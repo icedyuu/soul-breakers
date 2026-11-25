@@ -63,14 +63,22 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   console.log('connected, rtt', await A.evaluate(() => Math.round(Net.rtt)));
   // pick fighters: host clicks a card, guest uses keyboard
   const ids = await A.evaluate(() => CHARS.map(c => c.id));
-  await A.evaluate(i => { scene.move(0, i); scene.confirm(0); }, Math.max(0, ids.indexOf('nue')));
-  await Bp.keyboard.press('KeyD'); await sleep(100); await Bp.keyboard.press('KeyD'); await sleep(100); await Bp.keyboard.press('KeyF');
+  // colour variants: host picks NUE colour 3 (LV 7 unlocked), guest cycles once with SP2 (T)
+  await A.evaluate(() => { Mastery.rec('nue').xp = 2000; }); await Bp.evaluate(() => { for (const c of CHARS) Mastery.rec(c.id).xp = 300; });
+  await A.evaluate(i => { scene.move(0, i); scene.syncVs(); scene.vs[0] = 3; }, Math.max(0, ids.indexOf('nue')));
+  await sleep(300); await A.evaluate(() => scene.confirm(0));
+  await Bp.keyboard.press('KeyD'); await sleep(100); await Bp.keyboard.press('KeyD'); await sleep(100); await Bp.keyboard.press('KeyT'); await sleep(300);
+  const seenV = await Bp.evaluate(() => scene.vs.slice());
+  await Bp.keyboard.press('KeyF');
   const results = [];
   for (let m = 1; m <= MATCHES; m++) {
     for (let i = 0; i < 100; i++) { await sleep(200); if (await A.evaluate(() => scene instanceof NetBattle) && await Bp.evaluate(() => scene instanceof NetBattle)) break; }
     if (!await Bp.evaluate(() => scene instanceof NetBattle)) throw new Error('match did not start: ' + await A.evaluate(() => scene.constructor.name) + ' / ' + await Bp.evaluate(() => scene.constructor.name));
     const info = await A.evaluate(() => ({ p1: CHARS[scene.cfg.p1].id, p2: CHARS[scene.cfg.p2].id, stage: scene.cfg.stage, delay: scene.delay }));
     console.log(`match ${m}:`, JSON.stringify(info));
+    const vA = await A.evaluate(() => [scene.p1.variant, scene.p2.variant]), vB = await Bp.evaluate(() => [scene.p1.variant, scene.p2.variant]);
+    console.log('variants host', JSON.stringify(vA), 'guest', JSON.stringify(vB), 'guest select saw', JSON.stringify(seenV));
+    if (JSON.stringify(vA) !== JSON.stringify(vB) || vA[0] !== 3 || vA[1] !== 1 || seenV[1] !== 3) throw new Error('colour variants not synced');
     const t0 = Date.now();
     for (;;) {
       await sleep(1000);

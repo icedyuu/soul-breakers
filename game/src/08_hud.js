@@ -37,7 +37,7 @@ function pxPortrait(g, F, px, py, side) {
   const x = px - 46, y = py - 46, col = P_COL[F.pid];
   pxBox(g, x, y, 92, 92, '#000000', col, { n: 8 });
   g.save(); g.beginPath(); g.rect(x + 4, y + 4, 84, 84); g.clip(); g.imageSmoothingEnabled = false;
-  const img = F.ch.portrait;
+  const img = chArt(F.ch, F.variant, 'portrait');
   if (side > 0) g.drawImage(img, px - 60, py - 60, 120, 120); else { g.translate(px, py); g.scale(-1, 1); g.drawImage(img, -60, -60, 120, 120); }
   g.restore();
   pxBox(g, side > 0 ? x + 58 : x - 2, y + 74, 36, 20, col, '#ffffff', { n: 2, shadow: false });
@@ -100,7 +100,7 @@ function drawHUD(g, bt) {
     if (Settings.pixel) pxPortrait(g, F, px, py, side);
     else {
     g.save(); hexPath(g, px, py, 46); g.fillStyle = '#000'; g.fill(); g.clip();
-    const img = F.ch.portrait;
+    const img = chArt(F.ch, F.variant, 'portrait');
     if (side > 0) g.drawImage(img, px - 60, py - 60, 120, 120); else { g.translate(px, py); g.scale(-1, 1); g.drawImage(img, -60, -60, 120, 120); }
     g.restore();
     hexPath(g, px, py, 46); g.strokeStyle = P_COL[F.pid]; g.lineWidth = 3; g.stroke();
@@ -189,7 +189,7 @@ function drawCutIn(g, fr) {
   g.fillStyle = '#000'; g.fillRect(-100, -bandH / 2 - 8, W + 200, bandH + 16);
   g.fillStyle = c; g.fillRect(-100, -bandH / 2 - 10, W + 200, 6); g.fillRect(-100, bandH / 2 + 4, W + 200, 6);
   g.save(); g.beginPath(); g.rect(-100, -bandH / 2, W + 200, bandH); g.clip();
-  const img = F.ch.cutin;
+  const img = chArt(F.ch, F.variant, 'cutin');
   if (left) g.drawImage(img, t * 0.7 - 20, -bandH / 2);
   else { g.translate(W, 0); g.scale(-1, 1); g.drawImage(img, t * 0.7 - 20, -bandH / 2); }
   g.restore();

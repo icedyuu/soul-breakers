@@ -69,6 +69,7 @@ cd game && python3 build.py   # → dist/index.html
 | `08_hud.js` | HUD: health/soul gauges, portraits, timer, combo counter, training panels, move list pages |
 | `09_scenes.js` | Title, `CpuSetupScene` (difficulty + Single/Arcade), character select (2-row grid, 5 columns when >8 fighters, RANDOM button), VS, results (arcade NEXT FIGHT / CONTINUE), how-to, settings |
 | `09a_peerjs.js`, `09b_net.js` | ONLINE 1v1: PeerJS lib, `Net`, lobby, net select/VS/battle/results (see §7h) |
+| `09c_mastery.js` | MASTERY + COLOR VARIANTS: canvas recolour hook, `VARIANTS` designs, `Mastery` profile (localStorage), select picker, results XP panel, online variant sync (see §7i) |
 | `10_main.js` | Boot, main loop (fixed 60 fps), resize (`VIEW_K` device-resolution scaling 1–3×), portrait/card/cut-in generation |
 
 ## 4. Engine essentials
@@ -313,6 +314,16 @@ Beni's own original manga character. A man with a completely featureless head (n
 - Local fighter: host = P1, guest = P2. Input from MOBILE pad (TouchPad drives the local fighter) or keyboard (P1 keys or arrows/P2 keys).
 - Tests: `netplay.js [matches]` (local PeerJS server via `SB_PEER_MODULE`=path to npm `peer`, two pages, bots play full matches over the real connection, per-frame hash compare, rematch, disconnect; `SB_DESYNC=1` tests the resync, `SB_STAGE=n`), `netsync.js [frames] [ring|all]` (all fighter pairings, two pages with different render timing/history must produce identical hashes), `netshots.js` (screens).
 
+## 7i. Mastery + colour variants (`09c_mastery.js`)
+
+- **Mastery** per fighter, saved on the device in `localStorage['sb_profile_v1']` = `{v:1, profile, upd, chars:{id:{xp,w,l}}, pick:{id:variant}}`. `Mastery.export()` / `Mastery.import(obj)` (merge keeps the higher XP) are the hooks for a future account/cloud sync.
+- Levels 1–10, XP to next level `120 + 80·(lv−1)` (LV 10 = 3960 XP). XP per match for the LOCAL player only: win 80 / loss 30, +15 per round won, +25 flawless win; × difficulty (Easy 0.7, Normal 1, Hard 1.4); Single VS CPU × 0.4; Arcade clear +200 × difficulty; Online × 1.5. Local 2P versus and Training give none. Awarded when `ResultsScene` opens (`this.mx`), panel bottom-left with animated bar, LEVEL UP and "NEW COLOR UNLOCKED" toasts.
+- **Colour variants**: 4 per fighter (`VARIANTS[id]`, index 1–4; 0 = original), unlocked at LV 2 / 4 / 7 / 10 (`VAR_UNLOCK`). LV 10 tier has `glow` → rising soul sparks around the fighter (draw-only). A variant is a list of HSL rules (`h` hue range, `l` lightness range, `grey:'only'|'also'`, `hue`/`dh`/`ss`/`s`/`lm`/`la`/`inv`); skin (and a skin-like hand colour) and pure white/near-black are protected; `keep:false` recolours skin too (Frogs, Buzzu). New fighters without designs fall back to `VAR_FALLBACK`.
+- How it works: `CanvasRenderingContext2D` fillStyle/strokeStyle/shadowColor + gradient stops go through `RC.fn` while a variant fighter/projectile/portrait is drawn (`withRecolor`); `Fighter.colors` returns the mapped palette (FX, HUD accents); `chArt(ch, v, 'portrait'|'card'|'cutin')` builds variant art lazily. Purely visual: the sim never reads variants.
+- Select: `SP1`/`SP2` (P1 R/T, P2 O/P) cycle unlocked colours, or tap/click a swatch (locked ones show the level); the last pick per fighter is remembered. Battle cfg carries `v1`/`v2`; mirror match with the same colour gives P2 the next colour (`cfgVariants`). CPU and dummy use the original colours.
+- Online: the `sel` message carries `v` (colour) and `lv` (mastery level shown for the rival); the host puts `v1`/`v2` into the `start` cfg, so both peers draw both colours, even locked ones.
+- Tests: `mastery.js` (picker, cfg, mirror rule, awards, unlock, art, export/import; shots to `../shots_mastery/`), `variants.js [ids|all] [out] [pixel]` (sheet of all variants), `varstress.js` (every fighter × every colour drawn with random inputs + draw cost), `netplay.js` now also checks that colours sync.
+
 ## 8. History of requests (in order)
 
 1. Original anime fighting game (Kazuma, Yoru, Sera, Goro).
@@ -331,6 +342,7 @@ Beni's own original manga character. A man with a completely featureless head (n
 14. Kuon, The Honored One (Gojo-inspired space manipulator) with the cinematic Domain Expansion: Unlimited Void.
 15. The Hollow, The Psychic Sealer (Beni's original manga character): Psychic Fragments, Outlet Seal (locks the last used special), Psychic Overload and the ult The Last Remnant with his wife.
 16. ONLINE 1v1 between two devices (free PeerJS/WebRTC, lockstep netcode) + installable web app on GitHub Pages (icedyuu.github.io/soul-breakers).
+17. Mastery system (per-fighter levels from Arcade / VS CPU / Online, saved locally, ready for future accounts) + 4 unlockable colour variants per fighter, shown to the online opponent.
 
 ## 9. Open ideas / possible next steps
 
