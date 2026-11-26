@@ -59,7 +59,7 @@ class Battle {
   say(F, text, dur = 100) { this.dialog = { F, text, t: 0, dur }; if (!F.ch.mute) Sound.speak(text, F.ch.voicePitch ?? 0.6, F.ch.voiceRate ?? 1); }
   superFreeze(F, m) {
     this.freeze = { F, m, f: 0, dur: 56 };
-    FX.darkTarget = 0.7; Sound.play('charge'); FX.speedlines(50, W / 2, H / 2, F.colors.accent, 60);
+    FX.darkTarget = 0.7; Sound.play('charge'); Sound.play('ultStart', F.ch.id); FX.speedlines(50, W / 2, H / 2, F.colors.accent, 60);
     if (!F.ch.mute) Sound.speak(m.name.toLowerCase(), 0.6, 1.05);   // mute: fighters who never speak aloud (The Hollow)
   }
   startCine(A, D, fn, opts = {}) {
@@ -397,9 +397,9 @@ class Battle {
     if (f === 1) {
       const final = this.wins[0] === 1 && this.wins[1] === 1;
       FX.announce(final ? 'FINAL ROUND' : `ROUND ${this.round}`, { sub: final ? '最終決戦' : `第${KANJI_NUM[Math.min(9, this.round)]}戦`, life: 75, size: 110, glow: '#ff2255', color: '#ffd84a' });
-      Sound.play('gong'); Sound.speak(final ? 'Final round' : `Round ${this.round}`, 0.5, 0.9);
+      Sound.play('gong'); Sound.announce(final ? 'final' : 'round' + this.round, final ? 'Final round' : `Round ${this.round}`, 0.5, 0.9);
     }
-    if (f === 80) { FX.announce('FIGHT!', { sub: '始め！', life: 50, size: 150, glow: '#ff2200', color: '#ff8a1a' }); Sound.play('impactBig'); Sound.speak('Fight!', 0.5, 1.1); FX.speedlines(20, W / 2, H / 2 - 40, '#ffffff', 50); FX.shakeIt(8); }
+    if (f === 80) { FX.announce('FIGHT!', { sub: '始め！', life: 50, size: 150, glow: '#ff2200', color: '#ff8a1a' }); Sound.play('impactBig'); Sound.announce('fight', 'Fight!', 0.5, 1.1); FX.speedlines(20, W / 2, H / 2 - 40, '#ffffff', 50); FX.shakeIt(8); }
     if (f >= 92) { this.phase = 'fight'; this.pf = 0; }
   }
   checkKO() {
@@ -418,7 +418,7 @@ class Battle {
     }
     const final = winner && this.wins[winner.pid - 1] + 1 >= 2;
     this.slow = final ? 120 : 75;
-    FX.impactFrame(final ? 5 : 3); FX.shakeIt(18); Sound.play('ko'); Sound.speak('K.O.', 0.4, 0.8);
+    FX.impactFrame(final ? 5 : 3); FX.shakeIt(18); Sound.play('ko'); Sound.announce('ko', 'K.O.', 0.4, 0.8);
     FX.announce(final ? 'FINISH!' : 'K.O.', { sub: final ? '決着' : '撃破', size: 170, life: 120, color: '#ff3355', glow: '#ff0033' });
     FX.speedlines(40, W / 2, H / 2, '#ffffff', 60); FX.flashScreen('#ffffff', 10, 0.6);
     const L = losers[0]; this.focus = { x: L.x, y: GROUND - 140, z: final ? 1.5 : 1.25 };
@@ -427,7 +427,7 @@ class Battle {
     this.phase = 'ko'; this.pf = 0;
     const r1 = this.p1.hp / this.p1.maxHp, r2 = this.p2.hp / this.p2.maxHp;
     this.winner = Math.abs(r1 - r2) < 0.001 ? null : r1 > r2 ? this.p1 : this.p2;
-    FX.announce('TIME OVER', { sub: '時間切れ', size: 120, life: 100, color: '#ffd84a', glow: '#ff6a00' }); Sound.play('gong'); Sound.speak('Time over', 0.5, 0.9);
+    FX.announce('TIME OVER', { sub: '時間切れ', size: 120, life: 100, color: '#ffd84a', glow: '#ff6a00' }); Sound.play('gong'); Sound.announce('time', 'Time over', 0.5, 0.9);
     for (const F of [this.p1, this.p2]) { F.move = null; F.hitActive = false; if (F !== this.winner) { F.setState('defeat'); } }
     this.timeOut = true;
   }

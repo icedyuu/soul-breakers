@@ -40,7 +40,8 @@ cd game && python3 build.py   # → dist/index.html
 | File | Purpose |
 |---|---|
 | `00_core.js` | Constants (W=1280, H=720, GROUND, STAGE_W), input (`PlayerInput`, `DEFAULT_BINDS`), `Settings` (persisted: master, music, sfx, muted, voice, shake, fx, roundTime, pixel), fonts (`FONT_T` starts with the bitmap `PixelArcade`) |
-| `01_audio.js` | Procedural Web-Audio SFX (`Sound.play(name)`), music, speech voice lines (`voicePitch`/`voiceRate` per char) |
+| `01_audio.js` | Web-Audio SFX (`Sound.play(name)`: CC0 samples with procedural fallback, §7l), music (files + procedural sequencer), announcer, speech voice lines (`voicePitch`/`voiceRate` per char) |
+| `01a_audio_files.js` | `AUDIO_FILES`: which samples/music back which sound names (§7l) |
 | `01b_pixel.js` | Pixel pipeline: `PIX` (640×360 world buffer, PXS=2), `pxProcess` (dithered alpha, Bayer-dithered colour quantization LUT, 1-px outline, rim light), `PX_GLYPHS` bitmap font patched into canvas text calls, UI primitives `pxBox`, `pxDiamond`, `snap2` |
 | `02_fx.js` | Particles (`FX.p({type,...})`: ember, spark, smoke, petal, shard, slash, card, **blood, splat, bat, bblade**…), rings, bursts, world text (`FX.wtext`), shake, flash, impact frames, screen callouts |
 | `03_render.js` | Procedural skeletal character renderer: `drawFigure`, `skeleton`, `buildPose`, `POSES`, `POSE_KEYS`, head/face/limb drawing, ropes (hair/cloth physics), `makePortrait` |
@@ -353,6 +354,18 @@ Beni's request: a Nakamura-inspired and a Kurumi-inspired fighter from his refer
 - Not covered: Training dummy option keys [1]–[0] still need a keyboard.
 - Test: `tests/gamepad.js` (fake `navigator.getGamepads`: menus, settings page, remap/swap/reset, two-cursor select, light attack, walking, ULT, pause/resume, P2 pad, keyboard+pad, keypad; shots to `../shots_gamepad/`).
 
+## 7l. Audio: CC0 samples + music (`01_audio.js`, `01a_audio_files.js`, `audio/`)
+
+- `audio/` holds CC0 files only (Kenney Impact/Interface/RPG/Sci-fi/Voiceover-Fighter packs; OpenGameArt CC0 music by HydroGene, Adiutorium, Spring Spring, Kistol, Juhani Junkala). Sources + licenses: `audio/CREDITS.txt`. Every file exists as `.ogg` and `.mp3`; the browser picks ogg if it can decode Vorbis, else mp3 (older Safari/iOS). Re-encode from the raw packs with `tools/make_audio.py <dir>` (ffmpeg; mono effects, loudness-normalised music).
+- `AUDIO_FILES` (`01a_audio_files.js`) maps existing `Sound.play` names to sample variants (`f`, `v` volume, `r` rate, `j` jitter, `w` reverb send, `syn` extra synth layer, `pick(args)` e.g. hit strength → light/heavy punch). **Names not listed, or not loaded yet, play their procedural version** — so the single-file build (artifact, file://) still has full sound. Character-specific sounds stay procedural.
+- SFX + announcer are fetched and decoded right after the first click/touch (`Sound.unlock`), ~0.5 MB. Voice cap ~28 samples. Shared convolver reverb (`rvbSend`); osc/noise take a number as `dest` = reverb amount.
+- `Sound.announce(key, text)`: Kenney announcer for round 1–5 / final round / fight / time, speech synthesis fallback (K.O., names, "X wins"). Respects Settings.voice.
+- New `ultStart(id)` sound in `Battle.superFreeze`: riser + sub swell + per-fighter element colour (`ULT_FLAVOR`).
+- Music: `Music.play(name)` starts the sequencer at once and streams `audio/music/<name>` through ONE reused `<audio>` element (iOS: started inside the unlock touch) into the music bus; when it plays the sequencer stops and the file fades in. Errors/offline → sequencer keeps playing.
+- Audio never consumes the sim RNG (own PRNG; `Sound.announce` is also wrapped in `09b_net.js`).
+- Web build: `build_web.py` copies `audio/` into the site; `sw.js` caches sfx/voice on first use (offline), music goes to the network (range requests). The cache version hashes the audio files too.
+- Test: `tests/audio.js [webdir]` (local http server: all samples decode, every sound/announcer plays, all 5 tracks stream, voice cap, file:// fallback).
+
 ## 8. History of requests (in order)
 
 1. Original anime fighting game (Kazuma, Yoru, Sera, Goro).
@@ -374,10 +387,11 @@ Beni's request: a Nakamura-inspired and a Kurumi-inspired fighter from his refer
 17. Mastery system (per-fighter levels from Arcade / VS CPU / Online, saved locally, ready for future accounts) + 4 unlockable colour variants per fighter, shown to the online opponent.
 18. Kanae, The Spiteful Bloom (Nakamura-inspired trickster/counter, REBELLION + UNRESTRAINED, eye-flower ult) and Tokine, The Nightmare Clock (Kurumi-inspired time/clone fighter, TIME + SOVEREIGNTY, clock ult), each with an LV10 alt outfit.
 19. Game controller support (Xbox/PlayStation/generic via the Gamepad API, P1/P2, menus, online, remapping in SETTINGS → CONTROLLER).
+20. Better audio: CC0 sound effects (Kenney), announcer voice, CC0 music per menu/stage/results, richer synthesized ultimates; procedural sound stays as fallback (§7l).
 
 ## 9. Open ideas / possible next steps
 
-- Revisit audio (ElevenLabs or another voice/SFX source) when ready.
+- Audio: listen and tune volumes / track choices (bamboo track is cosy rather than night-time; loops not checked by ear). Optional: KO/name announcer lines.
 - Hands-on balance pass for Vespera, Borgar, Buzzu, Reika, Yamika, Lunaria, Kuon, The Hollow, Kanae and Tokine (verified by automated trials and stress tests, not by human play).
 
 ## 10. Testing approach used so far

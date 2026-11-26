@@ -1,0 +1,21 @@
+Soul Breakers - audio credits
+All audio files in this folder are CC0 1.0 (public domain dedication,
+https://creativecommons.org/publicdomain/zero/1.0/). Attribution is not required;
+listed here as thanks and for record keeping. Files were re-encoded (ogg + mp3,
+mono for effects, loudness-normalised music) by tools/make_audio.py. Downloaded 2026-11-26.
+
+SOUND EFFECTS (sfx/) and ANNOUNCER (voice/) - by Kenney (www.kenney.nl), CC0
+  Impact Sounds            https://kenney.nl/assets/impact-sounds          punch_*, plate*, step*, soft_*, metal_*, wood_*, mining*, bell1
+  Interface Sounds         https://kenney.nl/assets/interface-sounds       ui_*
+  RPG Audio                https://kenney.nl/assets/rpg-audio              slice*, draw*, cloth*
+  Sci-fi Sounds            https://kenney.nl/assets/sci-fi-sounds          expl*, lowboom1, laser*
+  Voiceover Pack: Fighter  https://kenney.nl/assets/voiceover-pack-fighter voice/*
+
+MUSIC (music/) - from OpenGameArt.org, each page's license field: CC0
+  menu     "Determination - Anime Style Music" by HydroGene   https://opengameart.org/content/determination-anime-style-music
+  neon     "Neon Hyperdrive" by Adiutorium                     https://opengameart.org/content/neon-hyperdrive
+  volcano  "Fire Level" by Spring Spring                       https://opengameart.org/content/fire-level
+  bamboo   "Hot Springs Town" by Kistol                        https://opengameart.org/content/hot-springs-town
+  results  "ending" (5 Chiptunes (Action)) by Juhani Junkala   https://opengameart.org/content/5-chiptunes-action
+
+All other sounds and the fallback music are synthesized in code (src/01_audio.js).

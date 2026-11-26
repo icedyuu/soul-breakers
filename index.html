@@ -185,9 +185,44 @@ class PlayerInput {
 }
 
 // ============================== AUDIO =================================
-// All sounds and music are synthesized with the Web Audio API.
+// Web Audio. SFX = CC0 samples (audio/sfx, see AUDIO_FILES in 01a_audio_files.js) layered with
+// procedural synthesis; every sound still has its synthesized version, used whenever a file is
+// missing or not loaded yet (single-file build, offline before the first visit, file://).
+// Music: CC0 tracks (audio/music) with the procedural sequencer as fallback. Presentation only:
+// nothing here may touch the sim (own RNG, never Math.random-dependent gameplay).
 const Sound = (() => {
-  let ac = null, master, sfxG, musG, noiseBuf;
+  let ac = null, master, sfxG, musG, noiseBuf, rvb, rvbSend, live = 0;
+  let rs = 1234567; const arand = () => (rs = (rs * 16807) % 2147483647) / 2147483647;
+  const bufs = {};   // file -> AudioBuffer | 'loading' | 'fail'
+  let ext = null;    // 'ogg' where Vorbis decodes (Chrome, Firefox, Android), else 'mp3' (older Safari / iOS)
+  function fileExt() { if (!ext) { try { ext = new Audio().canPlayType('audio/ogg; codecs="vorbis"') ? 'ogg' : 'mp3'; } catch (e) { ext = 'mp3'; } } return ext; }
+  const canFetch = () => location.protocol !== 'file:' && typeof fetch === 'function';
+  function decode(ab) { return new Promise((res, rej) => { const p = ac.decodeAudioData(ab, res, rej); if (p && p.then) p.then(res, rej); }); }
+  function load(file, cb) {
+    const b = bufs[file];
+    if (b) { if (cb && b instanceof AudioBuffer) cb(b); return; }
+    if (!ac || !canFetch()) { bufs[file] = 'fail'; return; }
+    bufs[file] = 'loading';
+    fetch((window.AUDIO_BASE || 'audio/') + file + '.' + fileExt()).then(r => { if (!r.ok) throw new Error(r.status); return r.arrayBuffer(); })
+      .then(decode).then(buf => { bufs[file] = buf; if (cb) cb(buf); }).catch(() => { bufs[file] = 'fail'; });
+  }
+  function preloadSfx() { if (typeof AUDIO_FILES === 'undefined') return; for (const k in AUDIO_FILES.sfx) for (const v of AUDIO_FILES.sfx[k].f) load('sfx/' + v); for (const k in AUDIO_FILES.voice) load('voice/' + AUDIO_FILES.voice[k]); }
+  // play a decoded sample; false if not available (caller falls back to synthesis)
+  function sample(file, vol, rate = 1, delay = 0, wet = 0, dest) {
+    const b = bufs[file]; if (!(b instanceof AudioBuffer)) return false;
+    if (live > 28) return true;   // voice cap: drop, but don't double up with synthesis
+    const t = ac.currentTime + delay, s = ac.createBufferSource(), g = ac.createGain();
+    s.buffer = b; s.playbackRate.value = rate; g.gain.value = vol;
+    s.connect(g); g.connect(dest || sfxG);
+    if (wet > 0) { const w = ac.createGain(); w.gain.value = wet; g.connect(w); w.connect(rvbSend); }
+    live++; s.onended = () => { live--; }; s.start(t);
+    return true;
+  }
+  function makeIR(sec, decay) {
+    const n = Math.floor(ac.sampleRate * sec), ir = ac.createBuffer(2, n, ac.sampleRate);
+    for (let c = 0; c < 2; c++) { const d = ir.getChannelData(c); for (let i = 0; i < n; i++) d[i] = (arand() * 2 - 1) * Math.pow(1 - i / n, decay); }
+    return ir;
+  }
   function unlock() {
     if (ac) { if (ac.state === 'suspended') ac.resume(); return; }
     try { ac = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { return; }
@@ -196,8 +231,12 @@ const Sound = (() => {
     master = ac.createGain(); sfxG = ac.createGain(); musG = ac.createGain();
     sfxG.connect(master); musG.connect(master); master.connect(comp); comp.connect(ac.destination);
     noiseBuf = ac.createBuffer(1, ac.sampleRate * 2, ac.sampleRate);
-    const d = noiseBuf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    const d = noiseBuf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = arand() * 2 - 1;
+    // shared reverb for big hits, ultimates and the announcer
+    try { rvb = ac.createConvolver(); rvb.buffer = makeIR(1.8, 2.6); rvbSend = ac.createGain(); rvbSend.gain.value = 0.55; rvbSend.connect(rvb); rvb.connect(sfxG); }
+    catch (e) { rvbSend = ac.createGain(); rvbSend.gain.value = 0; rvbSend.connect(sfxG); }
     applyVolume();
+    preloadSfx();
     Music.onUnlock();
   }
   function applyVolume() {
@@ -217,7 +256,7 @@ const Sound = (() => {
     o.type = type; o.frequency.setValueAtTime(f0, t);
     if (f1 !== f0) o.frequency.exponentialRampToValueAtTime(Math.max(1, f1), t + dur);
     env(g, t, 0.004, vol, dur);
-    o.connect(g); g.connect(dest || sfxG); o.start(t); o.stop(t + dur + 0.05);
+    o.connect(g); route(g, dest); o.start(t); o.stop(t + dur + 0.05);
   }
   function noise(dur, vol, ftype, f0, f1, q = 1, delay = 0, dest) {
     const t = ac.currentTime + delay;
@@ -225,8 +264,24 @@ const Sound = (() => {
     const fl = ac.createBiquadFilter(); fl.type = ftype; fl.Q.value = q;
     fl.frequency.setValueAtTime(f0, t); fl.frequency.exponentialRampToValueAtTime(Math.max(20, f1), t + dur);
     const g = ac.createGain(); env(g, t, 0.004, vol, dur);
-    s.connect(fl); fl.connect(g); g.connect(dest || sfxG);
-    s.start(t, Math.random() * 1.2); s.stop(t + dur + 0.05);
+    s.connect(fl); fl.connect(g); route(g, dest);
+    s.start(t, arand() * 1.2); s.stop(t + dur + 0.05);
+  }
+  // dest: undefined = dry SFX bus, a number = dry + that much reverb, a node = that node
+  function route(g, dest) {
+    if (typeof dest === 'number') { g.connect(sfxG); const w = ac.createGain(); w.gain.value = dest; g.connect(w); w.connect(rvbSend); }
+    else g.connect(dest || sfxG);
+  }
+  // rising "power up" riser + sub swell used by ultimates
+  function riser(dur, f0, f1, vol, wet = 0.6) {
+    const t = ac.currentTime;
+    const o = ac.createOscillator(), o2 = ac.createOscillator(), g = ac.createGain(), f = ac.createBiquadFilter();
+    o.type = 'sawtooth'; o2.type = 'sawtooth'; o2.detune.value = 18;
+    o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(f1, t + dur);
+    o2.frequency.setValueAtTime(f0 * 1.5, t); o2.frequency.exponentialRampToValueAtTime(f1 * 1.5, t + dur);
+    f.type = 'lowpass'; f.Q.value = 6; f.frequency.setValueAtTime(300, t); f.frequency.exponentialRampToValueAtTime(5000, t + dur);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + dur * 0.85); g.gain.exponentialRampToValueAtTime(0.0001, t + dur + 0.08);
+    o.connect(f); o2.connect(f); f.connect(g); route(g, wet); o.start(t); o2.start(t); o.stop(t + dur + 0.1); o2.stop(t + dur + 0.1);
   }
   const S = {
     whoosh(p = 1) { noise(0.13, 0.22, 'bandpass', 500 * p, 2600 * p, 1.4); },
@@ -293,7 +348,55 @@ const Sound = (() => {
     rewind() { osc('sawtooth', 300, 1400, 0.4, 0.12); osc('sine', 1200, 300, 0.4, 0.08, 0.05); noise(0.35, 0.15, 'bandpass', 2000, 5000, 3); },
     bloom() { osc('sine', 60, 110, 1.2, 0.35); osc('triangle', 220, 140, 1.1, 0.08, 0.1); noise(1.0, 0.18, 'lowpass', 400, 1400, 0.6); },
   };
-  function play(name, ...a) { if (!ac || Settings.muted) return; try { S[name](...a); } catch (e) { /* ignore */ } }
+  // extra synth layers that can sit under a sample (AUDIO_FILES.sfx[name].syn)
+  const L = {
+    sub(str = 1) { osc('sine', 120 + 25 * str, 36, 0.08 + 0.05 * str, 0.35 + 0.12 * str); },
+    boom() { osc('sine', 70, 22, 0.9, 0.7, 0, 0.4); noise(0.6, 0.35, 'lowpass', 900, 60, 0.7, 0, 0.5); },
+    tail(v = 0.25) { noise(0.5, v, 'lowpass', 2500, 120, 0.6, 0, 0.9); },
+    zap() { osc('sawtooth', 1400, 300, 0.12, 0.06); },
+  };
+  // ultimate start: one shared riser + an element "colour" per fighter
+  const ULT_FLAVOR = { kazuma: 'fire', saint: 'holy', sera: 'storm', goro: 'earth', yoru: 'void', frogs: 'water', conductor: 'steel', cardmaster: 'rune', nue: 'beast',
+    borgar: 'earth', buzzu: 'steel', reika: 'blood', yamika: 'void', lunaria: 'holy', honored: 'void', hollow: 'blood', remnant: 'blood', fragment: 'void', kanae: 'steel', tokine: 'time' };
+  S.ultStart = (id) => {
+    riser(0.85, 90, 520, 0.12);
+    osc('sine', 45, 90, 0.9, 0.35, 0, 0.3);
+    noise(0.9, 0.18, 'bandpass', 300, 4000, 2, 0, 0.6);
+    osc('sine', 2093, 2093, 0.5, 0.06, 0.82, 0.8); osc('sine', 3136, 3136, 0.6, 0.04, 0.84, 0.8);
+    const fl = ULT_FLAVOR[id] || 'fire';
+    if (fl === 'fire') { noise(1.0, 0.3, 'lowpass', 600, 3000, 0.8, 0.1, 0.4); }
+    else if (fl === 'storm') { noise(0.25, 0.4, 'highpass', 2500, 7000, 1, 0.75, 0.6); osc('sawtooth', 80, 30, 0.5, 0.15, 0.75, 0.5); }
+    else if (fl === 'earth') { osc('sine', 60, 25, 1.0, 0.6, 0.3, 0.3); noise(0.8, 0.4, 'lowpass', 400, 60, 1, 0.3, 0.3); }
+    else if (fl === 'void') { osc('sine', 1800, 60, 1.1, 0.14, 0, 0.9); osc('sine', 55, 41, 1.2, 0.4, 0.2, 0.5); }
+    else if (fl === 'holy') { [523, 659, 784, 1047, 1319].forEach((f, i) => osc('triangle', f, f, 1.0, 0.05, 0.1 + i * 0.07, 0.9)); }
+    else if (fl === 'water') { for (let i = 0; i < 6; i++) osc('sine', 500 + i * 160, 1300 + i * 200, 0.08, 0.08, i * 0.09, 0.5); }
+    else if (fl === 'steel') { [1, 1.5, 2.76].forEach((m, i) => osc('triangle', 420 * m, 410 * m, 0.9, 0.07, 0.6 + i * 0.01, 0.8)); }
+    else if (fl === 'rune') { [440, 554, 659, 880].forEach((f, i) => osc('sine', f, f * 2, 0.6, 0.06, i * 0.12, 0.8)); }
+    else if (fl === 'beast') { osc('sawtooth', 140, 60, 0.9, 0.18, 0.35, 0.4); noise(0.8, 0.3, 'lowpass', 900, 150, 0.8, 0.35, 0.4); }
+    else if (fl === 'blood') { osc('sine', 62, 38, 0.18, 0.6, 0.2); osc('sine', 58, 34, 0.2, 0.5, 0.45); noise(0.8, 0.25, 'lowpass', 1400, 150, 2.5, 0.1, 0.6); }
+    else if (fl === 'time') { for (let i = 0; i < 6; i++) osc('square', 2100 - i * 120, 1900 - i * 120, 0.02, 0.1, i * 0.12, 0.6); osc('sine', 196, 194, 1.4, 0.18, 0.7, 0.9); }
+  };
+  function play(name, ...a) {
+    if (!ac || Settings.muted) return;
+    try {
+      const e = typeof AUDIO_FILES !== 'undefined' && AUDIO_FILES.sfx[name];
+      let done = false;
+      if (e) {
+        const list = e.pick ? e.pick(...a) : e.f, f = list[Math.floor(arand() * list.length)];
+        const r = (e.r || 1) * (1 + (arand() - 0.5) * (e.j ?? 0.1));
+        done = sample('sfx/' + f, e.v ?? 0.8, r, 0, e.w || 0);
+        if (done && e.syn) L[e.syn](...a);
+      }
+      if (!done) S[name](...a);
+    } catch (e) { /* ignore */ }
+  }
+  // announcer line: CC0 voice sample if loaded, else speech synthesis
+  function announce(key, text, pitch = 0.5, rate = 0.95) {
+    if (!Settings.voice || Settings.muted) return;
+    const v = typeof AUDIO_FILES !== 'undefined' && AUDIO_FILES.voice[key];
+    if (ac && v && sample('voice/' + v, 1.0, 1, 0, 0.35)) { try { speechSynthesis.cancel(); } catch (e) { } return; }
+    speak(text, pitch, rate);
+  }
   let voices = null;
   function speak(text, pitch = 0.55, rate = 0.95) {
     if (!Settings.voice || Settings.muted || !('speechSynthesis' in window)) return;
@@ -306,7 +409,25 @@ const Sound = (() => {
       speechSynthesis.cancel(); speechSynthesis.speak(u);
     } catch (e) { /* ignore */ }
   }
-  return { unlock, play, speak, applyVolume, get ac() { return ac; }, get musDest() { return musG; }, get noiseBuf() { return noiseBuf; } };
+  // music file: streamed through ONE reused <audio> element (low memory on phones; iOS only lets an
+  // element play after a touch, so it is started inside unlock() and then just gets new sources)
+  let mel = null, mgain = null;
+  function musicEl() {
+    if (mel !== null) return mel || null;
+    mel = false;
+    if (!ac || !canFetch() || !ac.createMediaElementSource) return null;
+    try {
+      const a = new Audio(); a.loop = true; a.preload = 'auto';
+      const n = ac.createMediaElementSource(a); mgain = ac.createGain(); mgain.gain.value = 0; n.connect(mgain); mgain.connect(musG);
+      mel = a;
+    } catch (e) { mel = false; }
+    return mel || null;
+  }
+  const musicUrl = name => (window.AUDIO_BASE || 'audio/') + 'music/' + name + '.' + fileExt();
+  // debug/test: how many sample files are decoded / failed / still loading
+  function status() { const o = { loaded: 0, fail: 0, loading: 0, ext: fileExt(), live, failed: [] }; for (const k in bufs) { const b = bufs[k]; if (b instanceof AudioBuffer) o.loaded++; else if (b === 'fail') { o.fail++; o.failed.push(k); } else o.loading++; } return o; }
+  const names = () => Object.keys(S);
+  return { unlock, play, speak, announce, applyVolume, load, status, names, musicEl, musicUrl, get musicGain() { return mgain; }, get ac() { return ac; }, get musDest() { return musG; }, get noiseBuf() { return noiseBuf; } };
 })();
 
 // ---------------- Procedural music sequencer ----------------
@@ -375,17 +496,78 @@ const Music = (() => {
     if (nextT < ac.currentTime) nextT = ac.currentTime + 0.02;
     while (nextT < ac.currentTime + 0.12) { playStep(step, nextT); nextT += spb; step++; }
   }
+  // file tracks (AUDIO_FILES.music) stream from the shared <audio> element; the sequencer plays
+  // until the file can play, and keeps playing if it fails (offline, single-file build, unsupported)
+  let cur = null, fileOn = false, gen = 0;
+  function fadeOutFile(sec = 0.5, pause = true) {
+    const el = Sound.musicEl(), g = Sound.musicGain; if (!el || !g) return;
+    const ac = Sound.ac, t = ac.currentTime, my = ++gen;
+    g.gain.cancelScheduledValues(t); g.gain.setValueAtTime(g.gain.value, t); g.gain.linearRampToValueAtTime(0, t + sec);
+    if (fileOn && pause) setTimeout(() => { if (gen === my) try { el.pause(); } catch (e) { } }, sec * 1000 + 50);
+    fileOn = false;
+    return my;
+  }
   function play(name) {
     wanted = name;
     if (!Sound.ac) return;
-    if (track === TRACKS[name]) return;
-    track = TRACKS[name]; step = 0; nextT = Sound.ac.currentTime + 0.08;
+    if (cur === name) return;
+    cur = name;
+    const m = typeof AUDIO_FILES !== 'undefined' && AUDIO_FILES.music[name], el = Sound.musicEl();
+    const wasOn = fileOn, my = fadeOutFile(0.5, !(m && el));   // a new file replaces the source itself
+    track = TRACKS[name] || null; step = 0; nextT = Sound.ac.currentTime + 0.08;
     if (!timer) timer = setInterval(schedule, 25);
+    if (!m || !el) return;
+    const start = () => {
+      if (gen !== my) return;
+      const ac = Sound.ac, g = Sound.musicGain;
+      el.onplaying = () => {
+        if (gen !== my) return;
+        track = null; fileOn = true;   // sequencer stops scheduling; file fades in
+        const t = ac.currentTime; g.gain.cancelScheduledValues(t); g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(m.v ?? 1, t + 0.8);
+      };
+      el.onerror = () => { };
+      try { el.src = Sound.musicUrl(m.f); el.currentTime = 0; const p = el.play(); if (p && p.catch) p.catch(() => { }); } catch (e) { }
+    };
+    if (wasOn) setTimeout(start, 520); else start();
   }
-  function stop() { track = null; wanted = null; }
-  function onUnlock() { if (wanted) { const w = wanted; wanted = null; play(w); } }
+  function stop() { track = null; wanted = null; cur = null; if (Sound.ac) fadeOutFile(0.4); }
+  function onUnlock() { if (wanted) { const w = wanted; wanted = null; cur = null; play(w); } }
   return { play, stop, onUnlock };
 })();
+
+// ============================ AUDIO FILES ================================
+// CC0 samples + music (sources and licenses: audio/CREDITS.txt; re-encode with tools/make_audio.py).
+// Each file exists as .ogg and .mp3 under audio/; the browser gets whichever it can decode.
+// sfx entry: f = file variants (one is picked at random), v = volume, r = playback rate,
+// j = random rate jitter, w = reverb send, syn = extra synth layer (Sound L.*), pick(args) = variants by argument.
+// A sound missing here, or not loaded yet, plays its procedural version from 01_audio.js.
+const AUDIO_FILES = {
+  sfx: {
+    hit: { f: ['punch_m1', 'punch_m2', 'punch_m3', 'punch_h1', 'punch_h2', 'punch_h3'], v: 0.9, syn: 'sub',
+      pick: (str = 1) => str >= 3 ? ['punch_h1', 'punch_h2', 'punch_h3'] : str >= 2 ? ['punch_m1', 'punch_m2', 'punch_h1'] : ['punch_m1', 'punch_m2', 'punch_m3'] },
+    kick: { f: ['punch_h1', 'punch_h2', 'punch_h3'], v: 0.95, r: 0.9, syn: 'sub' },
+    block: { f: ['plate1', 'plate2', 'plate3'], v: 0.55, r: 1.1 },
+    land: { f: ['step1', 'step2', 'step3'], v: 0.45, r: 0.85 },
+    grab: { f: ['soft_m1', 'soft_m2', 'cloth1'], v: 0.8 },
+    slam: { f: ['soft_h1', 'soft_h2'], v: 1.0, r: 0.8, syn: 'boom', w: 0.25 },
+    slap: { f: ['soft_m1', 'soft_m2'], v: 0.8, r: 1.3 },
+    armor: { f: ['metal_h1', 'metal_h2'], v: 0.6 },
+    clack: { f: ['wood_l1', 'wood_l2'], v: 0.8 },
+    crush: { f: ['mining1', 'mining2'], v: 0.8, syn: 'boom' },
+    bell: { f: ['bell1'], v: 0.55, j: 0.02, w: 0.5 },
+    kunai: { f: ['draw1', 'draw2'], v: 0.5, r: 1.4 },
+    slash: { f: ['slice1', 'slice2'], v: 0.7, r: 1.15, syn: 'zap' },
+    explosion: { f: ['expl1', 'expl2'], v: 0.9, syn: 'boom', w: 0.4 },
+    impactBig: { f: ['punch_h1', 'punch_h2', 'punch_h3'], v: 1.0, r: 0.75, syn: 'boom', w: 0.3 },
+    ko: { f: ['lowboom1'], v: 1.0, j: 0, syn: 'tail', w: 0.5 },
+    energy: { f: ['laser1', 'laser2'], v: 0.45, r: 0.9 },
+    menuMove: { f: ['ui_move1', 'ui_move2'], v: 0.5, j: 0.04 },
+    menuOk: { f: ['ui_ok1'], v: 0.6, j: 0 },
+    menuBack: { f: ['ui_back1'], v: 0.6, j: 0 },
+  },
+  voice: { round1: 'round1', round2: 'round2', round3: 'round3', round4: 'round4', round5: 'round5', final: 'final', fight: 'fight', time: 'time' },
+  music: { menu: { f: 'menu', v: 0.9 }, neon: { f: 'neon', v: 0.8 }, volcano: { f: 'volcano', v: 0.85 }, bamboo: { f: 'bamboo', v: 0.9 }, results: { f: 'results', v: 0.85 } },
+};
 
 // ============================ PIXEL-ART RENDERING ============================
 // The world is rendered at 640×360 (1 art pixel = 2 logical pixels) and upscaled without smoothing.
@@ -11328,7 +11510,7 @@ class Battle {
   say(F, text, dur = 100) { this.dialog = { F, text, t: 0, dur }; if (!F.ch.mute) Sound.speak(text, F.ch.voicePitch ?? 0.6, F.ch.voiceRate ?? 1); }
   superFreeze(F, m) {
     this.freeze = { F, m, f: 0, dur: 56 };
-    FX.darkTarget = 0.7; Sound.play('charge'); FX.speedlines(50, W / 2, H / 2, F.colors.accent, 60);
+    FX.darkTarget = 0.7; Sound.play('charge'); Sound.play('ultStart', F.ch.id); FX.speedlines(50, W / 2, H / 2, F.colors.accent, 60);
     if (!F.ch.mute) Sound.speak(m.name.toLowerCase(), 0.6, 1.05);   // mute: fighters who never speak aloud (The Hollow)
   }
   startCine(A, D, fn, opts = {}) {
@@ -11666,9 +11848,9 @@ class Battle {
     if (f === 1) {
       const final = this.wins[0] === 1 && this.wins[1] === 1;
       FX.announce(final ? 'FINAL ROUND' : `ROUND ${this.round}`, { sub: final ? '最終決戦' : `第${KANJI_NUM[Math.min(9, this.round)]}戦`, life: 75, size: 110, glow: '#ff2255', color: '#ffd84a' });
-      Sound.play('gong'); Sound.speak(final ? 'Final round' : `Round ${this.round}`, 0.5, 0.9);
+      Sound.play('gong'); Sound.announce(final ? 'final' : 'round' + this.round, final ? 'Final round' : `Round ${this.round}`, 0.5, 0.9);
     }
-    if (f === 80) { FX.announce('FIGHT!', { sub: '始め！', life: 50, size: 150, glow: '#ff2200', color: '#ff8a1a' }); Sound.play('impactBig'); Sound.speak('Fight!', 0.5, 1.1); FX.speedlines(20, W / 2, H / 2 - 40, '#ffffff', 50); FX.shakeIt(8); }
+    if (f === 80) { FX.announce('FIGHT!', { sub: '始め！', life: 50, size: 150, glow: '#ff2200', color: '#ff8a1a' }); Sound.play('impactBig'); Sound.announce('fight', 'Fight!', 0.5, 1.1); FX.speedlines(20, W / 2, H / 2 - 40, '#ffffff', 50); FX.shakeIt(8); }
     if (f >= 92) { this.phase = 'fight'; this.pf = 0; }
   }
   checkKO() {
@@ -11687,7 +11869,7 @@ class Battle {
     }
     const final = winner && this.wins[winner.pid - 1] + 1 >= 2;
     this.slow = final ? 120 : 75;
-    FX.impactFrame(final ? 5 : 3); FX.shakeIt(18); Sound.play('ko'); Sound.speak('K.O.', 0.4, 0.8);
+    FX.impactFrame(final ? 5 : 3); FX.shakeIt(18); Sound.play('ko'); Sound.announce('ko', 'K.O.', 0.4, 0.8);
     FX.announce(final ? 'FINISH!' : 'K.O.', { sub: final ? '決着' : '撃破', size: 170, life: 120, color: '#ff3355', glow: '#ff0033' });
     FX.speedlines(40, W / 2, H / 2, '#ffffff', 60); FX.flashScreen('#ffffff', 10, 0.6);
     const L = losers[0]; this.focus = { x: L.x, y: GROUND - 140, z: final ? 1.5 : 1.25 };
@@ -11696,7 +11878,7 @@ class Battle {
     this.phase = 'ko'; this.pf = 0;
     const r1 = this.p1.hp / this.p1.maxHp, r2 = this.p2.hp / this.p2.maxHp;
     this.winner = Math.abs(r1 - r2) < 0.001 ? null : r1 > r2 ? this.p1 : this.p2;
-    FX.announce('TIME OVER', { sub: '時間切れ', size: 120, life: 100, color: '#ffd84a', glow: '#ff6a00' }); Sound.play('gong'); Sound.speak('Time over', 0.5, 0.9);
+    FX.announce('TIME OVER', { sub: '時間切れ', size: 120, life: 100, color: '#ffd84a', glow: '#ff6a00' }); Sound.play('gong'); Sound.announce('time', 'Time over', 0.5, 0.9);
     for (const F of [this.p1, this.p2]) { F.move = null; F.hitActive = false; if (F !== this.winner) { F.setState('defeat'); } }
     this.timeOut = true;
   }
@@ -13529,7 +13711,7 @@ const netRandom = () => NetRng.next();
 // audio must never consume the sim RNG (muted / locked audio would desync the peers)
 // (FX.update only uses randomness for screen shake, which draw code can also trigger; stage
 // updates are pure ambience — e.g. neon rain starts at per-device random positions)
-for (const [o, k] of [[Sound, 'play'], [Sound, 'speak'], [Music, 'play'], [FX, 'update'], ...STAGES.filter(st => st.update).map(st => [st, 'update'])]) {
+for (const [o, k] of [[Sound, 'play'], [Sound, 'speak'], [Sound, 'announce'], [Music, 'play'], [FX, 'update'], ...STAGES.filter(st => st.update).map(st => [st, 'update'])]) {
   const fn = o[k];
   o[k] = function (...a) { const r = Math.random; Math.random = NetRng.orig; try { return fn.apply(this, a); } finally { Math.random = r; } };
 }
