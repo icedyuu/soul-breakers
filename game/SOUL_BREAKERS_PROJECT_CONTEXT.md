@@ -103,7 +103,7 @@ Combo trials: `{ name, notation, seq:[moveKeys], pre?:[...] }` — checked by th
 ### Cinematics
 `BT.startCine(A, D, CINE.x, {zoom})`; `CINE.x(A, D, f, c)` runs per frame, uses `BT.scriptHit`, `forcePose`, `hidden`, `FX.darkTarget`, and returns `true` when finished (`BT.release(D, vx, vy)`).
 
-## 5. Roster (16 fighters)
+## 5. Roster (18 fighters)
 
 | # | Name | Title | Archetype | HP | Style |
 |---|---|---|---|---|---|
@@ -123,6 +123,8 @@ Combo trials: `{ name, notation, seq:[moveKeys], pre?:[...] }` — checked by th
 | 14 | LUNARIA ルナリア | The Moon Sovereign 月の女王 | Dark Mage / Zoner | 950 | **chibi** |
 | 15 | KUON クオン | The Honored One 天上の者 | Space / Rushdown | 980 | **chibi** |
 | 16 | THE HOLLOW ホロウ | The Psychic Sealer 封印の虚 | Technical / Anti-Ability | 960 | **chibi** |
+| 17 | KANAE カナエ | The Spiteful Bloom 棘の花 | Trickster / Counter | 990 | **chibi** |
+| 18 | TOKINE トキネ | The Nightmare Clock 刻の悪夢 | Time / Clones | 990 | **chibi** |
 
 ### Signature specials & ultimates
 - **Kazuma:** Blazing Knuckle → Second Blaze, Burst Shot, Iron Wall (counter), Rising Flame, Earth Breaker, Burning Hammer · Ult **Hundred Inferno Fists**.
@@ -138,8 +140,9 @@ Combo trials: `{ name, notation, seq:[moveKeys], pre?:[...] }` — checked by th
 - **Yamika / Lunaria:** see §7e.
 - **Kuon:** see §7f.
 - **The Hollow:** see §7g.
+- **Kanae / Tokine:** see §7j.
 
-All characters have 3–7 combo trials (64 total).
+All characters have 3–7 combo trials (74 total).
 
 ## 6. Chibi style kit (`04_zz_chibi.js`)
 
@@ -325,6 +328,20 @@ Beni's own original manga character. A man with a completely featureless head (n
 - **Hidden cheat** (Beni's request): in SETTINGS hover the mouse over TOGGLE FULLSCREEN and type `cheat` → every fighter set to LV 10, all colours unlocked (`Mastery.unlockAll()`), with a CHEAT ACTIVATED banner. While the word is being typed over that button, key presses are swallowed so settings don't change. Test: `tests/cheat.js`.
 - Tests: `mastery.js` (picker, cfg, mirror rule, awards, unlock, art, export/import; shots to `../shots_mastery/`), `variants.js [ids|all] [out] [pixel]` (sheet of all variants), `varstress.js` (every fighter × every colour drawn with random inputs + draw cost), `netplay.js` now also checks that colours sync.
 
+## 7j. Kanae (The Spiteful Bloom) and Tokine (The Nightmare Clock) (`04_zzzz8_kanae.js`, `04_zzzz9_tokine.js`)
+
+Beni's request: a Nakamura-inspired and a Kurumi-inspired fighter from his reference images. Like Kuon/Vespera they are ORIGINAL inspired characters with own names; Kanae's ult flower is an original eye-flower, not the manga design.
+- **Kanae** (red messy bob, thin glasses, school shirt + plaid skirt; LV10 "BLACK DAYS" = longer black hair, dark t-shirt, calm face). Resource **REBELLION** `F.reb` 0–100: counter +18 (+50% in Break the Rules, +6 vs marked), interrupt +10, punish +5, feint payoff +6, backdash dodge +6, Pact "their move" +4. Decays only below 100. At 100 ↓↓SP2 → **UNRESTRAINED** (`unrT` 360f: walk ×1.3, dmg ×1.08, follow-ups), then SPENT 150f (no gain). Base `dmgBonus` 1.08.
+  - SP1 Impulse (rush kick, → Knee & Stomp follow-up in BTR/UNR), ↓→SP1 Disgust (feint: hold block f9–12 to cancel; hold ↓ at f13 = low, else overhead), ↓←SP1 Provocation (counter, `counterNoGrab`), SP2 The Pact (mark 360f), ↓→SP2 No More Pretending (3-hit punish), ↓↓SP2 Break the Rules (240f, costs 25; at 100 upgrades to UNRESTRAINED).
+  - Ult **The Spiteful Bloom** `CINE.kanae` ~336f, 250 dmg: world desaturates (`saturation` composite), the eye-flower grows from the ground, captures, closes, blooms, kick; leaves a small seed flower. `kanFlower()` draws the flower.
+- **Tokine** (gothic red/black dress, mini clock top hat, twin tails, crimson + gold clock eye, flintlock pistol/musket; LV10 "AFTER SCHOOL" = black sailor uniform, no hat, fringe over the gold eye). Resource **TIME** `F.time` (specials, clone hits, interrupts). At 100 → **TIME SOVEREIGNTY** (`sovT` 420f: half costs, half gain, extra clones), then time = 20. Base `dmgBonus` 1.1.
+  - **Clones** are sim entities in `F.clones` `{x,y,face,t,at,kind,dmg,life}`; cap 4 (oldest fades), they fire `tokBullet`/`tokSlash` projectiles, shatter if hit before acting, cleared on KO/round end.
+  - SP1 Haste (150f, `xpHaste`), ↓→SP1 Slow bullet (`slowT` + slower recovery), ↓←SP1 Temporal Clone (15: kick if <170 px else shot), SP2 Stop (30: freezes the foe ~38f, 240f re-freeze lock), ↓→SP2 Echoes (40: 3 clones, 4 in Sovereignty), ↓↓SP2 Rewind (20: returns to the marked spot after 80f unless hit; "BROKEN").
+  - Ult **Endless Nightmare** `CINE.tokine` ~344f, ~254 dmg: giant roman-numeral clock, nightmare dimension, 7 clones fire in sequence, collapse, slow final bullet, shatter.
+- Generic hooks added: `ch.varColors(vi)` returns an outfit palette for a colour variant (used by `chArt`), `makePortrait` passes `opts.pal`. Palettes switch to the alt look when `F.variant===4`. New sounds in `01_audio.js`: kick, gunshot, tock, bell, gear, rewind, bloom.
+- CPU: Tokine's Rewind is a 'virtual' move for the bot. Roster win rate (Normal bots): Kanae ~41%, Tokine ~44%.
+- Tests: `mech_kanae.js`, `mech_tokine.js`, plus trials/specials/fuzz/cpu/mobile (`SB_P1=kanae|tokine`)/netsync.
+
 ## 8. History of requests (in order)
 
 1. Original anime fighting game (Kazuma, Yoru, Sera, Goro).
@@ -344,11 +361,12 @@ Beni's own original manga character. A man with a completely featureless head (n
 15. The Hollow, The Psychic Sealer (Beni's original manga character): Psychic Fragments, Outlet Seal (locks the last used special), Psychic Overload and the ult The Last Remnant with his wife.
 16. ONLINE 1v1 between two devices (free PeerJS/WebRTC, lockstep netcode) + installable web app on GitHub Pages (icedyuu.github.io/soul-breakers).
 17. Mastery system (per-fighter levels from Arcade / VS CPU / Online, saved locally, ready for future accounts) + 4 unlockable colour variants per fighter, shown to the online opponent.
+18. Kanae, The Spiteful Bloom (Nakamura-inspired trickster/counter, REBELLION + UNRESTRAINED, eye-flower ult) and Tokine, The Nightmare Clock (Kurumi-inspired time/clone fighter, TIME + SOVEREIGNTY, clock ult), each with an LV10 alt outfit.
 
 ## 9. Open ideas / possible next steps
 
 - Revisit audio (ElevenLabs or another voice/SFX source) when ready.
-- Hands-on balance pass for Vespera, Borgar, Buzzu, Reika, Yamika, Lunaria, Kuon and The Hollow (verified by automated trials and stress tests, not by human play).
+- Hands-on balance pass for Vespera, Borgar, Buzzu, Reika, Yamika, Lunaria, Kuon, The Hollow, Kanae and Tokine (verified by automated trials and stress tests, not by human play).
 
 ## 10. Testing approach used so far
 

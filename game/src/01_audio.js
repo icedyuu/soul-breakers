@@ -98,6 +98,14 @@ const Sound = (() => {
     crush() { osc('sine', 70, 22, 0.8, 0.8); noise(0.25, 0.5, 'bandpass', 300, 120, 2); osc('square', 140, 40, 0.3, 0.12); },
     psi() { osc('sine', 880, 220, 0.35, 0.12); osc('sine', 1320, 330, 0.3, 0.06, 0.04); noise(0.3, 0.12, 'bandpass', 2400, 600, 6); },
     impactBig() { osc('sine', 120, 30, 0.5, 0.9); noise(0.5, 0.8, 'bandpass', 4000, 200, 0.5); osc('square', 60, 25, 0.4, 0.3); },
+    // Kanae / Tokine
+    kick() { osc('sine', 150, 45, 0.14, 0.7); noise(0.08, 0.45, 'lowpass', 1800, 300, 1); },
+    gunshot() { noise(0.16, 0.85, 'bandpass', 2600, 400, 0.8); osc('square', 220, 40, 0.12, 0.35); osc('sine', 90, 30, 0.25, 0.5, 0.01); },
+    tock() { osc('square', 2100, 1900, 0.02, 0.14); osc('square', 1500, 1400, 0.02, 0.1, 0.28); },
+    bell() { [196, 392, 523, 784].forEach((f, i) => osc('sine', f, f * 0.995, 1.6 - i * 0.25, 0.14 - i * 0.025, i * 0.01)); },
+    gear() { for (let i = 0; i < 6; i++) osc('square', 600 + i * 40, 500, 0.02, 0.09, i * 0.05); noise(0.3, 0.12, 'highpass', 3000, 5000, 1); },
+    rewind() { osc('sawtooth', 300, 1400, 0.4, 0.12); osc('sine', 1200, 300, 0.4, 0.08, 0.05); noise(0.35, 0.15, 'bandpass', 2000, 5000, 3); },
+    bloom() { osc('sine', 60, 110, 1.2, 0.35); osc('triangle', 220, 140, 1.1, 0.08, 0.1); noise(1.0, 0.18, 'lowpass', 400, 1400, 0.6); },
   };
   function play(name, ...a) { if (!ac || Settings.muted) return; try { S[name](...a); } catch (e) { /* ignore */ } }
   let voices = null;
