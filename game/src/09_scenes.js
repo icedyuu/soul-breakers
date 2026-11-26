@@ -202,7 +202,7 @@ class CharSelectScene {
       if (this.ready[1] && !this.cpu?.arcade) this.ready[1] = false; else if (this.ready[0]) this.ready[0] = this.ready[1] = false; else { go(this.cpu ? new CpuSetupScene() : new TitleScene()); return; }
       Sound.play('menuBack');
     } else if (!this.single && Keys.pressed.has('Escape') && !this.ready[0] && !this.ready[1]) { Sound.play('menuBack'); go(new TitleScene()); return; }
-    if (this.ready[0] && this.ready[1]) { if (++this.readyT > 50) go(this.cpu?.arcade ? new VSScene(arcadeCfg(this.cur[0], this.cpu.level)) : new StageSelectScene({ mode: this.mode, p1: this.cur[0], p2: this.cur[1], cpu: this.cpu })); } else this.readyT = 0;
+    if (this.ready[0] && this.ready[1]) { if (++this.readyT > 50) go(this.cpu?.arcade ? arcadeVS(arcadeCfg(this.cur[0], this.cpu.level)) : new StageSelectScene({ mode: this.mode, p1: this.cur[0], p2: this.cur[1], cpu: this.cpu })); } else this.readyT = 0;
   }
   randRect() { const r = this.cardRect(CHARS.length - 1); return { x: W / 2 - 90, y: r.y + r.h + 22, w: 180, h: 36 }; }
   randomPick(s) {   // RANDOM: pick an open fighter (not the current one) and confirm it straight away
@@ -396,7 +396,7 @@ class ResultsScene {
     const it = this.menu.update(); if (!it) return;
     Sound.play('menuOk');
     if (it.id === 'rematch') go(new Battle({ ...this.bt.cfg }));
-    if (it.id === 'next') { const c = this.bt.cfg, a = c.arcade; go(new VSScene({ ...c, p2: a.order[a.i + 1], stage: (c.stage + 1) % STAGES.length, arcade: { ...a, i: a.i + 1 } })); }
+    if (it.id === 'next') { const c = this.bt.cfg, a = c.arcade; go(arcadeVS({ ...c, p2: a.order[a.i + 1], stage: (c.stage + 1) % STAGES.length, arcade: { ...a, i: a.i + 1 } })); }
     if (it.id === 'select') go(new CharSelectScene('versus', this.bt.cfg.cpu));
     if (it.id === 'menu') go(new TitleScene());
   }

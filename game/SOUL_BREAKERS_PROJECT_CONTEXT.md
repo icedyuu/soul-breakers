@@ -526,6 +526,12 @@ The test scripts are in `tests/` inside the source zip. Run each with node and P
 - Saved in the mastery profile: `fu {id:1}`, `fuAll`, `fuFree` (picks used), `fuV` (new-format flag). Migration: a profile/account save without `fuV` that already has XP/wins gets `fuAll` (old players keep everyone). Account sync only adds. Cheat (`data.clean`) opens all on this device only. Admin: GIVE LEVEL (fighter or ALL) also unlocks; grant keys `f_<id>`/`f_all` work too.
 - Test: `tests/unlock.js`.
 
+## Story mode for Arcade (`09h_story.js`, 2026-11-26)
+- `STORY[id]` per fighter: `riv` (rival id), `pre` (PROLOGUE before fight 1), `vs` (FINAL BATTLE scene with the rival), `end` (ending after ARCADE CLEAR). Lines `{ s: 'p'|'r'|null, t }` (null = narration). `STORY_FALLBACK` for fighters added later without a story.
+- `arcadeCfg` is wrapped: the rival is always the last of the `ARCADE_LEN` opponents. `arcadeVS(cfg)` (used by character select + NEXT FIGHT) returns a `StoryScene` before fight 1 / the final fight, else the VSScene.
+- `StoryScene`: portraits (speaker lit), typewriter text box, any key/click = next, ESC / G / SKIP button = skip scene. Ending: victory figure (with colour variant) + text box; then back to character select. Results after ARCADE CLEAR gets a first button STORY ENDING (not online).
+- The Hollow's lines are telepathy `< ... >` (violet). Hachishakusama only says "po... po...". Rivals: Kazuma↔Goro, Borgar→Goro, Goro→Borgar, Sera↔Lunaria, Kanae↔Tokine, Reika↔Buzzu, Kuon↔Hollow, Nue→Hollow, Yamika→Kuon, Yoru/Aimi/Hachi→Kuchi, Kuchi→Hachi, Frogs→Buzzu, Tetsumichi→Tokine, Fudagami→Yamika, Vespera→Reika.
+- Test: `tests/story.js` (rival order for all 21, every scene draws, prologue/skip/rival/ending flow). `tests/menus.js` skips the prologue.
 ### Combo list + training options + Buzzu hurtbox (2026-11-26, src/09h_combobook.js)
 - Pause menu → COMBO LIST: verified combos for all 21 fighters (COMBO_BOOK, generated from COMBOS.md + player guide; Nue per form, Fudagami per hand), EASY/MEDIUM/HARD/SOUL, damage % and hits, pages with ←/→. Also in the online pause menu.
 - Pause menu (practice/training) → TRAINING OPTIONS: dummy stance/guard/action, new DUMMY THROW TECH, meter refill, hitboxes, reset (works with touch/controller; number keys 1–7 still work). Practice panel shows live/last combo with % of HP and best combo damage.
