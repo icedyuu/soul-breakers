@@ -8,7 +8,7 @@ const { open } = require('./harness');
   const ids = await page.evaluate(() => CHARS.map(c => c.id));
   const play = (p1, p2, l1, l2, seed) => page.evaluate(([p1, p2, l1, l2, seed]) => {
     Settings.roundTime = 60; Settings.pixel = seed % 2 === 0;
-    go(new Battle({ mode: 'versus', stage: seed % 3, p1: T.idx(p1), p2: T.idx(p2), cpu: { level: l2 } }));
+    go(new Battle({ mode: 'versus', stage: seed % STAGES.length, p1: T.idx(p1), p2: T.idx(p2), cpu: { level: l2 } }));
     const bt = BT, bot1 = new CpuBot(bt, l1, 0); const issues = []; let f = 0, cineRun = 0, specials = [0, 0], ults = 0;
     const orig = bt.cpu.tick.bind(bt.cpu); bt.cpu.tick = () => { bot1.tick(); orig(); };
     while (scene === bt && f < 30000) {

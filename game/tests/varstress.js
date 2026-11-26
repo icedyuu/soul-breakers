@@ -6,7 +6,7 @@ const { open } = require('./harness');
     const out = {}; let tv = 0, t0 = 0, n = 0;
     const keys = ['light', 'medium', 'heavy', 'sp1', 'sp2', 'left', 'right', 'up', 'down'];
     for (let i = 0; i < CHARS.length; i++) for (let v = 0; v < VAR_N; v++) {
-      go(new Battle({ mode: 'versus', p1: i, p2: (i + 5) % CHARS.length, stage: v % 3, v1: v, v2: (v + 2) % VAR_N })); BT.phase = 'fight'; BT.pf = 0;
+      go(new Battle({ mode: 'versus', p1: i, p2: (i + 5) % CHARS.length, stage: v % STAGES.length, v1: v, v2: (v + 2) % VAR_N })); BT.phase = 'fight'; BT.pf = 0;
       for (let f = 0; f < 240; f++) {
         const p = f % 7 === 0 ? [keys[(f * 13 + i) % keys.length]] : []; if (f % 40 === 0) { BT.p1.meter = 100; p.push('sp1', 'sp2'); }
         T.frame(p);

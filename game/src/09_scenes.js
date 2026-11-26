@@ -273,12 +273,14 @@ class CharSelectScene {
 // ----------------------------- STAGE SELECT -----------------------------
 class StageSelectScene {
   constructor(cfg) { this.cfg = cfg; this.sel = 0; this.t = 0; }
-  rect(i) { const sel = i === this.sel; const w = sel ? 352 : 320, h = sel ? 198 : 180; const cx = 240 + i * 400; return { x: cx - w / 2, y: 300 - h / 2 + 40, w, h }; }
+  // 3 columns, as many rows as needed (6 stages → 2 rows)
+  rect(i) { const sel = i === this.sel, rows = Math.ceil(STAGES.length / 3); const w = sel ? 312 : 288, h = sel ? 176 : 162; const cx = 240 + (i % 3) * 400, cy = rows > 1 ? 232 + Math.floor(i / 3) * 236 : 340; return { x: cx - w / 2, y: cy - h / 2, w, h }; }
   update() {
     this.t++;
     const n = STAGES.length;
     if (UI.left() || pressedAny(B(2, 'left'))) { this.sel = (this.sel + n - 1) % n; Sound.play('menuMove'); }
     if (UI.right() || pressedAny(B(2, 'right'))) { this.sel = (this.sel + 1) % n; Sound.play('menuMove'); }
+    if (n > 3 && (UI.up() || UI.down() || pressedAny(B(2, 'up')) || pressedAny(B(2, 'down')))) { this.sel = Math.min(n - 1, (this.sel + 3) % (Math.ceil(n / 3) * 3)); Sound.play('menuMove'); }
     for (let i = 0; i < n; i++) if (inRect(this.rect(i))) { if (Mouse.moved && this.sel !== i) { this.sel = i; Sound.play('menuMove'); } if (Mouse.clicked) { this.sel = i; this.go(); return; } }
     if (UI.ok()) { this.go(); return; }
     if (UI.back()) { Sound.play('menuBack'); go(new CharSelectScene(this.cfg.mode, this.cfg.cpu)); }
@@ -290,7 +292,7 @@ class StageSelectScene {
   }
   draw(g) {
     const t = this.t, st = STAGES[this.sel];
-    g.drawImage(st.wide, 0, 0); g.fillStyle = 'rgba(6,3,16,0.55)'; g.fillRect(0, 0, W, H);
+    g.drawImage(st.wide, 0, 0, W, H); g.fillStyle = 'rgba(6,3,16,0.55)'; g.fillRect(0, 0, W, H);
     drawTitleText(g, 'SELECT STAGE', W / 2, 70, 56, '#ffd84a', '#ff2a3a');
     g.font = `700 20px ${FONT_JP}`; g.textAlign = 'center'; g.fillStyle = '#ffb3c6'; g.fillText('ステージ選択', W / 2, 116);
     STAGES.forEach((s, i) => {
@@ -298,11 +300,11 @@ class StageSelectScene {
       g.save(); if (sel) { g.shadowColor = '#ff2a55'; g.shadowBlur = 30; }
       g.drawImage(s.thumb, r.x, r.y, r.w, r.h); g.restore();
       g.strokeStyle = sel ? '#ffffff' : 'rgba(255,255,255,0.3)'; g.lineWidth = sel ? 4 : 2; g.strokeRect(r.x, r.y, r.w, r.h);
-      g.textAlign = 'center'; g.font = `italic 900 ${sel ? 30 : 24}px ${FONT_T}`; g.textBaseline = 'alphabetic';
-      strokeText(g, s.name, r.x + r.w / 2, r.y + r.h + 38, sel ? '#ffffff' : '#bbb', OUTLINE, 5);
-      g.font = `700 18px ${FONT_JP}`; g.fillStyle = sel ? '#ff8aa0' : '#888'; g.fillText(s.jp, r.x + r.w / 2, r.y + r.h + 62);
+      g.textAlign = 'center'; g.font = `italic 900 ${sel ? 26 : 21}px ${FONT_T}`; g.textBaseline = 'alphabetic';
+      strokeText(g, s.name, r.x + r.w / 2, r.y + r.h + 30, sel ? '#ffffff' : '#bbb', OUTLINE, 5);
+      g.font = `700 16px ${FONT_JP}`; g.fillStyle = sel ? '#ff8aa0' : '#888'; g.fillText(s.jp, r.x + r.w / 2, r.y + r.h + 50);
     });
-    drawFooter(g, '← / →  choose   ·   ENTER / F / K  confirm   ·   ESC / G  back');
+    drawFooter(g, '← → ↑ ↓  choose   ·   ENTER / F / K  confirm   ·   ESC / G  back');
   }
 }
 

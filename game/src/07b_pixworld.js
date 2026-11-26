@@ -123,11 +123,13 @@ function drawStageBGPx(B, st, cam, t) {
   const P = stagePxBuild(st), SP = STAGE_PX[st.id] || {}, sc = cam.z / PX_ZOOM;
   B.setTransform(1, 0, 0, 1, 0, 0); B.imageSmoothingEnabled = false;
   B.drawImage(P.sky, 0, 0);
+  if (SP.sky) SP.sky(B, t, cam, st);
   st.layers.forEach((L, i) => {
     const img = P.layers[i], X = -(cam.x - W / 2) * L.f - 130, Y = -(cam.y - H / 2) * L.f * 0.6 - LAYER_PAD;
     const lx = (W / 2 + FX.sx * L.f + cam.z * (X - W / 2)) / PXS, ly = (H / 2 + FX.sy * L.f + cam.z * (Y - H / 2)) / PXS;
     B.drawImage(img, Math.round(lx), Math.round(ly), Math.round(img.width * sc), Math.round(img.height * sc));
     if (i === 0 && SP.anim) SP.anim(B, t, cam, st);
+    if (SP.animAt && SP.animAt[i]) SP.animAt[i](B, t, cam, st);
   });
   const fx = (W / 2 + FX.sx + cam.z * (-200 - cam.x)) / PXS, fy = (H / 2 + FX.sy + cam.z * (GROUND - cam.y)) / PXS;
   B.drawImage(P.floor, Math.round(fx), Math.round(fy), Math.round(P.floor.width * sc), Math.round(P.floor.height * sc));

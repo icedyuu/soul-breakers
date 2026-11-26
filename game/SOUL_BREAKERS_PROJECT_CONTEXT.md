@@ -15,7 +15,7 @@ Handoff notes for continuing development of Beni's browser anime fighting game. 
 
 - Local fighting game on one keyboard: 1P vs CPU or 2 players (plus Training mode with a dummy).
 - Modes: 1P VS CPU (Single Match / Arcade, Easy/Normal/Hard), Versus, Training (frame data, hitbox view, combo trials, move list), How to Play (7 pages), Settings.
-- 3 stages: NEON DISTRICT (neon), CRIMSON VOLCANO (volcano), MOONLIT BAMBOO (bamboo).
+- 6 stages: NEON DISTRICT (neon), CRIMSON VOLCANO (volcano), MOONLIT BAMBOO (bamboo), MIDNIGHT ACADEMY (school), CLOCKWORK SPIRE (clock), RUNE FORGE (forge).
 - Round flow: VS screen → rounds with timer → KO → results. Burst, meter ("魂 SOUL"), ultimates with cinematics, counters, juggles with a juggle limit, combo scaling.
 
 ### Default controls
@@ -62,9 +62,11 @@ cd game && python3 build.py   # → dist/index.html
 | `04_zzzz6_honored.js` | Kuon / The Honored One |
 | `04_zzzz7_hollow.js` | The Hollow / The Psychic Sealer (+ the Remnant figure and shadow fragments used by his moves) |
 | `05_stages.js` | Stage definitions (vector) |
+| `05b_stages2.js` | Stages 4–6 (school, clock, forge), pushed onto `STAGES`; helper `layerPt` (layer coords → screen/art px), optional `bgAnim` hook (vector, after the far layer) |
 | `06_fighter.js` | `Fighter` class: states, movement, attacks, cancels, follow-ups, projectiles (`Proj`, `EXTRA_PROJ` registry) |
 | `07_battle.js` | `Battle`: rounds, hit resolution (`resolveHit`, `applyDamage`), cinematics (`startCine`, `scriptHit`, `release`), camera, training mode |
 | `07b_pixworld.js` | Pixel-mode stage layers (`STAGE_PX`) and `drawWorldPixel` |
+| `07bb_pixstages2.js` | `STAGE_PX` entries for stages 4–6 (extra hooks: `sky` after the sky, `animAt[i]` after layer i) |
 | `07c_cpu.js` | CPU opponent: `CPU_LEVELS`, `cpuProfile(move)`, `CpuBot` (see §7c) |
 | `07d_touch.js` | MOBILE touch controls: `TouchPad` (virtual stick + buttons for P1 in singleplayer), title-screen MOBILE toggle (see §7d) |
 | `08_hud.js` | HUD: health/soul gauges, portraits, timer, combo counter, training panels, move list pages |
@@ -414,3 +416,9 @@ The test scripts are in `tests/` inside the source zip. Run each with node and P
 - `shots.js` takes screenshots of select, battle, move list and How-to; `shots2.js` does select + battles for the redesigned classics.
 - `lineup.js ids [out] [pose]` draws a stance lineup; `heads.js ids` a big close-up of the heads.
 - Default build path is `../dist/index.html` (run the scripts from `tests/`).
+
+### New stages (2026-11-26)
+- MIDNIGHT ACADEMY (夜の学園): school rooftop at night, moon, fence, sakura in the courtyard, tournament banner; pixel: drifting clouds, blinking radio tower, classroom lights switching, one flickering fluorescent. Music: menu track.
+- CLOCKWORK SPIRE (時計塔): inside a clock tower, giant backlit clock face (mirrored numerals), gears, chains, lanterns; pixel: moving hands, meshing gears, light shafts, dust. Music: neon track.
+- RUNE FORGE (霊峰鍛冶場): forge hall carved into a snowy mountain, glowing gate, rune monoliths, cyan rune braziers, rune circle on the floor; pixel: aurora, pulsing runes, snow, sparks. Music: volcano track.
+- Stage select is a 3×2 grid (↑/↓ switches rows). All stage animation is visual only (netplay hashes identical on all new stages). Test: `tests/stages.js` (every stage vector+pixel, draw cost, select nav; shots to `../shots_stages/`).

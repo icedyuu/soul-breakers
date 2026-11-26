@@ -262,6 +262,9 @@ const Music = (() => {
     neon: { bpm: 142, root: 50, prog: [[0, 0], [-4, 1], [-2, 1], [-5, 0]], drums: 2, arp: true, mel: genMelody(31) },
     volcano: { bpm: 152, root: 52, prog: [[0, 0], [1, 1], [0, 0], [-2, 1]], drums: 3, arp: true, mel: genMelody(99) },
     bamboo: { bpm: 126, root: 47, prog: [[0, 0], [-4, 1], [3, 1], [-2, 1]], drums: 2, arp: true, pad: true, mel: genMelody(53) },
+    school: { bpm: 118, root: 46, prog: [[0, 1], [-3, 0], [5, 1], [-5, 1]], drums: 2, arp: true, pad: true, mel: genMelody(61) },
+    clock: { bpm: 136, root: 45, prog: [[0, 0], [-2, 1], [-4, 1], [-5, 0]], drums: 3, arp: true, mel: genMelody(88) },
+    forge: { bpm: 146, root: 43, prog: [[0, 0], [3, 1], [-2, 1], [0, 0]], drums: 3, arp: true, pad: true, mel: genMelody(45) },
     storm: { bpm: 148, root: 49, prog: [[0, 0], [-2, 1], [-4, 1], [-5, 1]], drums: 3, arp: true, mel: genMelody(77) },
     results: { bpm: 110, root: 48, prog: [[0, 1], [5, 1], [-3, 0], [7, 1]], drums: 1, arp: true, pad: true, mel: genMelody(13) },
   };
