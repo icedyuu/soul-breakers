@@ -205,6 +205,12 @@ const VARIANTS = {
     { n: 'WHITE NIGHTMARE', rules: [{ grey: 'also', h: [280, 360], l: [0.03, 0.2], inv: 1, lm: 0.9 }] },
     { n: 'AFTER SCHOOL', glow: '#ffcf5a', rules: [] },   // LV 10: her school-uniform look (see TOKINE.varColors)
   ],
+  aimi: [
+    { n: 'LAVENDER VOW', rules: [{ h: [320, 360], hue: 275 }, { h: [0, 12], hue: 275 }] },
+    { n: 'MINT DIARY', rules: [{ h: [320, 360], hue: 160, s: 0.8 }, { h: [0, 12], hue: 160, s: 0.8 }, { h: [220, 245], hue: 170, ss: 0.35 }] },
+    { n: 'MIDNIGHT DRESS', rules: [], special: 'arcade' },   // her black dress (see AIMI.varColors) — unlocked by clearing Arcade with her
+    { n: 'LAST HORIZON', glow: '#ffc0d6', rules: [] },        // LV 10: the long mantle (see AIMI.varColors)
+  ],
   hollow: [
     { n: 'CRIMSON SEAL', rules: [{ h: [240, 300], hue: 355 }] },
     { n: 'MIDNIGHT BLUE', rules: [{ h: [240, 300], hue: 195 }, { grey: 'also', l: [0.12, 0.45], hue: 225, ss: 0.35 }] },
@@ -212,6 +218,9 @@ const VARIANTS = {
     { n: 'LAST REMNANT', glow: '#ffd860', rules: [{ grey: 'also', l: [0.12, 0.45], ss: 0, lm: 0.45 }, { h: [240, 300], l: [0.45, 1], hue: 45, s: 1.1, la: 0.05 }] },
   ],
 };
+// skins with their own unlock condition instead of a mastery level (VARIANTS entry `special`)
+function varSpecial(id, vi) { const L = VARIANTS[id], V = L && L[vi - 1]; return (V && V.special) || null; }
+function varLockText(ch, vi) { return varSpecial(ch.id, vi) === 'arcade' ? `CLEAR ARCADE WITH ${ch.name}` : `REACH LV ${VAR_UNLOCK[vi]}`; }
 // fallback for fighters added later without designs: hue rotations
 const VAR_FALLBACK = [{ n: 'ALT I', rules: [{ dh: 120 }] }, { n: 'ALT II', rules: [{ dh: 220 }] }, { n: 'SHADOW', rules: [{ grey: 'also', l: [0.5, 1], lm: 0.35 }] }, { n: 'SOUL', glow: '#ffd860', rules: [{ hue: 45, s: 1.1 }] }];
 function varDef(ch, vi) { return vi > 0 ? ((VARIANTS[ch.id] || VAR_FALLBACK)[vi - 1] || null) : null; }
@@ -232,7 +241,7 @@ function varPal(ch, vi, pal) {
   const o = {}; for (const k in pal) o[k] = typeof pal[k] === 'string' ? fn(pal[k]) : pal[k];
   return (m[vi] = o);
 }
-function varSwatch(ch, vi) { const fn = varFn(ch, vi) || (v => v), c = ch.colors; return [fn(c.top || c.skin || c.accent), fn(c.hair || c.leg || c.accent), fn(c.accent)]; }
+function varSwatch(ch, vi) { const fn = varFn(ch, vi) || (v => v), c = (vi && ch.varColors && ch.varColors(vi)) || ch.colors; return [fn(c.top || c.skin || c.accent), fn(c.hair || c.leg || c.accent), fn(c.accent)]; }
 // effective variants of a match: a mirror match with identical colours gives P2 the next colour
 function cfgVariants(cfg) {
   const v1 = clamp(cfg.v1 | 0, 0, VAR_N - 1); let v2 = clamp(cfg.v2 | 0, 0, VAR_N - 1);
@@ -271,7 +280,12 @@ const Mastery = {
   save() { this.data.upd = Date.now(); try { localStorage.setItem(this.KEY, JSON.stringify(this.d)); } catch (e) { } },
   rec(id) { const c = this.data.chars; return c[id] || (c[id] = { xp: 0, w: 0, l: 0 }); },
   level(id) { return this.info(this.rec(id).xp).lv; },
-  unlocked(id, vi) { return vi <= 0 || this.level(id) >= VAR_UNLOCK[vi]; },
+  unlocked(id, vi) {
+    if (vi <= 0) return true;
+    const sp = varSpecial(id, vi);   // a skin with its own unlock condition (not a level): saved in data.unl, the hidden cheat opens it too
+    if (sp) return !!((this.data.unl && this.data.unl[id + ':' + vi]) || this.data.clean);
+    return this.level(id) >= VAR_UNLOCK[vi];
+  },
   pick(id) { const v = this.data.pick[id] | 0; return this.unlocked(id, v) ? v : 0; },
   setPick(id, vi) { if (this.data.pick[id] !== vi) { this.data.pick[id] = vi; this.save(); } },
   // XP for the local player at the end of a match; returns what the results screen shows
@@ -290,7 +304,8 @@ const Mastery = {
     const id = F.ch.id, r = this.rec(id), before = this.info(r.xp);
     r.xp += xp; if (won) r.w++; else r.l++;
     const after = this.info(r.xp), unlocks = [];
-    for (let v = 1; v < VAR_N; v++) if (before.lv < VAR_UNLOCK[v] && after.lv >= VAR_UNLOCK[v]) unlocks.push(v);
+    for (let v = 1; v < VAR_N; v++) if (!varSpecial(id, v) && before.lv < VAR_UNLOCK[v] && after.lv >= VAR_UNLOCK[v]) unlocks.push(v);
+    if (clear) for (let v = 1; v < VAR_N; v++) if (varSpecial(id, v) === 'arcade' && !this.unlocked(id, v)) { (this.data.unl || (this.data.unl = {}))[id + ':' + v] = 1; unlocks.push(v); }
     this.save();
     return { ch: F.ch, gained: xp, before, after, unlocks, src, clear };
   },
@@ -300,6 +315,7 @@ const Mastery = {
     if (!o || o.v !== 1 || !o.chars) return false;
     const d = this.data;
     for (const id in o.chars) { const a = this.rec(id), b = o.chars[id]; if ((b.xp | 0) > a.xp) Object.assign(a, { xp: b.xp | 0, w: b.w | 0, l: b.l | 0 }); }
+    if (o.unl && typeof o.unl === 'object') { d.unl = d.unl || {}; for (const k in o.unl) if (o.unl[k]) d.unl[k] = 1; }   // special skin unlocks only ever add
     Object.assign(d.pick, o.pick || {}); this.save(); return true;
   },
 };
@@ -424,13 +440,13 @@ function swatchRect(s, vi) { const left = s === 0, sz = 26, gap = 6; return { x:
       g.fillStyle = sw[0]; g.fillRect(r.x, r.y, r.w, r.h / 2); g.fillStyle = sw[1]; g.fillRect(r.x, r.y + r.h / 2, r.w * 0.6, r.h / 2); g.fillStyle = sw[2]; g.fillRect(r.x + r.w * 0.6, r.y + r.h / 2, r.w * 0.4, r.h / 2);
       g.globalAlpha = 1;
       if (varDef(ch, v) && varDef(ch, v).glow) { g.fillStyle = '#ffd84a'; g.fillRect(r.x + r.w - 6, r.y - 3, 6, 6); }
-      if (!open) { g.fillStyle = 'rgba(0,0,0,0.55)'; g.fillRect(r.x, r.y, r.w, r.h); g.font = `800 10px ${FONT_UI}`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = '#ffffff'; g.fillText('LV' + VAR_UNLOCK[v], r.x + r.w / 2, r.y + r.h / 2 + 1); }
+      if (!open) { g.fillStyle = 'rgba(0,0,0,0.55)'; g.fillRect(r.x, r.y, r.w, r.h); g.font = `800 10px ${FONT_UI}`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = '#ffffff'; g.fillText(varSpecial(ch.id, v) ? '★' : 'LV' + VAR_UNLOCK[v], r.x + r.w / 2, r.y + r.h / 2 + 1); }
       g.lineWidth = sel ? 3 : 1.5; g.strokeStyle = sel ? '#ffffff' : 'rgba(255,255,255,0.3)'; g.strokeRect(r.x, r.y, r.w, r.h);
     }
     const lm = this.lockMsg && this.lockMsg.s === s ? this.lockMsg : null;
     g.font = `italic 800 13px ${FONT_UI}`; g.textBaseline = 'middle'; g.textAlign = left ? 'left' : 'right';
     const nx = local ? (left ? 34 + VAR_N * 32 + 4 : W - 34 - VAR_N * 32 - 4) : (left ? 34 + 34 : W - 34 - 34);
-    const txt = lm ? `${varName(ch, lm.v)} · REACH LV ${VAR_UNLOCK[lm.v]}` : varName(ch, vi);
+    const txt = lm ? `${varName(ch, lm.v)} · ${varLockText(ch, lm.v)}` : varName(ch, vi);
     strokeText(g, txt, nx, 305, lm ? '#ff9ab0' : vi ? '#ffd84a' : '#e8e0ff', OUTLINE, 3);
     if (local && !this.ready[s]) {
       const keys = Settings.mobile ? 'TAP A COLOR' : this.single || s === 0 ? `COLOR: ${keyName(B(1, 'sp1'))} / ${keyName(B(1, 'sp2'))}` : `COLOR: ${keyName(B(2, 'sp1'))} / ${keyName(B(2, 'sp2'))}`;
@@ -483,7 +499,7 @@ function drawMasteryGain(g, M, t) {
     panel(g, tx, ty, tw, th, 'rgba(30,14,4,0.92)', '#ffd84a');
     const cd = chArt(M.ch, v, 'card'); g.drawImage(cd, tx + 8, ty + 6, 39, 72);
     g.textBaseline = 'middle'; g.textAlign = 'left';
-    g.font = `italic 900 18px ${FONT_T}`; strokeText(g, 'NEW COLOR UNLOCKED!', tx + 60, ty + 22, t % 30 < 18 ? '#ffd84a' : '#ffffff', OUTLINE, 4);
+    g.font = `italic 900 18px ${FONT_T}`; strokeText(g, M.ch.varColors && M.ch.varColors(v) ? 'NEW SKIN UNLOCKED!' : 'NEW COLOR UNLOCKED!', tx + 60, ty + 22, t % 30 < 18 ? '#ffd84a' : '#ffffff', OUTLINE, 4);
     g.font = `italic 900 22px ${FONT_T}`; strokeText(g, varName(M.ch, v), tx + 60, ty + 50, '#ffffff', OUTLINE, 4);
     g.font = `700 12px ${FONT_UI}`; g.fillStyle = '#ffe2a8'; g.fillText(`${M.ch.name} · choose it in character select`, tx + 60, ty + 72);
     g.restore();

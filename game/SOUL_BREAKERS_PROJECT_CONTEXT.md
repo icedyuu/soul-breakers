@@ -60,6 +60,8 @@ cd game && python3 build.py   # → dist/index.html
 | `04_zzzz4_yamika.js` | Yamika / The Wicked Eye |
 | `04_zzzz5_lunaria.js` | Lunaria / The Moon Sovereign |
 | `04_zzzz6_honored.js` | Kuon / The Honored One |
+| `04_zzzz9b_aimi.js` | Aimi / The Devoted Gaze (§7n) |
+| `06b_statepose.js` | optional `ch.statePose(F)` hook: per-fighter poses for non-attack states (Aimi's defeat/victory) |
 | `04_zzzz7_hollow.js` | The Hollow / The Psychic Sealer (+ the Remnant figure and shadow fragments used by his moves) |
 | `05_stages.js` | Stage definitions (vector) |
 | `05b_stages2.js` | Stages 4–6 (school, clock, forge), pushed onto `STAGES`; helper `layerPt` (layer coords → screen/art px), optional `bgAnim` hook (vector, after the far layer) |
@@ -108,7 +110,7 @@ Combo trials: `{ name, notation, seq:[moveKeys], pre?:[...] }` — checked by th
 ### Cinematics
 `BT.startCine(A, D, CINE.x, {zoom})`; `CINE.x(A, D, f, c)` runs per frame, uses `BT.scriptHit`, `forcePose`, `hidden`, `FX.darkTarget`, and returns `true` when finished (`BT.release(D, vx, vy)`).
 
-## 5. Roster (18 fighters)
+## 5. Roster (19 fighters)
 
 | # | Name | Title | Archetype | HP | Style |
 |---|---|---|---|---|---|
@@ -130,6 +132,7 @@ Combo trials: `{ name, notation, seq:[moveKeys], pre?:[...] }` — checked by th
 | 16 | THE HOLLOW ホロウ | The Psychic Sealer 封印の虚 | Technical / Anti-Ability | 960 | **chibi** |
 | 17 | KANAE カナエ | The Spiteful Bloom 棘の花 | Trickster / Counter | 990 | **chibi** |
 | 18 | TOKINE トキネ | The Nightmare Clock 刻の悪夢 | Time / Clones | 990 | **chibi** |
+| 19 | AIMI アイミ | The Devoted Gaze 執愛の瞳 | Rushdown / Guns | 960 | **chibi** |
 
 ### Signature specials & ultimates
 - **Kazuma:** Blazing Knuckle → Second Blaze, Burst Shot, Iron Wall (counter), Rising Flame, Flame Cyclone (↓→SP2), Earth Breaker, Burning Hammer · Ult **Hundred Inferno Fists**.
@@ -146,6 +149,7 @@ Combo trials: `{ name, notation, seq:[moveKeys], pre?:[...] }` — checked by th
 - **Kuon:** see §7f.
 - **The Hollow:** see §7g.
 - **Kanae / Tokine:** see §7j.
+- **Aimi:** see §7n.
 
 All characters have 3–7 combo trials (74 total).
 
@@ -381,6 +385,21 @@ Beni's request: a Nakamura-inspired and a Kurumi-inspired fighter from his refer
 - Online: `sel` carries `cs` (loadout), host puts both into the `start` cfg (`cos`), guest + rematch reuse it; `Cos.clean` sanitises. `netsync.js` now runs with random intros/victories.
 - Test: `tests/cosmetics.js [ids|all] [-shots]` (every fighter × every intro/victory, pixel + vector, NaN/flow checks, skip, loadout rules; shots to `../../shots_cosmetics/`).
 
+## 7n. Aimi — The Devoted Gaze (`04_zzzz9b_aimi.js`)
+
+Beni asked for "Yuno Gasai (Future Diary)". Like Kanae/Tokine she is an ORIGINAL yandere-archetype fighter with her own name, title and outfits (no copied uniform / dress / cloak designs).
+- Look: long pink twin tails (ropes `tailB`/`tailF` + static root in `hairBack`), magenta eyes, school blouse + navy vest + red ribbon tie, navy plaid skirt with a pink flip phone charm, compact pistol with a heart sticker (`aimGun`). Face `aimFace` expressions: normal, smile, calm, stare (pin-point pupils), grin, crazy (shadow over the eyes), smirk, angry; picked per action in `tick` (`F.aimEx`).
+- **Skins** = Mastery colour slots (purely visual): 0 school · 1 LAVENDER VOW (LV 2) · 2 MINT DIARY (LV 4) · 3 **MIDNIGHT DRESS** (black dress, crimson lacing, rose choker, long gloves) · 4 **LAST HORIZON** (LV 10: long dark mantle over a white dress, gold heart-lock clasp). Outfits via `AIMI.varColors(vi)` (`AIM_DRESS`, `AIM_CLOAK`).
+- **Special unlock (generic):** a `VARIANTS` entry can carry `special: 'arcade'` → `Mastery.unlocked` checks `Mastery.data.unl['<id>:<vi>']` instead of a level. Set by `Mastery.award` on an Arcade clear with that fighter (toast "NEW SKIN UNLOCKED"), merged additively by `Mastery.import` (so the cloud save keeps it; the server keeps top-level keys of the newest upload). The hidden cheat opens it at runtime (`data.clean`) without writing `unl`. Swatch shows ★, message "CLEAR ARCADE WITH AIMI". `varSwatch` now uses `varColors` for outfit skins.
+- **OBSESSION** `F.obs` 0–100: melee hits +2 (specials/follow-ups +4), gun hits +3–5, combos past 4 hits +1, interrupting a startup +8 ("INTERRUPTED", 30f lock), hitting an opponent who backdashed/walked away in the last 45 f +6 ("DON'T RUN~", 60f lock). Fades only after 6 s without gain. At 100 → **UNSTABLE LOVE** (`ulT` 330 f): `xpHaste` 0.25, walk ×1.15, dmg ×1.06, red aura + cracked hearts + stare/crazy faces, Deadly Accuracy faster/heavier (beats normal projectiles), Point-Blank launches, Pursuit +1 hit, Rain 7 rounds, No Escape wider + 3 hits. Then `calmT` 240 f with no gain.
+- Normals: Sweet Jab, Ribbon Kick, **H = HEARTSHOT** (pistol, 128 px reach, st 14), Rising Heel, Lovestruck Lunge. Base `baseNormals({ dmg: 0.96, spd: -1 })`.
+- SP1 **Predatory Dash** (low rush + knee, st 10) → SP1 follow-up **Stay With Me** (point-blank shot, kd) · ↓→SP1 **Deadly Accuracy** (one round ~700 px, st 14) · ↓←SP1 **Point-Blank** (step-in shot, short range, 96 dmg, rec 28) · SP2 **Obsessive Pursuit** (vanish f4–13 = `hidden`, reappears 74 px in front of the foe, max 460 px travel, 4 blockable hits + heel drop `final`; the count starts at 1 outside UL) · ↓→SP2 **Rain of Bullets** (5 rounds every 7 f, last heavy) · ↓↓SP2 **No Escape** (`aimiZone`: 26 f warning circle, then 2 hits while inside, launch -7).
+- Ult **THE SKY BREAKS** `CINE.aimi` ~362 f, 230 dmg (20+40+170): calm look → glitch + vanish → opponent looks around (facing flips, restored) → camera rises, sky darkens and cracks → jagged opening tears open (fragments, light rays) → giant Aimi beyond it (silhouette → colours, glowing eye) → giant hand (`cineFg`) reaches down, closes, lifts them → the sky closes (flash + shockwave) → she is back at her spot fixing her hair, smirks. All random geometry is made at f 1 (sim), draws never use Math.random.
+- Defeat/victory via `statePose`: fall → tries to push up → kneels with a fist (angry face); victory: sweet → "claim" reach toward the opponent → hair fix with a smirk.
+- Sounds (procedural, `01_audio.js`): pistol, cock, aimiLove, aimiVanish, aimiReach, rift, skyCrack, skyTear, skyClose; ULT_FLAVOR 'love'. Cosmetics: intros FOUND YOU / SAFETY OFF, victories ALL MINE / LOVE LETTER, LV 10 title FOREVER YOURS.
+- Balance: `BALANCE.aimi = { dmg: 1.12 }` → ~56% in the bot round robin (3 reps vs all 18).
+- Tests: `mech_aimi.js` (gains, UL/calm, Rain count, Pursuit range/hits/hidden leak, No Escape warning/avoid, skins = same stats, arcade unlock + import + cheat, ult cleanup), `aimi_look.js` (skins/faces/pose sheet), `aimi_ult.js [out] [px] [skin]` (ult frames), `aimi_battle.js` (battle + select previews).
+
 ## 8. History of requests (in order)
 
 1. Original anime fighting game (Kazuma, Yoru, Sera, Goro).
@@ -405,6 +424,7 @@ Beni's request: a Nakamura-inspired and a Kurumi-inspired fighter from his refer
 20. Better audio: CC0 sound effects (Kenney), announcer voice, CC0 music per menu/stage/results, richer synthesized ultimates; procedural sound stays as fallback (§7l).
 21. Six specials for every fighter: new ↓→SP2 moves for the six classics and ↓↓SP2 Seal Drop for Nue (see §5).
 22. Cosmetics (2026-11-26): 2 animated intros + 2 victory poses per fighter, mastery titles (unique LV 10 title per fighter), COLLECTION screen (§7m).
+23. Aimi, The Devoted Gaze (2026-11-26): Beni's "Yuno Gasai" request as an original yandere fighter — OBSESSION / UNSTABLE LOVE, pistol kit, THE SKY BREAKS ult, school / MIDNIGHT DRESS (Arcade clear) / LAST HORIZON (LV 10) skins (§7n).
 
 ## 9. Open ideas / possible next steps
 

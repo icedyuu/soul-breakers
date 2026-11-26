@@ -10,6 +10,7 @@ const BALANCE = {
   nue:     { dmg: 0.97 },
   kazuma:  { dmg: 0.99 },
   tokine:  { dmg: 1.10 },
+  aimi:    { dmg: 1.12 },
   yoru:    { dmg: 1.08 },
   yamika:  { dmg: 1.12 },
   kanae:   { dmg: 1.12 },

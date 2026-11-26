@@ -2,7 +2,7 @@
 // match sim (NetBattle step path: seeded RNG, netEnter) with identical pseudo-random inputs.
 // Page B renders every 2nd frame and page A played a local CPU match first, so per-device
 // state differs. State hashes must match every frame, for every fighter pairing.
-// Usage: node netsync.js [frames=1500] [pairs=all|ring]
+// Usage: node netsync.js [frames=1500] [pairs=all|ring|last]  (last = newest fighter vs everyone, both sides)
 const { chromium } = require('playwright');
 const path = require('path');
 const DIST = process.env.SB_DIST || path.resolve(__dirname, '../dist/index.html');
@@ -41,7 +41,8 @@ const FR = +(process.argv[2] || 1500), MODE = process.argv[3] || 'ring';
   const A = await mk(true, 0), B = await mk(false, 2);
   const n = await A.evaluate(() => CHARS.length), ids = await A.evaluate(() => CHARS.map(c => c.id));
   const pairs = [];
-  if (MODE === 'all') { for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) pairs.push([i, j]); }
+  if (MODE === 'last') { for (let i = 0; i < n; i++) { pairs.push([n - 1, i]); pairs.push([i, n - 1]); } }
+  else if (MODE === 'all') { for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) pairs.push([i, j]); }
   else for (let i = 0; i < n; i++) { pairs.push([i, (i + 1) % n]); pairs.push([i, (i + 5) % n]); }
   let bad = 0;
   for (const [i, j] of pairs) {

@@ -68,8 +68,9 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   // pick fighters: host clicks a card, guest uses keyboard
   const ids = await A.evaluate(() => CHARS.map(c => c.id));
   // colour variants: host picks NUE colour 3 (LV 7 unlocked), guest cycles once with SP2 (T)
-  await A.evaluate(() => { Mastery.rec('nue').xp = 2000; }); await Bp.evaluate(() => { for (const c of CHARS) Mastery.rec(c.id).xp = 300; });
-  await A.evaluate(i => { scene.move(0, i); scene.syncVs(); scene.vs[0] = 3; }, Math.max(0, ids.indexOf('nue')));
+  const HOST = process.env.SB_NET_P1 || 'nue';   // env SB_NET_P1=<id>: the host's fighter (colour 3)
+  await A.evaluate(h => { Mastery.rec(h).xp = 2000; (Mastery.data.unl || (Mastery.data.unl = {}))[h + ':3'] = 1; }, HOST); await Bp.evaluate(() => { for (const c of CHARS) Mastery.rec(c.id).xp = 300; });
+  await A.evaluate(i => { scene.move(0, i); scene.syncVs(); scene.vs[0] = 3; }, Math.max(0, ids.indexOf(HOST)));
   await sleep(300); await A.evaluate(() => scene.confirm(0));
   await Bp.keyboard.press('KeyD'); await sleep(100); await Bp.keyboard.press('KeyD'); await sleep(100); await Bp.keyboard.press('KeyT'); await sleep(300);
   const seenV = await Bp.evaluate(() => scene.vs.slice());
