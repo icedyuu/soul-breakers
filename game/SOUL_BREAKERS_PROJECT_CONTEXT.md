@@ -27,7 +27,7 @@ Handoff notes for continuing development of Beni's browser anime fighting game. 
 | Special 1 / Special 2 | R / T | O / P |
 | Block | H | I |
 
-Universal inputs: L+H = launcher, →→+H = dash attack, SP1+SP2 = ultimate (100 meter). Specials use SP1/SP2 alone, with ↓→ (sp1f/sp2f), ↓← (counter) or ↓↓ (sp2d).
+Game controllers (Xbox/PlayStation) work too, see §7k. Universal inputs: L+H = launcher, →→+H = dash attack, SP1+SP2 = ultimate (100 meter). Specials use SP1/SP2 alone, with ↓→ (sp1f/sp2f), ↓← (counter) or ↓↓ (sp2d).
 
 ## 3. Build & file layout
 
@@ -70,6 +70,7 @@ cd game && python3 build.py   # → dist/index.html
 | `09_scenes.js` | Title, `CpuSetupScene` (difficulty + Single/Arcade), character select (2-row grid, 5 columns when >8 fighters, RANDOM button), VS, results (arcade NEXT FIGHT / CONTINUE), how-to, settings |
 | `09a_peerjs.js`, `09b_net.js` | ONLINE 1v1: PeerJS lib, `Net`, lobby, net select/VS/battle/results (see §7h) |
 | `09c_mastery.js` | MASTERY + COLOR VARIANTS: canvas recolour hook, `VARIANTS` designs, `Mastery` profile (localStorage), select picker, results XP panel, online variant sync (see §7i) |
+| `09d_gamepad.js` | Game controllers via the Gamepad API: `Pad` (presses bound keyboard codes), `PadScene` (SETTINGS → CONTROLLER remapping), see §7k |
 | `10_main.js` | Boot, main loop (fixed 60 fps), resize (`VIEW_K` device-resolution scaling 1–3×), portrait/card/cut-in generation |
 
 ## 4. Engine essentials
@@ -342,6 +343,16 @@ Beni's request: a Nakamura-inspired and a Kurumi-inspired fighter from his refer
 - CPU: Tokine's Rewind is a 'virtual' move for the bot. Roster win rate (Normal bots): Kanae ~41%, Tokine ~44%.
 - Tests: `mech_kanae.js`, `mech_tokine.js`, plus trials/specials/fuzz/cpu/mobile (`SB_P1=kanae|tokine`)/netsync.
 
+## 7k. Game controllers (`09d_gamepad.js`)
+
+- Browser Gamepad API, no extra service: Xbox, PlayStation (detected by id → button names CROSS/CIRCLE/…, L1/R1) and generic "standard" pads, on PC and phones (USB/Bluetooth). Controller 1 = P1, controller 2 = P2.
+- **How it works:** `Pad.poll()` (first line of `tick()` in `10_main.js`) presses the player's bound KEYBOARD codes in `Keys.down`/`Keys.pressed`. So menus, battles, Training, VS CPU, the MOBILE pad (merges P1 keys) and ONLINE (`NetBattle.sample` reads Keys) need no changes, lockstep stays deterministic. Keyboard holds are tracked (`Pad.kb`) so releasing the pad never drops a held key. Buttons still held when the context changes (menu → battle, pause) are latched until released.
+- **Battle layout** (remappable, `Settings.padMap` = button index → action, saved): X/□ Light, Y/△ Medium, B/○ Heavy, A/✕ SP1, RB/R1 SP2, LB/L1 + LT/L2 Block, RT/R2 ULT (= SP1+SP2), MENU/OPTIONS pause (Escape), VIEW/SHARE = reset positions in Training (Digit5). Stick and d-pad move.
+- **Menus** (fixed): A OK (light + Enter for P1), B back (heavy + Escape for P1), X = medium (RANDOM in select), LB/RB = SP1/SP2 (colour cycling), Start = OK / pause.
+- SETTINGS → **CONTROLLER →** (`PadScene`, added to the Settings list by a prototype patch): shows connected pads, remap per action (press a button, conflicts are swapped), reset defaults. How to Play → CONTROLS shows a controller line. Connect/disconnect toast (`Pad.draw`). The MOBILE touch overlay hides while a controller was used in the last 20 s. ONLINE join keypad: d-pad cursor, A types, B deletes/leaves.
+- Not covered: Training dummy option keys [1]–[0] still need a keyboard.
+- Test: `tests/gamepad.js` (fake `navigator.getGamepads`: menus, settings page, remap/swap/reset, two-cursor select, light attack, walking, ULT, pause/resume, P2 pad, keyboard+pad, keypad; shots to `../shots_gamepad/`).
+
 ## 8. History of requests (in order)
 
 1. Original anime fighting game (Kazuma, Yoru, Sera, Goro).
@@ -362,6 +373,7 @@ Beni's request: a Nakamura-inspired and a Kurumi-inspired fighter from his refer
 16. ONLINE 1v1 between two devices (free PeerJS/WebRTC, lockstep netcode) + installable web app on GitHub Pages (icedyuu.github.io/soul-breakers).
 17. Mastery system (per-fighter levels from Arcade / VS CPU / Online, saved locally, ready for future accounts) + 4 unlockable colour variants per fighter, shown to the online opponent.
 18. Kanae, The Spiteful Bloom (Nakamura-inspired trickster/counter, REBELLION + UNRESTRAINED, eye-flower ult) and Tokine, The Nightmare Clock (Kurumi-inspired time/clone fighter, TIME + SOVEREIGNTY, clock ult), each with an LV10 alt outfit.
+19. Game controller support (Xbox/PlayStation/generic via the Gamepad API, P1/P2, menus, online, remapping in SETTINGS → CONTROLLER).
 
 ## 9. Open ideas / possible next steps
 
