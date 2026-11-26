@@ -338,7 +338,7 @@ Beni's request: a Nakamura-inspired and a Kurumi-inspired fighter from his refer
   - **Clones** are sim entities in `F.clones` `{x,y,face,t,at,kind,dmg,life}`; cap 4 (oldest fades), they fire `tokBullet`/`tokSlash` projectiles, shatter if hit before acting, cleared on KO/round end.
   - SP1 Haste (150f, `xpHaste`), ↓→SP1 Slow bullet (`slowT` + slower recovery), ↓←SP1 Temporal Clone (15: kick if <170 px else shot), SP2 Stop (30: freezes the foe ~38f, 240f re-freeze lock), ↓→SP2 Echoes (40: 3 clones, 4 in Sovereignty), ↓↓SP2 Rewind (20: returns to the marked spot after 80f unless hit; "BROKEN").
   - Ult **Endless Nightmare** `CINE.tokine` ~344f, ~254 dmg: giant roman-numeral clock, nightmare dimension, 7 clones fire in sequence, collapse, slow final bullet, shatter.
-- Generic hooks added: `ch.varColors(vi)` returns an outfit palette for a colour variant (used by `chArt`), `makePortrait` passes `opts.pal`. Palettes switch to the alt look when `F.variant===4`. New sounds in `01_audio.js`: kick, gunshot, tock, bell, gear, rewind, bloom.
+- Generic hooks added: `ch.varColors(vi)` returns an outfit palette for a colour variant (used by `chArt`), `makePortrait` passes `opts.pal`; menu figures (select, VS, results) get the outfit via `withVarPal` → `RC.pal[ch.id]` read in `drawFigure`. Palettes switch to the alt look when `F.variant===4`. New sounds in `01_audio.js`: kick, gunshot, tock, bell, gear, rewind, bloom.
 - CPU: Tokine's Rewind is a 'virtual' move for the bot. Roster win rate (Normal bots): Kanae ~41%, Tokine ~44%.
 - Tests: `mech_kanae.js`, `mech_tokine.js`, plus trials/specials/fuzz/cpu/mobile (`SB_P1=kanae|tokine`)/netsync.
 

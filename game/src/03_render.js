@@ -275,7 +275,7 @@ function drawHead(g, ch, c, R, o) {
 // ---------- full figure ----------
 function drawFigure(g, ch, p, x, y, facing, o = {}) {
   if (ch.drawCustom) { ch.drawCustom(g, ch, p, x, y, facing, o); return skeleton(p, ch.dims); }
-  const s = ch.scale * (o.scale || 1), sk = skeleton(p, ch.dims), c = o.pal || ch.colors;
+  const s = ch.scale * (o.scale || 1), sk = skeleton(p, ch.dims), c = o.pal || (typeof RC !== 'undefined' && RC.pal && RC.pal[ch.id]) || ch.colors;
   const R = { mono: o.mono || null, ol: 2.4 };
   if (o.ropes && !o.mono && ch.ropes) {
     for (const rs of ch.ropes) {
