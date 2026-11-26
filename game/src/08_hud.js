@@ -164,9 +164,9 @@ function drawPracticePanel(g, bt) {
   g.textAlign = 'left'; g.textBaseline = 'alphabetic';
   g.font = `italic 900 20px ${FONT_T}`; strokeText(g, bt.mode === 'training' ? 'TRAINING  修行' : 'PRACTICE  練習', 40, 146, '#ffd84a', OUTLINE, 4);
   const lines = [
-    ['Last hit', `${Math.round(D.lastDmg)} dmg`], ['Combo', `${D.comboHits} hits · ${Math.round(D.comboDmg)} dmg`],
+    ['Last hit', `${Math.round(D.lastDmg)} dmg`], D.comboHits || !bt.lastCombo ? ['Combo', `${D.comboHits} hits · ${Math.round(D.comboDmg)} dmg (${Math.round(D.comboDmg / D.maxHp * 100)}%)`] : ['Last combo', `${bt.lastCombo.hits} hits · ${Math.round(bt.lastCombo.dmg)} dmg (${Math.round(bt.lastCombo.dmg / D.maxHp * 100)}%)`],
     ['Scaling', D.comboRaw > 0 ? `${Math.round(D.comboDmg / D.comboRaw * 100)}%` : '100%'], ['Juggle', `${D.juggle} / ${A.ch.juggleMax || 6}`],
-    ['Max combo', `${A.stats.maxCombo} hits`], ['Dummy', `${ST[dm.stance]} · ${GD[dm.guard]}`], ['Action', AC[dm.action]],
+    ['Best combo', `${A.stats.maxCombo} hits · ${Math.round(bt.bestComboDmg || 0)} dmg`], ['Dummy', `${ST[dm.stance]} · ${GD[dm.guard]}${dm.tech ? ' · TECH' : ''}`], ['Action', AC[dm.action]],
     ['Meter ∞ · Burst', `${bt.infMeter ? 'ON' : 'OFF'} · ${D.burstReady ? 'ready' : 'used'}`],
   ];
   g.font = `600 13px ${FONT_UI}`;
@@ -175,7 +175,7 @@ function drawPracticePanel(g, bt) {
   g.restore();
   g.font = `600 12px ${FONT_UI}`; g.textAlign = 'center'; g.fillStyle = 'rgba(230,220,255,0.9)';
   g.fillText('[1] Stance  [2] Guard  [3] Action  [4] Meter ∞  [5] Reset  [6] Reset at wall  [7] Hitboxes', W / 2, 110);
-  g.fillText(bt.mode === 'training' ? '[8] Moves / Trials / Frame data  [9] Next trial  [0] Prev   ·   ESC: menu & move list' : 'BLOCK+HEAVY while hit = Soul Burst   ·   ESC: menu & move list', W / 2, 126);
+  g.fillText(bt.mode === 'training' ? '[8] Moves / Trials / Frame data  [9] Next trial  [0] Prev   ·   ESC: options, moves & combo list' : 'BLOCK+HEAVY while hit = Soul Burst   ·   ESC: options, moves & combo list', W / 2, 126);
   if (bt.mode === 'training') { g.save(); g.globalAlpha = bt.panelFadeR; drawTrainingPanel(g, bt); g.restore(); }
 }
 
