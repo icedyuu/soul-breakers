@@ -326,7 +326,7 @@ function makePortrait(ch, w, h, opts = {}) {
       if (ch.ropes) for (const rs of ch.ropes) { let r = ropes[rs.id]; if (!r) r = ropes[rs.id] = new Rope(rs.n, rs.seg * s); const a = rs.at(sk, ch.dims.headR), wp = toWorld(x, y, 1, s, p, sk, a[0], a[1]); r.update(wp[0], wp[1], -(rs.wind || 0.55) * 2, (rs.grav ?? 0.3) * s); }
     }
     const fake = {}; if (ch.ropes) for (const rs of ch.ropes) fake[rs.id] = ropes[rs.id];
-    drawFigure(g, ch, p, x, y, 1, { scale: sc, expr: opts.expr || 'normal', glow: opts.glow, T: 0, ropes: fake });
+    drawFigure(g, ch, p, x, y, 1, { pal: opts.pal, scale: sc, expr: opts.expr || 'normal', glow: opts.glow, T: 0, ropes: fake });
     if (opts.vignette !== false) {
       const v = g.createRadialGradient(w / 2, h / 2, w * 0.2, w / 2, h / 2, w * 0.75);
       v.addColorStop(0, 'rgba(0,0,0,0)'); v.addColorStop(1, 'rgba(0,0,0,0.6)'); g.fillStyle = v; g.fillRect(0, 0, w, h);

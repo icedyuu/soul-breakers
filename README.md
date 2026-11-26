@@ -1,6 +1,6 @@
 # SOUL BREAKERS — 魂砕き
 
-Anime fighting game in the browser (HTML5 Canvas + JavaScript, no engine). 16 chibi fighters, 1P vs CPU, local 2P, Training — and **ONLINE 1 VS 1** between two phones or PCs.
+Anime fighting game in the browser (HTML5 Canvas + JavaScript, no engine). 18 chibi fighters, 1P vs CPU, local 2P, Training — and **ONLINE 1 VS 1** between two phones or PCs.
 
 **Play:** https://icedyuu.github.io/soul-breakers/
 

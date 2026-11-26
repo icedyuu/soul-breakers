@@ -193,6 +193,18 @@ const VARIANTS = {
     { n: 'WHITE JACKET', rules: [{ grey: 'also', h: [200, 250], l: [0.06, 0.3], inv: 1, lm: 0.95 }] },
     { n: 'INFINITY GOLD', glow: '#ffd860', rules: [{ grey: 'only', l: [0.7, 1], hue: 45, ss: 0.85, lm: 0.85 }, { grey: 'also', l: [0.06, 0.3], hue: 45, ss: 0.05, lm: 0.5 }, { h: [180, 235], hue: 45, s: 1.1 }] },
   ],
+  kanae: [
+    { n: 'BRUISED BLUE', rules: [{ h: [330, 360], hue: 220 }, { h: [0, 15], hue: 220 }] },
+    { n: 'ENVY', rules: [{ h: [330, 360], hue: 130, s: 0.8 }, { h: [0, 15], hue: 130, s: 0.8 }, { h: [220, 250], hue: 150, ss: 0.3 }] },
+    { n: 'SCHOOL\'S OUT', rules: [{ h: [220, 250], hue: 25, s: 0.9, lm: 1.5 }, { h: [330, 360], hue: 30 }, { h: [0, 15], hue: 30 }] },
+    { n: 'BLACK DAYS', glow: '#ff4a60', rules: [] },   // LV 10: her other look (see KANAE.varColors)
+  ],
+  tokine: [
+    { n: 'MIDNIGHT ROSE', rules: [{ h: [335, 360], hue: 285 }, { h: [0, 12], hue: 285 }] },
+    { n: 'GILDED HOUR', rules: [{ h: [335, 360], hue: 40, s: 1.1 }, { h: [0, 12], hue: 40, s: 1.1 }] },
+    { n: 'WHITE NIGHTMARE', rules: [{ grey: 'also', h: [280, 360], l: [0.03, 0.2], inv: 1, lm: 0.9 }] },
+    { n: 'AFTER SCHOOL', glow: '#ffcf5a', rules: [] },   // LV 10: her school-uniform look (see TOKINE.varColors)
+  ],
   hollow: [
     { n: 'CRIMSON SEAL', rules: [{ h: [240, 300], hue: 355 }] },
     { n: 'MIDNIGHT BLUE', rules: [{ h: [240, 300], hue: 195 }, { grey: 'also', l: [0.12, 0.45], hue: 225, ss: 0.35 }] },
@@ -237,7 +249,8 @@ function chArt(ch, vi, k) {
   if (!e) {
     const [w, h, o] = VAR_ART[k], mr = Math.random;
     if (typeof NetRng !== 'undefined') Math.random = NetRng.orig;   // never touch the online sim RNG
-    try { e = A[key] = { hd: withRecolor(fn, () => makePortrait(ch, w, h, o)), px: null }; } finally { Math.random = mr; }
+    const vp = ch.varColors && ch.varColors(vi), o2 = vp ? { ...o, pal: vp } : o;   // ch.varColors(vi): optional outfit palette for a variant (Kanae / Tokine LV 10)
+    try { e = A[key] = { hd: withRecolor(fn, () => makePortrait(ch, w, h, o2)), px: null }; } finally { Math.random = mr; }
   }
   if (!px) return e.hd;
   return e.px || (e.px = PIX.pixelizeCanvas(e.hd, VAR_ART[k][3], { outline: true, step: 18 }));

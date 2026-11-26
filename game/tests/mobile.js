@@ -48,12 +48,12 @@ require('fs').mkdirSync(OUT, { recursive: true });
   await touch('touchEnd', []);
   ok(s.mk === 'sp1f', `SP1 + forward → ${s.mk}`);
   await page.screenshot({ path: OUT + '/battle_sp1f.png' });
-  await page.evaluate(() => { BT.p1.setState('idle'); BT.p1.cd = {}; BT.p1.moveKey = null; }); await page.waitForTimeout(300);
+  await page.evaluate(() => { BT.p1.setState('idle'); BT.p1.cd = {}; BT.p1.moveKey = null; BT.p1.reb = 60; BT.p1.time = 60; }); await page.waitForTimeout(300);
   // SP1 + back => counter
   await touch('touchStart', [{ x: 175, y: 560, id: 1 }]); await touch('touchMove', [{ x: 90, y: 560, id: 1 }]); await page.waitForTimeout(60);
   await touch('touchStart', [{ x: 90, y: 560, id: 1 }, { x: 950, y: 496, id: 3 }]); s = await waitMove(); await touch('touchEnd', []);
   ok(s.mk === 'counter', `SP1 + back → ${s.mk}`);
-  await page.evaluate(() => { BT.p1.setState('idle'); BT.p1.cd = {}; BT.p1.moveKey = null; BT.p1.lim = 100; BT.p1.limT = BT.p1.T + 9999; if (BT.p1.ch.id === 'hollow') BT.p1.ch.applyTrial(BT.p1, { authority: 60 }); }); await page.waitForTimeout(300);
+  await page.evaluate(() => { BT.p1.setState('idle'); BT.p1.cd = {}; BT.p1.moveKey = null; BT.p1.lim = 100; BT.p1.limT = BT.p1.T + 9999; if (BT.p1.ch.id === 'hollow') BT.p1.ch.applyTrial(BT.p1, { authority: 60 }); BT.p1.reb = 60; BT.p1.time = 60; }); await page.waitForTimeout(300);
   // SP2 + down => sp2d
   await touch('touchStart', [{ x: 175, y: 560, id: 1 }]); await touch('touchMove', [{ x: 175, y: 650, id: 1 }]); await page.waitForTimeout(60);
   await touch('touchStart', [{ x: 175, y: 650, id: 1 }, { x: 1062, y: 470, id: 4 }]); s = await waitMove(); await touch('touchEnd', []);
