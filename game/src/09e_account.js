@@ -34,7 +34,7 @@ const Cloud = {
       try { r = await fetch(c.url.replace(/\/$/, '') + '/rest/v1/rpc/' + fn, { method: 'POST', headers: h, body: JSON.stringify(args || {}), signal: ctl && ctl.signal }); }
       catch (e) { throw new Error('NET'); }
       const t = await r.text(); let j = null; try { j = t ? JSON.parse(t) : null; } catch (e) { }
-      if (!r.ok) throw new Error(j && /^[A-Z_]+$/.test(j.message || '') ? j.message : 'NET');
+      if (!r.ok) throw new Error(j && j.code === 'PGRST202' ? 'MISSING_FN' : j && /^[A-Z_]+$/.test(j.message || '') ? j.message : 'NET');
       if (j && typeof j === 'object' && typeof j.error === 'string') throw new Error(j.error);
       return j;
     } finally { this.busy--; if (to) clearTimeout(to); }
