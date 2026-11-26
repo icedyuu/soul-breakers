@@ -10812,33 +10812,38 @@ NUE_BADGES.human.push(['sp2d', '↓↓S2 DROP']);
 
 [KAZUMA, YORU, SERA, GORO, FROGS, CONDUCTOR, NUE].forEach(finalizeMoves);
 
-// Balance pass (2026-11-26): per-fighter tuning measured with tests/balance.js (full bot-vs-bot round robin).
+// Balance pass (2026-11-26, re-tuned after the higher jumps in 04_zzzzc_jump.js): per-fighter tuning measured with tests/balance.js (full bot-vs-bot round robin).
 // dmg: multiplies all damage the fighter deals; hp: replaces base health. Kits, frame data and identities stay untouched.
 const BALANCE = {
-  goro:    { dmg: 0.78, hp: 1030 },
+  goro:    { dmg: 0.76, hp: 1030 },
   borgar:  { dmg: 0.84, hp: 1130 },
-  saint:   { dmg: 0.78 },
+  saint:   { dmg: 0.72 },
   buzzu:   { dmg: 0.82 },
   conductor: { dmg: 0.86 },
-  frogs:   { dmg: 0.94 },
+  frogs:   { dmg: 0.91 },
   nue:     { dmg: 0.97 },
   kazuma:  { dmg: 0.99 },
   tokine:  { dmg: 1.10 },
   yoru:    { dmg: 1.08 },
-  yamika:  { dmg: 1.14 },
-  kanae:   { dmg: 1.08 },
-  lunaria: { dmg: 1.14 },
+  yamika:  { dmg: 1.12 },
+  kanae:   { dmg: 1.12 },
+  lunaria: { dmg: 1.20 },
   cardmaster: { dmg: 1.14 },
-  sera:    { dmg: 1.15 },
+  sera:    { dmg: 1.20 },
   reika:   { dmg: 1.28, hp: 980 },
   hollow:  { dmg: 1.27, hp: 1010 },
-  honored: { dmg: 1.30, hp: 1040 },
+  honored: { dmg: 1.32, hp: 1040 },
 };
 for (const ch of CHARS) {
   const b = BALANCE[ch.id]; if (!b) continue;
   if (b.hp) ch.health = b.hp;
   if (b.dmg && b.dmg !== 1) { const base = ch.dmgBonus, m = b.dmg; ch.dmgBonus = base ? F => base(F) * m : () => m; }
 }
+
+// Jump pass (2026-11-26): every fighter jumps higher and a little farther so a cornered fighter can always
+// jump over the opponent (corner escape without teleport). One factor for all, so relative differences stay.
+const JUMP_TUNE = { v: 1.1, x: 1.12 };
+for (const ch of CHARS) { ch.jumpV *= JUMP_TUNE.v; ch.jumpX *= JUMP_TUNE.x; }
 
 // =============================== STAGES ===============================
 // Each stage: sky gradient, parallax layers pre-rendered to canvases
@@ -12214,7 +12219,10 @@ class Battle {
     const skip = s => s === 'grabbed' || s === 'cine' || s === 'knockdown';
     if (!skip(a.state) && !skip(b.state)) {
       const wa = (a.ch.hurt?.w ?? 52) * 0.77 * a.s * (a.ch.wide || 1), wb = (b.ch.hurt?.w ?? 52) * 0.77 * b.s * (b.ch.wide || 1);
-      const ha = (a.state === 'crouch' ? 110 : 165) * a.s, hb = (b.state === 'crouch' ? 110 : 165) * b.s;
+      // a grounded fighter's pushbox stops at the shoulders against a jumper (the big chibi head can be jumped over),
+      // so a jump from the corner carries over the opponent instead of shoving them along the floor
+      const air = !a.onGround !== !b.onGround;
+      const ha = (a.state === 'crouch' ? 110 : air && a.onGround ? 118 : 165) * a.s, hb = (b.state === 'crouch' ? 110 : air && b.onGround ? 118 : 165) * b.s;
       const vOver = a.y > b.y - hb && b.y > a.y - ha;
       const dx = b.x - a.x, ov = (wa + wb) / 2 - Math.abs(dx);
       if (vOver && ov > 0) {

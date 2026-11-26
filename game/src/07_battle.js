@@ -331,7 +331,10 @@ class Battle {
     const skip = s => s === 'grabbed' || s === 'cine' || s === 'knockdown';
     if (!skip(a.state) && !skip(b.state)) {
       const wa = (a.ch.hurt?.w ?? 52) * 0.77 * a.s * (a.ch.wide || 1), wb = (b.ch.hurt?.w ?? 52) * 0.77 * b.s * (b.ch.wide || 1);
-      const ha = (a.state === 'crouch' ? 110 : 165) * a.s, hb = (b.state === 'crouch' ? 110 : 165) * b.s;
+      // a grounded fighter's pushbox stops at the shoulders against a jumper (the big chibi head can be jumped over),
+      // so a jump from the corner carries over the opponent instead of shoving them along the floor
+      const air = !a.onGround !== !b.onGround;
+      const ha = (a.state === 'crouch' ? 110 : air && a.onGround ? 118 : 165) * a.s, hb = (b.state === 'crouch' ? 110 : air && b.onGround ? 118 : 165) * b.s;
       const vOver = a.y > b.y - hb && b.y > a.y - ha;
       const dx = b.x - a.x, ov = (wa + wb) / 2 - Math.abs(dx);
       if (vOver && ov > 0) {
