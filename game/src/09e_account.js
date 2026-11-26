@@ -314,7 +314,7 @@ class AdminScene {
     this.busy = true; this.out = '…'; this.isErr = false;
     try {
       const T = Cloud.tok; let r;
-      if (a === 'grant') { const id = this.ci < 0 ? '*' : CHARS[this.ci].id; r = await Cloud.rpc('sb_admin_grant', { p_token: T, p_user: u, p_ch: id, p_lv: this.lv }); this.out = `${r.name}: ${this.ci < 0 ? 'ALL FIGHTERS' : CHARS[this.ci].name} → LV ${this.lv}. Unlocks on their next login.`; }
+      if (a === 'grant') { const id = this.ci < 0 ? '*' : CHARS[this.ci].id; r = await Cloud.rpc('sb_admin_grant', { p_token: T, p_user: u, p_ch: id, p_lv: this.lv }); this.out = `${r.name}: ${this.ci < 0 ? 'ALL FIGHTERS' : CHARS[this.ci].name} → LV ${this.lv} (fighter unlocked too). Unlocks on their next login.`; }
       if (a === 'arc') { const id = this.ci < 0 ? 'arc_all' : 'arc_' + CHARS[this.ci].id; r = await Cloud.rpc('sb_admin_grant', { p_token: T, p_user: u, p_ch: id, p_lv: 1 }); this.out = `${r.name}: ARCADE SKIN for ${this.ci < 0 ? 'ALL FIGHTERS' : CHARS[this.ci].name}. Unlocks on their next login.`; }
       if (a === 'look') { r = await Cloud.rpc('sb_admin_user', { p_token: T, p_user: u }); const gn = k => k === '*' ? 'ALL' : k === 'arc_all' ? 'ARCADE SKINS: ALL' : k.startsWith('arc_') ? 'ARCADE SKIN: ' + (chById(k.slice(4)) || { name: k }).name : (chById(k) || { name: k }).name;
         const gr = Object.entries(r.grants || {}).map(([k, v]) => k.startsWith('arc_') ? gn(k) : `${gn(k)} ${v}`).join(', '); this.out = `${r.name} · rating ${r.rating} · ${r.wins} W / ${r.losses} L${r.banned ? ' · BANNED' : ''} · given: ${gr || 'nothing'}`; }
