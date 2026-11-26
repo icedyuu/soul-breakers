@@ -212,6 +212,18 @@ const VARIANTS = {
     { n: 'LAST HORIZON', glow: '#ffc0d6', rules: [] },        // LV 10: the long mantle (see AIMI.varColors)
     { n: 'MIDNIGHT DRESS', rules: [], special: 'arcade' },   // her black dress (see AIMI.varColors) — unlocked by clearing Arcade with her
   ],
+  hachi: [
+    { n: 'SUMMER DUSK', rules: [{ grey: 'only', l: [0.55, 1], hue: 32, ss: 0.38, lm: 0.92 }] },
+    { n: 'MOURNING', rules: [{ grey: 'only', l: [0.55, 1], lm: 0.2 }, { grey: 'only', l: [0.06, 0.3], lm: 2.4 }] },
+    { n: 'RED SUMMER', rules: [{ grey: 'only', l: [0.55, 1], hue: 355, ss: 0.62, lm: 0.62 }] },
+    { n: 'TRUE FORM', glow: '#dfe6ff', rules: [{ grey: 'also', l: [0.55, 1], hue: 228, ss: 0.3, lm: 0.97 }, { grey: 'also', l: [0.06, 0.3], hue: 250, ss: 0.45, lm: 1.7 }] },
+  ],
+  kuchi: [
+    { n: 'CHARCOAL COAT', rules: [{ h: [25, 55], ss: 0.05, lm: 0.45 }] },
+    { n: 'NAVY COAT', rules: [{ h: [25, 55], hue: 222, s: 0.9, lm: 0.5 }] },
+    { n: 'CRIMSON COAT', rules: [{ h: [25, 55], hue: 352, s: 1.4, lm: 0.58 }] },
+    { n: 'TRUE SMILE', glow: '#ff2a4a', rules: [{ h: [25, 55], hue: 350, ss: 0.12, lm: 0.2 }, { h: [340, 20], hue: 350, s: 1.2, la: 0.05 }] },
+  ],
   hollow: [
     { n: 'CRIMSON SEAL', rules: [{ h: [240, 300], hue: 355 }] },
     { n: 'MIDNIGHT BLUE', rules: [{ h: [240, 300], hue: 195 }, { grey: 'also', l: [0.12, 0.45], hue: 225, ss: 0.35 }] },

@@ -1,13 +1,15 @@
 // Balance sweep: node balance.js [level=1] [reps=1] [shard=0] [shards=1] > out.jsonl
+// SB_ONLY=a,b limits to matches involving those fighters.
 // Full round robin (every ordered pair, both sides) of bot vs bot at the same level; prints one JSON line per match.
 const { open } = require('./harness');
 (async () => {
   const lv = +(process.argv[2] ?? 1), reps = +(process.argv[3] ?? 1), shard = +(process.argv[4] ?? 0), shards = +(process.argv[5] ?? 1);
   const { browser, page, errors } = await open();
   const ids = await page.evaluate(() => CHARS.map(c => c.id));
+  const ONLY = process.env.SB_ONLY ? process.env.SB_ONLY.split(',') : null; // only matches involving these fighters
   let k = 0;
   for (let rep = 0; rep < reps; rep++) for (let i = 0; i < ids.length; i++) for (let j = 0; j < ids.length; j++) {
-    if (i === j) continue; if (k++ % shards !== shard) continue;
+    if (i === j) continue; if (ONLY && !ONLY.includes(ids[i]) && !ONLY.includes(ids[j])) continue; if (k++ % shards !== shard) continue;
     const seed = (i * 31 + j * 7 + rep * 13);
     const r = await page.evaluate(([p1, p2, lv, seed]) => {
       Settings.roundTime = 60; Settings.pixel = false;

@@ -171,6 +171,29 @@ const Sound = (() => {
     skyCrack() { noise(0.06, 0.6, 'highpass', 5000, 9000, 1); for (let i = 0; i < 5; i++) noise(0.04, 0.35, 'bandpass', 3000 - i * 300, 2000, 4, 0.03 + i * 0.035, 0.5); osc('sine', 2400, 1800, 0.3, 0.05, 0, 0.9); },
     skyTear() { noise(1.3, 0.6, 'bandpass', 900, 5200, 0.9, 0, 0.6); noise(1.4, 0.35, 'lowpass', 300, 1800, 1, 0.05, 0.6); for (let i = 0; i < 10; i++) noise(0.05, 0.3, 'highpass', 4000, 7000, 2, i * 0.11, 0.4); osc('sawtooth', 60, 140, 1.3, 0.08, 0, 0.7); },
     skyClose() { osc('sine', 90, 22, 1.6, 0.9, 0, 0.5); noise(0.3, 0.7, 'bandpass', 4000, 300, 0.7); noise(1.6, 0.5, 'lowpass', 2400, 60, 0.6, 0.05, 0.8); osc('sawtooth', 400, 40, 0.5, 0.1, 0, 0.6); },
+    // Hachishakusama: a distant, low, unnatural "po… po… po…" (plosive click + two vowel formants, lots of reverb)
+    po(n = 3, v = 1) {
+      for (let i = 0; i < n; i++) {
+        const d = i * 0.44, a = 0.16 * v;
+        noise(0.025, 0.25 * a / 0.16, 'highpass', 1800, 2400, 1, d, 0.95);
+        osc('sine', 128, 104, 0.2, a, d + 0.012, 0.95); osc('sine', 440, 380, 0.17, a * 0.45, d + 0.012, 0.95); osc('sine', 820, 700, 0.14, a * 0.18, d + 0.012, 0.95);
+        noise(0.16, 0.05 * v, 'bandpass', 520, 420, 5, d + 0.012, 0.95);
+      }
+    },
+    wind() { noise(2.2, 0.16, 'bandpass', 380, 900, 0.8, 0, 0.7); noise(2.0, 0.08, 'highpass', 2400, 1600, 0.6, 0.3, 0.7); },
+    hachiStep() { noise(0.07, 0.2, 'lowpass', 420, 120, 1, 0, 0.8); osc('sine', 70, 50, 0.1, 0.12, 0, 0.8); },
+    hachiDistort() { osc('sine', 64, 30, 1.1, 0.3, 0, 0.8); osc('sine', 1400, 260, 0.7, 0.04, 0.05, 0.9); noise(0.9, 0.12, 'bandpass', 300, 1200, 6, 0, 0.8); },
+    hachiReach() { osc('sawtooth', 95, 38, 0.45, 0.07, 0, 0.6); noise(0.4, 0.22, 'bandpass', 1300, 300, 3, 0, 0.5); osc('square', 220, 60, 0.3, 0.03, 0.1); },
+    hachiSlash() { noise(0.16, 0.45, 'bandpass', 900, 3200, 1.2, 0, 0.5); osc('sine', 180, 60, 0.2, 0.25); },
+    shadowRise() { noise(0.45, 0.32, 'lowpass', 160, 900, 1.2, 0, 0.6); osc('sine', 46, 82, 0.45, 0.28, 0, 0.5); },
+    silence() { osc('sine', 40, 38, 0.06, 0.001); },
+    // Kuchisake-onna: scissors, breath, the mask
+    snip() { osc('square', 3400, 2700, 0.018, 0.1); noise(0.04, 0.4, 'highpass', 5200, 8000, 2); osc('triangle', 2500, 2300, 0.08, 0.06, 0.05); noise(0.03, 0.3, 'highpass', 6000, 8000, 2, 0.06); },
+    shear() { noise(0.2, 0.55, 'bandpass', 4200, 1400, 1.2); osc('triangle', 1900, 1200, 0.16, 0.1); osc('square', 3000, 2600, 0.02, 0.08, 0.12); noise(0.03, 0.35, 'highpass', 6000, 8000, 2, 0.12); },
+    breath() { noise(0.7, 0.07, 'bandpass', 900, 600, 1.4, 0, 0.4); noise(0.6, 0.05, 'bandpass', 700, 1000, 1.4, 0.8, 0.4); },
+    maskOff() { noise(0.28, 0.22, 'bandpass', 2400, 1200, 0.9); osc('sine', 300, 120, 0.4, 0.05, 0.2, 0.6); },
+    kuchiVanish() { osc('sine', 700, 70, 0.26, 0.1, 0, 0.6); noise(0.22, 0.24, 'bandpass', 3000, 600, 1, 0, 0.5); },
+    fear() { osc('sine', 55, 40, 1.2, 0.35, 0, 0.6); osc('sawtooth', 220, 210, 1.0, 0.03, 0.1, 0.8); osc('sawtooth', 233, 222, 1.0, 0.03, 0.1, 0.8); noise(1.0, 0.1, 'highpass', 6000, 3000, 1, 0, 0.8); },
   };
   // extra synth layers that can sit under a sample (AUDIO_FILES.sfx[name].syn)
   const L = {
@@ -181,7 +204,7 @@ const Sound = (() => {
   };
   // ultimate start: one shared riser + an element "colour" per fighter
   const ULT_FLAVOR = { kazuma: 'fire', saint: 'holy', sera: 'storm', goro: 'earth', yoru: 'void', frogs: 'water', conductor: 'steel', cardmaster: 'rune', nue: 'beast',
-    borgar: 'earth', buzzu: 'steel', reika: 'blood', yamika: 'void', lunaria: 'holy', honored: 'void', hollow: 'blood', remnant: 'blood', fragment: 'void', kanae: 'steel', tokine: 'time', aimi: 'love' };
+    borgar: 'earth', buzzu: 'steel', reika: 'blood', yamika: 'void', lunaria: 'holy', honored: 'void', hollow: 'blood', remnant: 'blood', fragment: 'void', kanae: 'steel', tokine: 'time', aimi: 'love', hachi: 'po', kuchi: 'cut' };
   S.ultStart = (id) => {
     riser(0.85, 90, 520, 0.12);
     osc('sine', 45, 90, 0.9, 0.35, 0, 0.3);
@@ -199,6 +222,8 @@ const Sound = (() => {
     else if (fl === 'beast') { osc('sawtooth', 140, 60, 0.9, 0.18, 0.35, 0.4); noise(0.8, 0.3, 'lowpass', 900, 150, 0.8, 0.35, 0.4); }
     else if (fl === 'blood') { osc('sine', 62, 38, 0.18, 0.6, 0.2); osc('sine', 58, 34, 0.2, 0.5, 0.45); noise(0.8, 0.25, 'lowpass', 1400, 150, 2.5, 0.1, 0.6); }
     else if (fl === 'love') { osc('sine', 62, 38, 0.18, 0.6, 0.2); osc('sine', 58, 34, 0.2, 0.5, 0.45); osc('sine', 1760, 440, 1.0, 0.06, 0.5, 0.9); noise(0.7, 0.2, 'bandpass', 500, 3000, 3, 0.6, 0.7); }
+    else if (fl === 'po') { noise(1.6, 0.14, 'bandpass', 380, 900, 0.8, 0.1, 0.8); S.po(2, 0.8); }
+    else if (fl === 'cut') { for (let i = 0; i < 3; i++) { osc('square', 3400, 2700, 0.018, 0.08, 0.5 + i * 0.12); noise(0.04, 0.3, 'highpass', 5200, 8000, 2, 0.5 + i * 0.12); } osc('sine', 62, 38, 0.18, 0.5, 0.2); }
     else if (fl === 'time') { for (let i = 0; i < 6; i++) osc('square', 2100 - i * 120, 1900 - i * 120, 0.02, 0.1, i * 0.12, 0.6); osc('sine', 196, 194, 1.4, 0.18, 0.7, 0.9); }
   };
   function play(name, ...a) {

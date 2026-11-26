@@ -110,7 +110,7 @@ Combo trials: `{ name, notation, seq:[moveKeys], pre?:[...] }` — checked by th
 ### Cinematics
 `BT.startCine(A, D, CINE.x, {zoom})`; `CINE.x(A, D, f, c)` runs per frame, uses `BT.scriptHit`, `forcePose`, `hidden`, `FX.darkTarget`, and returns `true` when finished (`BT.release(D, vx, vy)`).
 
-## 5. Roster (19 fighters)
+## 5. Roster (21 fighters)
 
 | # | Name | Title | Archetype | HP | Style |
 |---|---|---|---|---|---|
@@ -133,6 +133,8 @@ Combo trials: `{ name, notation, seq:[moveKeys], pre?:[...] }` — checked by th
 | 17 | KANAE カナエ | The Spiteful Bloom 棘の花 | Trickster / Counter | 990 | **chibi** |
 | 18 | TOKINE トキネ | The Nightmare Clock 刻の悪夢 | Time / Clones | 990 | **chibi** |
 | 19 | AIMI アイミ | The Devoted Gaze 執愛の瞳 | Rushdown / Guns | 960 | **chibi** |
+| 20 | HACHISHAKUSAMA 八尺様 | The Eight-Foot Tall Woman 八尺の女 | Zoner / Space Control | 1050 | **chibi** (tall) |
+| 21 | KUCHISAKE-ONNA 口裂け女 | The Slit-Mouth Woman 口裂けの女 | Rushdown / Mix-up | 1000 | **chibi** |
 
 ### Signature specials & ultimates
 - **Kazuma:** Blazing Knuckle → Second Blaze, Burst Shot, Iron Wall (counter), Rising Flame, Flame Cyclone (↓→SP2), Earth Breaker, Burning Hammer · Ult **Hundred Inferno Fists**.
@@ -150,6 +152,7 @@ Combo trials: `{ name, notation, seq:[moveKeys], pre?:[...] }` — checked by th
 - **The Hollow:** see §7g.
 - **Kanae / Tokine:** see §7j.
 - **Aimi:** see §7n.
+- **Hachishakusama / Kuchisake-onna:** see §7q.
 
 All characters have 3–7 combo trials (74 total).
 
@@ -416,6 +419,26 @@ Beni: "a friends list so you see if friends are online and can invite them to pl
 - Client `Friends` polls every 20 s (4 s on the FRIENDS / invite screens), not while the tab is hidden; status 'match' during fights. FRIENDS screen: from ONLINE lobby menu and ACCOUNT menu (text field to add by name; rows invites → requests → friends (online first) → sent requests; ↑/↓ + ←/→ + ENTER or mouse; REMOVE asks twice). INVITE = `FriendInviteScene` (NetLobbyScene subclass: CREATE ROOM + send code; shows sent / said no). Invite pop-up (JOIN / NO) on any menu via `Pad.poll`/`Pad.draw` hooks, hidden in fights and online rooms. Title shows "● N friends online · N requests" under the ACCOUNT chip.
 - Test: `tests/friends.js` (two browsers + local PeerServer + cloudmock; needs both SQL files loaded).
 
+## 7q. Urban legends: Hachishakusama and Kuchisake-onna (`04_zzzz9c_hachi.js`, `04_zzzz9d_kuchi.js`, 2026-11-26)
+
+Beni asked for two fighters from public-domain Japanese urban legends; the real names are used. Both stylised and non-gory.
+
+**HACHISHAKUSAMA** (`hachi`), zoner / space control. Tall chibi (own dims, scale 1.1, hurt box 196), white wide-brim hat with black band, long white dress, long black hair (3 ropes), face hidden under the hat shadow until she "reveals" (`hacFace` normal/reveal/hurt/ko). Slow, deliberate timings; `mute` voice, procedural "po… po… po…" (`Sound.po`).
+- **PRESENCE** `F.pres` 0–100 (`hacGain`): apparition / shadow / reach hits, keeping the foe at 200–500 px or cornered, the foe standing still (+6), every step/jump/special of a WATCHED foe. Decays after 6 s. At 100 → **FULL MANIFESTATION** (`manT` 480 f): longer reach (560), double apparition strikes, extra shadow arms, Shadow Claw follow-up.
+- Apparitions are real attackers: harmless carrier projectile `hachiApp` (max 3, dispel by hitting it, tracks a marked foe ≤170 px) that strikes via a `hachiStrike` hitbox.
+- SP1 **Po… Po… Po…** (apparition right behind the foe, ≤560 px) · ↓→SP1 **Unnatural Reach** (arm `hachiArm`, st 20, pulls) · ↓←SP1 **The White Apparition** (placed apparition; hold →/← for 420/120 px instead of 260) · SP2 **The Distance Disappears** (hidden f8–23, `hachiFlicker` shows the landing spot, strike; Manifestation → SP2 follow-up **Shadow Claw**) · ↓→SP2 **Shadow of the Eight Feet** (3/4/5 `hachiShadow` arms with warning pools, slow) · ↓↓SP2 **The Watcher** (mark ≤700 px, 6 s, no damage).
+- Ult **THE EIGHT-FOOT TALL NIGHTMARE** `CINE.hachi` ~452 f, 7 phases (silence · po po po · she is gone · distant white figures · the impossible distance · the grab + giant silhouette · the darkness under her shadow), 240 dmg (20+40+180). Defeat dissolve `hachiFade`.
+- Skins: SUMMER DUSK, MOURNING, RED SUMMER, TRUE FORM (LV 10, glow), arcade **WHITE SHRINE** (white cape with red lining, red cord, paper shide). Cosmetics: intros DISTANT FIGURE / THE WATCHER, wins PO… PO… / NOWHERE TO HIDE, LV 10 title EIGHT FEET OF DREAD.
+
+**KUCHISAKE-ONNA** (`kuchi`), rushdown / mix-up with scissors. Long beige coat (tails in `drawSkirt`), red scarf, surgical mask; with the mask down a stylised wide smile with stitch marks (`kuSmile`), no blood. Big scissors (`kuScissors`, pose keys `kp` open / `gr` dangling).
+- **BEAUTY** `F.bea` 0–100 (`kuGain`, ×1.5 while the mask is off): scissor hits (`sc:1`), feints (hit within 45 f of `feintT`), cross-ups, low/overhead mix-ups, interrupts. At 100 → **TRUE SMILE** (`tsT` 360 f): mask off, faster, Snip Snap follow-up, Vanishing Step half cooldown, stronger scissors; then calm 200 f. `kuFearT` = TERRIFIED (slower walk).
+- SP1 **Scissor Strike** (2 cuts; True Smile → SP1 **Snip Snap** launcher) · ↓→SP1 **Vanishing Step** (hidden f5–11, behind by default, front with ←) · ↓←SP1 **Are You Pretty?** (counter f11–36 → Wrong Answer; unanswered → No Answer? cut when close) · SP2 **The Mask Comes Off** (shockwave 280 px → TERRIFIED, +30 Beauty, extends True Smile once) · ↓→SP2 **Open Wide** (rush command grab → `CINE.kuchiOpen`, 150/175 dmg) · ↓↓SP2 **Now You See It** (3 `kuchiDecoy` afterimages front/behind/above, one real: mid / cross-up / overhead).
+- Ult **THE QUESTION** `CINE.kuchi` ~392 f, 6 phases (darkness · "Am I pretty?" · mask comes down · behind / beside / everywhere, faster · final question · 口裂け).
+- Skins: CHARCOAL / NAVY / CRIMSON COAT, TRUE SMILE (LV 10, glow), arcade **SCARLET NIGHT** (red coat, black mask, cloche hat with a rose, cape). Cosmetics: intros EXCUSE ME / SUDDEN STEP, wins NOW WE MATCH / SNIP SNIP, LV 10 title AM I PRETTY?.
+- Balance: `BALANCE.hachi = { dmg: 1.2, hp: 1050 }` (bot plays her slow kit badly; 25% → 55% over 2 reps), `BALANCE.kuchi = { dmg: 1.0 }` (50%). `balance.js` now takes `SB_ONLY=hachi,kuchi` to run only matches involving those fighters.
+- Select screen: long names / title lines are now scaled to fit beside the grid.
+- Tests: `horror_look.js <id>` (lineup, faces, pose sheet, 6 skins), `horror_battle.js [out]` (battle + select previews); both pass trials, specials, fuzz, corner, ultdraw (incl. `SB_V=5`), cosmetics, mech_arcade, cpu, menus, mobile.
+
 ## 8. History of requests (in order)
 
 1. Original anime fighting game (Kazuma, Yoru, Sera, Goro).
@@ -443,11 +466,12 @@ Beni: "a friends list so you see if friends are online and can invite them to pl
 23. Aimi, The Devoted Gaze (2026-11-26): Beni's "Yuno Gasai" request as an original yandere fighter — OBSESSION / UNSTABLE LOVE, pistol kit, THE SKY BREAKS ult, school / MIDNIGHT DRESS (Arcade clear) / LAST HORIZON (LV 10) skins (§7n).
 24. Arcade skins for every fighter (2026-11-26): one costume per fighter unlocked by clearing Arcade with them, The Hollow's THE VEILED KING (veil, crown, long mantle) as Beni described (§7o).
 25. Friends list (2026-11-26): add friends by account name, see who is online, invite them to an ONLINE 1 VS 1 with one click (§7p).
+26. Two urban-legend fighters (2026-11-26): Hachishakusama (zoner, PRESENCE → FULL MANIFESTATION, 7-phase ult) and Kuchisake-onna (scissor rushdown, BEAUTY → TRUE SMILE, 6-phase ult) (§7q).
 
 ## 9. Open ideas / possible next steps
 
 - Audio: listen and tune volumes / track choices (bamboo track is cosy rather than night-time; loops not checked by ear). Optional: KO/name announcer lines.
-- Hands-on balance pass for Vespera, Borgar, Buzzu, Reika, Yamika, Lunaria, Kuon, The Hollow, Kanae and Tokine (verified by automated trials and stress tests, not by human play).
+- Hands-on balance pass for Vespera, Borgar, Buzzu, Reika, Yamika, Lunaria, Kuon, The Hollow, Kanae, Tokine, Aimi, Hachishakusama and Kuchisake-onna (verified by automated trials and stress tests, not by human play).
 
 ## 10. Testing approach used so far
 

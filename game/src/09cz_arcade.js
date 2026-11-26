@@ -62,7 +62,7 @@ function cosRose(g, x, y, s, col, R) {
 }
 function cosHorn(g, r, base, pts, col, R, w = 0.16) { tube(g, [base, ...pts].map(([x, y]) => [x * r, y * r]), w * r, 0.03 * r, col, R); }
 
-// ---------------- the eighteen designs (Aimi's MIDNIGHT DRESS is in 04_zzzz9b_aimi.js) ----------------
+// ---------------- the twenty designs (Aimi's MIDNIGHT DRESS is in 04_zzzz9b_aimi.js) ----------------
 const ARC = {
   kazuma: { n: 'CHAMPION\'S ROBE', jp: '覇者', pal: { kc: '#b8141e', kl: '#ffd25a', kt: '#ffd25a', kb: '#e6b23a', kg: '#ff3a4a' },
     back(g, sk, p, c, R, o) {   // a boxing champion's satin robe worn as a cape, hood folded behind the neck
@@ -311,6 +311,34 @@ const ARC = {
       g.strokeStyle = c.kr; g.lineWidth = 2; g.beginPath(); g.moveTo(cx, cy); g.lineTo(cx + Math.cos(am) * 38, cy + Math.sin(am) * 38); g.stroke();
       g.restore();
       cosCape(g, sk, c, R, o, { len: 0.44, flare: 6, col: c.kc, lin: c.kl, trim: c.kt, w: 0.9 });
+    },
+    front(g, sk, p, c, R) { cosDrape(g, sk, c, R, c.kc, c.kt, c.kr); },
+  },
+  hachi: { n: 'WHITE SHRINE', jp: '白い社', pal: { kc: '#f2efe8', kl: '#b01428', kt: '#d8b45a', ks: '#ffffff', kr: '#c8102e' },
+    back(g, sk, p, c, R, o) { cosCape(g, sk, c, R, o, { len: 0.96, flare: 12, col: c.kc, lin: c.kl, trim: c.kt, tatter: 5 }); },
+    head(g, r, c, R, o) {   // a red cord around the crown and paper shide streamers hanging from the brim
+      if (R.mono) return;
+      g.strokeStyle = c.kr; g.lineWidth = 0.09 * r; g.beginPath(); g.moveTo(-0.78 * r, -1.0 * r); g.quadraticCurveTo(0.05 * r, -0.9 * r, 0.88 * r, -1.03 * r); g.stroke();
+      const T = (o && o.T) || 0;
+      for (const [bx, k] of [[1.62, 0], [1.2, 1], [-1.3, 2], [-0.9, 3]]) {
+        const x = bx * r, y = -0.7 * r + (bx > 0 ? -0.08 * r : 0.06 * r), sw = Math.sin(T * 0.07 + k) * 0.05 * r, w = 0.16 * r;
+        g.fillStyle = c.ks; g.strokeStyle = OUTLINE; g.lineWidth = 1.2; g.beginPath();
+        g.moveTo(x - w * 0.5, y); g.lineTo(x + w * 0.5, y); g.lineTo(x + w * 0.5 + sw, y + 0.3 * r); g.lineTo(x - w * 0.2 + sw, y + 0.3 * r); g.lineTo(x - w * 0.2 + sw * 1.4, y + 0.62 * r); g.lineTo(x - w * 0.9 + sw * 1.4, y + 0.62 * r); g.lineTo(x - w * 0.9 + sw * 1.6, y + 0.9 * r); g.lineTo(x - w * 1.5 + sw * 1.6, y + 0.9 * r);
+        g.lineTo(x - w * 1.5 + sw * 1.2, y + 0.56 * r); g.lineTo(x - w * 0.9 + sw, y + 0.56 * r); g.lineTo(x - w * 0.9 + sw * 0.6, y + 0.26 * r); g.lineTo(x - w * 0.5, y + 0.26 * r); g.closePath(); g.fill(); g.stroke();
+      }
+    },
+    front(g, sk, p, c, R) { cosDrape(g, sk, c, R, c.kc, c.kt, c.kr); },
+  },
+  kuchi: { n: 'SCARLET NIGHT', jp: '緋色の夜', pal: { top: '#7a0c18', uarm: '#7a0c18', farm: '#7a0c18', cuff: '#4a0610', coat: '#7a0c18', coat2: '#5a0812', collar: '#1a1014', lining: '#120a0c', belt: '#1a1014', scarf: '#141016', maskC: '#1c181e',
+    kc: '#5a0812', kl: '#120a0c', kt: '#d8b45a', kh: '#141016', kr: '#e0203a' },
+    back(g, sk, p, c, R, o) { cosCape(g, sk, c, R, o, { len: 0.82, flare: 10, col: c.kc, lin: c.kl, trim: c.kt }); },
+    head(g, r, c, R) {   // a small black cloche hat with a red band and a rose
+      g.save(); g.translate(0.06 * r, -0.74 * r); g.rotate(-0.08);
+      g.beginPath(); g.ellipse(0, 0, 1.2 * r, 0.22 * r, 0, 0, TAU); if (!R.mono) { g.strokeStyle = OUTLINE; g.lineWidth = R.ol * 2; g.stroke(); } g.fillStyle = R.mono || c.kh; g.fill(); g.restore();
+      polyR(g, r, [[-0.86, -0.72], [-0.8, -1.22], [-0.34, -1.48], [0.4, -1.44], [0.88, -1.06], [0.96, -0.74]], c.kh, R);
+      if (R.mono) return;
+      g.fillStyle = c.kr; g.beginPath(); g.moveTo(-0.84 * r, -0.9 * r); g.quadraticCurveTo(0.05 * r, -0.82 * r, 0.94 * r, -0.92 * r); g.lineTo(0.95 * r, -0.76 * r); g.quadraticCurveTo(0.05 * r, -0.68 * r, -0.85 * r, -0.76 * r); g.closePath(); g.fill();
+      cosRose(g, -0.62 * r, -0.86 * r, 0.16 * r, c.kr, R);
     },
     front(g, sk, p, c, R) { cosDrape(g, sk, c, R, c.kc, c.kt, c.kr); },
   },

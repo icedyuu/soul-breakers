@@ -251,9 +251,9 @@ class CharSelectScene {
     g.font = `900 15px ${FONT_UI}`; g.textBaseline = 'alphabetic'; g.fillStyle = s ? P_COL[2] : P_COL[1]; g.fillText(label, x, 140);
     if (hidden) { g.font = `italic 900 30px ${FONT_T}`; g.fillStyle = 'rgba(255,255,255,0.3)'; g.fillText(this.cpu?.arcade ? `${ARCADE_LEN} OPPONENTS` : 'WAITING…', x, 190); return; }
     g.font = `italic 900 60px ${FONT_T}`; const nmW = g.measureText(ch.name).width;
-    drawTitleText(g, ch.name, x, 184, Math.min(60, Math.floor(60 * 380 / nmW)), '#ffffff', ch.colors.accent, left ? 'left' : 'right');
+    drawTitleText(g, ch.name, x, 184, Math.min(60, Math.floor(60 * 300 / nmW)), '#ffffff', ch.colors.accent, left ? 'left' : 'right');
     g.font = `700 19px ${FONT_JP}`; g.textBaseline = 'alphabetic'; strokeText(g, `${ch.jp} · ${ch.titleJp}`, x, 238, '#ffffff', OUTLINE, 4);
-    g.font = `italic 800 16px ${FONT_UI}`; strokeText(g, `${ch.title.toUpperCase()} — ${ch.style}`, x, 260, ch.colors.accent, OUTLINE, 4);
+    { const tl = `${ch.title.toUpperCase()} — ${ch.style}`; g.font = `italic 800 16px ${FONT_UI}`; const tw = g.measureText(tl).width; g.font = `italic 800 ${Math.min(16, Math.floor(16 * 360 / tw))}px ${FONT_UI}`; strokeText(g, tl, x, 260, ch.colors.accent, OUTLINE, 4); }
     const stats = [['POWER', ch.stats.power], ['SPEED', ch.stats.speed], ['RANGE', ch.stats.range], ['DEFENSE', ch.stats.defense]];
     stats.forEach(([n, v], i) => {
       const col = i % 2, row = i >> 1, sx = left ? 34 + col * 205 : W - 421 + col * 205, by = 588 + row * 26;
