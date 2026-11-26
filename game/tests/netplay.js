@@ -16,6 +16,9 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   const ps = PeerServer({ port: 9123, host: '127.0.0.1', path: '/' });
   const srv = http.createServer((q, r) => { const f = q.url.split('?')[0]; if (f === '/' || f === '/index.html') { r.setHeader('content-type', 'text/html'); r.end(fs.readFileSync(DIST)); } else { r.statusCode = 404; r.end(); } }).listen(9124);
   await sleep(500);
+  // SB_CLOUD=1: both players log in to a local mock of the account server (tests/cloudmock.js) and every match must be rated
+  const CLOUD = process.env.SB_CLOUD ? require('./cloudmock').start(9205) : null;
+  if (CLOUD) await CLOUD.sql("delete from sb_matches; delete from sb_reports; delete from sb_sessions; delete from sb_users");
   const browser = await chromium.launch({ args: ['--autoplay-policy=no-user-gesture-required'] });
   const url = 'http://127.0.0.1:9124/?peerhost=127.0.0.1&peerport=9123';
   const errs = [];
@@ -24,7 +27,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
     const p = await ctx.newPage();
     p.on('pageerror', e => errs.push(name + ': ' + (e.stack || e)));
     p.on('console', m => { if (m.type() === 'error' && !m.text().includes('Failed to load resource')) errs.push(name + ' console: ' + m.text()); });
-    await p.addInitScript(() => { localStorage.clear(); });
+    await p.addInitScript(c => { localStorage.clear(); if (c) window.SB_CLOUD_OVERRIDE = { url: 'http://127.0.0.1:9205', key: 'test' }; }, !!CLOUD);
     await p.goto(url); await p.waitForTimeout(400);
     await p.evaluate(() => {
       Settings.voice = false; Settings.muted = true; Settings.mobile = false;
@@ -42,6 +45,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
     return p;
   };
   const A = await mk('host'), Bp = await mk('guest');
+  if (CLOUD) { await A.evaluate(() => Cloud.register('NetHost', 'secret1')); await Bp.evaluate(() => Cloud.register('NetGuest', 'secret1')); }
   // guest draws only every 3rd frame
   await Bp.evaluate(() => { const d = NetBattle.prototype.draw; let n = 0; NetBattle.prototype.draw = function (g) { if (++n % 3 === 0) d.call(this, g); }; });
   // SB_DESYNC=1: corrupt the guest's state once to exercise the soft resync
@@ -95,7 +99,15 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
     for (const [, f, h] of hA) if (mapB.has(f)) { cmp++; if (mapB.get(f) !== h) { if (diff < 0) diff = f; lastDiff = f; } }
     if (process.env.SB_DESYNC && m === 1) { console.log(`  desync test: frames ${diff}..${lastDiff} differed, then back in sync`); if (lastDiff > 0 && lastDiff < 1000 && rA.desync > 0) diff = -1; }
     console.log(`  host won=${rA.won} wins=${rA.wins} · guest won=${rB.won} wins=${rB.wins} · frames compared ${cmp} · first diff ${diff} · resyncs ${rA.desync}/${rB.desync} · ${((Date.now() - t0) / 1000).toFixed(0)}s`);
-    results.push({ ok: diff < 0 && rA.won !== rB.won && cmp > 600 && String(rA.wins) === String(rB.wins) });
+    let rated = true;
+    if (CLOUD) {
+      let ka, kb;
+      for (let i = 0; i < 40; i++) { await sleep(250); ka = await A.evaluate(() => scene.rk); kb = await Bp.evaluate(() => scene.rk); if (ka && kb && ka.s === 'rated' && kb.s === 'rated') break; }
+      rated = ka.s === 'rated' && kb.s === 'rated' && ka.delta === -kb.delta && (ka.delta > 0) === rA.won;
+      console.log(`  ranked: host ${ka.s} ${ka.delta} → ${ka.rating} · guest ${kb.s} ${kb.delta} → ${kb.rating}`, rated ? 'OK' : 'FAIL');
+      if (m === 1) await A.screenshot({ path: path.resolve(__dirname, '../shots_account/ranked_results.png') });
+    }
+    results.push({ ok: rated && diff < 0 && rA.won !== rB.won && cmp > 600 && String(rA.wins) === String(rB.wins) });
     if (m < MATCHES) { await A.evaluate(() => { scene.t = 99; Mouse.x = scene.menu.rect(0).x + 10; Mouse.y = scene.menu.rect(0).y + 10; Mouse.clicked = true; }); await Bp.keyboard.press('Enter'); }
   }
   // disconnect: guest closes its page → host should land in the lobby with a message
@@ -106,6 +118,6 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   console.log(errs.length ? 'ERRORS:\n' + errs.slice(0, 10).join('\n') : 'no errors');
   const pass = results.every(r => r.ok) && lostMsg && !errs.length;
   console.log(pass ? 'NETPLAY PASS' : 'NETPLAY FAIL');
-  await browser.close(); srv.close(); try { ps.close?.(); } catch (e) { }
+  await browser.close(); srv.close(); if (CLOUD) await CLOUD.shut(); try { ps.close?.(); } catch (e) { }
   process.exit(pass ? 0 : 1);
 })().catch(e => { console.error(e); process.exit(1); });
