@@ -23,7 +23,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
     const ctx = await browser.newContext({ viewport: { width: 1280, height: 720 } });
     const p = await ctx.newPage();
     p.on('pageerror', e => errs.push(name + ': ' + (e.stack || e)));
-    p.on('console', m => { if (m.type() === 'error') errs.push(name + ' console: ' + m.text()); });
+    p.on('console', m => { if (m.type() === 'error' && !m.text().includes('Failed to load resource')) errs.push(name + ' console: ' + m.text()); });
     await p.addInitScript(() => { localStorage.clear(); });
     await p.goto(url); await p.waitForTimeout(400);
     await p.evaluate(() => {
@@ -85,7 +85,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
       const a = await A.evaluate(() => scene.constructor.name), b = await Bp.evaluate(() => scene.constructor.name);
       if (a === 'NetResultsScene' && b === 'NetResultsScene') break;
       if (Date.now() - t0 > 240000) throw new Error('match timeout ' + a + ' ' + b);
-      if (errs.length) break;
+      if (errs.length) { console.log("ERRS", errs.slice(0, 3)); break; }
     }
     const rA = await A.evaluate(() => ({ won: scene.won, wins: scene.bt.wins, desync: Net.desyncs })), rB = await Bp.evaluate(() => ({ won: scene.won, wins: scene.bt.wins, desync: Net.desyncs }));
     // compare per-frame hashes

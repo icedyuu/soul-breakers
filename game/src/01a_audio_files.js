@@ -29,5 +29,5 @@ const AUDIO_FILES = {
     menuBack: { f: ['ui_back1'], v: 0.6, j: 0 },
   },
   voice: { round1: 'round1', round2: 'round2', round3: 'round3', round4: 'round4', round5: 'round5', final: 'final', fight: 'fight', time: 'time' },
-  music: { menu: { f: 'menu', v: 0.9 }, neon: { f: 'neon', v: 0.8 }, volcano: { f: 'volcano', v: 0.85 }, bamboo: { f: 'bamboo', v: 0.9 }, results: { f: 'results', v: 0.85 } },
+  music: { menu: { f: 'menu', v: 0.9 }, neon: { f: 'neon', v: 0.8 }, volcano: { f: 'volcano', v: 0.85 }, bamboo: { f: 'bamboo', v: 0.9 }, school: { f: 'menu', v: 0.85 }, clock: { f: 'neon', v: 0.78 }, forge: { f: 'volcano', v: 0.85 }, results: { f: 'results', v: 0.85 } },
 };

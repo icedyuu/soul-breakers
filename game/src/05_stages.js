@@ -189,11 +189,12 @@ function drawStageBG(g, st, cam, t) {
     g.fillStyle = '#fff3d6'; g.beginPath(); g.arc(mx, my, 105, 0, TAU); g.fill();
     g.fillStyle = 'rgba(210,190,150,0.35)'; for (const [dx, dy, r] of [[-30, -20, 22], [25, 30, 16], [40, -35, 12], [-10, 45, 10]]) { g.beginPath(); g.arc(mx + dx, my + dy, r, 0, TAU); g.fill(); }
   }
-  for (const L of st.layers) {
+  st.layers.forEach((L, i) => {
     g.save(); g.translate(W / 2 + FX.sx * L.f, H / 2 + FX.sy * L.f); g.scale(cam.z, cam.z); g.translate(-W / 2, -H / 2);
     g.drawImage(L.c, Math.round(-(cam.x - W / 2) * L.f - 130), Math.round(-(cam.y - H / 2) * L.f * 0.6 - LAYER_PAD));
     g.restore();
-  }
+    if (i === 0 && st.bgAnim) st.bgAnim(g, cam, t);
+  });
 }
 // static thumbnail renders for menus
 function stageThumb(st, w, h) {
