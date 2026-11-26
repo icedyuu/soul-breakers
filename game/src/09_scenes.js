@@ -500,7 +500,7 @@ class HowToScene {
     g.textAlign = 'left'; g.textBaseline = 'alphabetic';
     g.font = `italic 900 20px ${FONT_T}`; strokeText(g, 'NUE — FIVE BEASTS, ONE RANDOM PICK', 100, 156, '#36ffd0', OUTLINE, 4);
     const ctr = [['SP2', 'Transform into a RANDOM beast (10 s), then the seal recharges (9 s)'], ['SP2 on hit', 'Beast Cancel: transform mid-combo (25% meter) and keep going'],
-      ['↓↓ SP2', 'Seal Release (in beast form): launching shockwave, cooldown −25%'], ['↓→ SP2', 'Spirit Step: invulnerable dodge through the opponent'], ['SP1+SP2', 'Primal Ascension (ultimate, human form)']];
+      ['↓↓ SP2', 'Seal Drop (human): overhead, seal −1.5 s · Seal Release (beast): shockwave, cooldown −25%'], ['↓→ SP2', 'Spirit Step: invulnerable dodge through the opponent'], ['SP1+SP2', 'Primal Ascension (ultimate, human form)']];
     ctr.forEach(([a, b], i) => { const y = 186 + i * 25; g.font = `900 15px ${FONT_UI}`; g.fillStyle = '#ffd84a'; g.fillText(a, 100, y); g.font = `600 13px ${FONT_UI}`; g.fillStyle = '#ffffff'; g.fillText(b, 196, y); });
     g.font = `500 13px ${FONT_UI}`; g.fillStyle = '#cfc4ee';
     wrapText(g, 'You cannot pick the beast. The draw is a fair bag: each beast appears once every five transformations and never twice in a row — the POOL icons on the HUD show what can still come out. A 4+ hit combo trims 1 s off the seal (or adds 0.75 s to the current beast), finishers like Infernal Crash or Ghost Hunt extend the beast, and winning a round without taking damage starts the next round with the seal ready.', 100, 326, 520, 16);
