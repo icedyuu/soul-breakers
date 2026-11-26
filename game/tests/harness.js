@@ -4,7 +4,7 @@ const path = require('path');
 const DIST = process.env.SB_DIST || path.resolve(__dirname, '../dist/index.html');
 async function open(opts = {}) {
   const browser = await chromium.launch({ args: ['--autoplay-policy=no-user-gesture-required'] });
-  const page = await browser.newPage({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 });
+  const page = await browser.newPage({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: +(process.env.SB_DPR || 1) });
   const errors = [];
   page.on('pageerror', e => errors.push(String(e.stack || e)));
   page.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });

@@ -47,6 +47,8 @@ function frame(now) {
   } catch (e) {
     if (!errShown) { errShown = e; console.error(e); }
     acc = 0;
+    // a draw that throws mid-way leaves its ctx.save()s open; reset the canvas state so they can't pile up frame after frame
+    if (ctx.reset) ctx.reset(); else canvas.width = canvas.width;
   }
   requestAnimationFrame(frame);
 }

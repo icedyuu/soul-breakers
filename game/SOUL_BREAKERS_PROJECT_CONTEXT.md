@@ -422,3 +422,8 @@ The test scripts are in `tests/` inside the source zip. Run each with node and P
 - CLOCKWORK SPIRE (時計塔): inside a clock tower, giant backlit clock face (mirrored numerals), gears, chains, lanterns; pixel: moving hands, meshing gears, light shafts, dust. Music: neon track.
 - RUNE FORGE (霊峰鍛冶場): forge hall carved into a snowy mountain, glowing gate, rune monoliths, cyan rune braziers, rune circle on the floor; pixel: aurora, pulsing runes, snow, sparks. Music: volcano track.
 - Stage select is a 3×2 grid (↑/↓ switches rows). All stage animation is visual only (netplay hashes identical on all new stages). Test: `tests/stages.js` (every stage vector+pixel, draw cost, select nav; shots to `../shots_stages/`).
+
+### Hollow ultimate freeze fix (2026-11-26)
+- Bug: during THE LAST REMNANT the rift ellipse's width was `46*k + sin(T)*3`; while the rift opened/closed (small k) it could go negative depending on the frame timer, so `ctx.ellipse` threw mid-draw. The main loop caught it, but the draw's open `ctx.save()`s piled up every frame → lag that looked like a crash ("sometimes", because it depended on timing).
+- Fix: radius = `max(0.1, k*(46 + sin*3))` (same look). Main loop now resets the canvas state (`ctx.reset()` / `canvas.width = canvas.width`) after any draw exception, so a future draw bug can't snowball.
+- Tests: `tests/ultdraw.js [id…]` plays every ultimate from 6 start timings × both sides × pixel/vector on a tiny canvas and fails on any draw exception (the old build fails it). `tests/ultperf.js [id…] [-px|-vec] [-p1] [-v=N]` times every ult frame (env `SB_DPR=3` in harness.js simulates a high-DPI screen).
