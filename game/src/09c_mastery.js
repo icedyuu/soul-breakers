@@ -80,7 +80,7 @@ function rcMaker(V, protect) {
 }
 
 // ---------------- canvas colour hook ----------------
-const RC = { fn: null, pal: null };   // pal: {charId: outfit palette} for menu figures drawn in a variant (ch.varColors)
+const RC = { fn: null, pal: null, cos: null };   // cos: fighter id whose arcade costume every figure of that fighter wears right now   // pal: {charId: outfit palette} for menu figures drawn in a variant (ch.varColors)
 (() => {
   const P = CanvasRenderingContext2D.prototype;
   for (const k of ['fillStyle', 'strokeStyle', 'shadowColor']) {
@@ -98,8 +98,8 @@ const RC = { fn: null, pal: null };   // pal: {charId: outfit palette} for menu 
 })();
 function withRecolor(fn, body) { const prev = RC.fn; RC.fn = fn; try { return body(); } finally { RC.fn = prev; } }
 
-// ---------------- variant designs (index 0 = default; 1-4 unlock at mastery LV 2 / 4 / 7 / 10) ----------------
-const VAR_UNLOCK = [1, 2, 4, 7, 10];
+// ---------------- variant designs (index 0 = default; 1-4 unlock at mastery LV 2 / 4 / 7 / 10; 5 = arcade-clear skin) ----------------
+const VAR_UNLOCK = [1, 2, 4, 7, 10, 99];   // slot 5 = ARCADE skin (special: clear Arcade with the fighter, see 09cz_arcade.js)
 const VAR_N = VAR_UNLOCK.length;
 const LIGHT = [0.55, 1], DARK = [0, 0.4];
 const VARIANTS = {
@@ -208,8 +208,9 @@ const VARIANTS = {
   aimi: [
     { n: 'LAVENDER VOW', rules: [{ h: [320, 360], hue: 275 }, { h: [0, 12], hue: 275 }] },
     { n: 'MINT DIARY', rules: [{ h: [320, 360], hue: 160, s: 0.8 }, { h: [0, 12], hue: 160, s: 0.8 }, { h: [220, 245], hue: 170, ss: 0.35 }] },
-    { n: 'MIDNIGHT DRESS', rules: [], special: 'arcade' },   // her black dress (see AIMI.varColors) — unlocked by clearing Arcade with her
+    { n: 'CRIMSON VOW', rules: [{ h: [320, 360], hue: 352, s: 1.1, lm: 0.85 }, { h: [0, 12], hue: 352, s: 1.1, lm: 0.85 }] },
     { n: 'LAST HORIZON', glow: '#ffc0d6', rules: [] },        // LV 10: the long mantle (see AIMI.varColors)
+    { n: 'MIDNIGHT DRESS', rules: [], special: 'arcade' },   // her black dress (see AIMI.varColors) — unlocked by clearing Arcade with her
   ],
   hollow: [
     { n: 'CRIMSON SEAL', rules: [{ h: [240, 300], hue: 355 }] },
@@ -238,14 +239,15 @@ function varPal(ch, vi, pal) {
   const fn = varFn(ch, vi); if (!fn || !pal) return pal;
   let m = VAR_PAL.get(pal); if (!m) VAR_PAL.set(pal, m = []);
   if (m[vi]) return m[vi];
-  const o = {}; for (const k in pal) o[k] = typeof pal[k] === 'string' ? fn(pal[k]) : pal[k];
+  const V = varDef(ch, vi), src = V && V.cos ? { ...pal, ...(V.pal || {}), cos: V.cos } : pal;   // arcade skins: costume colours + parts (09cz_arcade.js)
+  const o = {}; for (const k in src) o[k] = typeof src[k] === 'string' && k !== 'cos' ? fn(src[k]) : src[k];
   return (m[vi] = o);
 }
 function varSwatch(ch, vi) { const fn = varFn(ch, vi) || (v => v), c = (vi && ch.varColors && ch.varColors(vi)) || ch.colors; return [fn(c.top || c.skin || c.accent), fn(c.hair || c.leg || c.accent), fn(c.accent)]; }
 // effective variants of a match: a mirror match with identical colours gives P2 the next colour
 function cfgVariants(cfg) {
   const v1 = clamp(cfg.v1 | 0, 0, VAR_N - 1); let v2 = clamp(cfg.v2 | 0, 0, VAR_N - 1);
-  if (cfg.p1 === cfg.p2 && v1 === v2) v2 = (v2 + 1) % VAR_N;
+  if (cfg.p1 === cfg.p2 && v1 === v2) v2 = v2 + 1 >= VAR_N - 1 ? 0 : v2 + 1;   // (never hands out the arcade skin)
   return [v1, v2];
 }
 
@@ -274,7 +276,12 @@ const Mastery = {
   load() {
     let d = null; try { d = JSON.parse(localStorage.getItem(this.KEY)); } catch (e) { }
     this.d = d && d.v === 1 && d.chars ? d : this.fresh(); if (!this.d.pick) this.d.pick = {};
+    this.migrate(this.d);
     return this.d;
+  },
+  // Aimi's MIDNIGHT DRESS moved from slot 3 to the arcade slot 5 (all fighters now have their arcade skin in slot 5)
+  migrate(d) {
+    if (d.unl && d.unl['aimi:3']) { delete d.unl['aimi:3']; d.unl['aimi:5'] = 1; if ((d.pick.aimi | 0) === 3) d.pick.aimi = 5; }
   },
   get data() { return this.d || this.load(); },
   save() { this.data.upd = Date.now(); try { localStorage.setItem(this.KEY, JSON.stringify(this.d)); } catch (e) { } },
@@ -315,8 +322,9 @@ const Mastery = {
     if (!o || o.v !== 1 || !o.chars) return false;
     const d = this.data;
     for (const id in o.chars) { const a = this.rec(id), b = o.chars[id]; if ((b.xp | 0) > a.xp) Object.assign(a, { xp: b.xp | 0, w: b.w | 0, l: b.l | 0 }); }
-    if (o.unl && typeof o.unl === 'object') { d.unl = d.unl || {}; for (const k in o.unl) if (o.unl[k]) d.unl[k] = 1; }   // special skin unlocks only ever add
-    Object.assign(d.pick, o.pick || {}); this.save(); return true;
+    if (o.unl && typeof o.unl === 'object') { d.unl = d.unl || {}; for (const k in o.unl) if (o.unl[k]) d.unl[k === 'aimi:3' ? 'aimi:5' : k] = 1; }   // special skin unlocks only ever add
+    const pk = { ...(o.pick || {}) }; if (o.unl && o.unl['aimi:3'] && (pk.aimi | 0) === 3) pk.aimi = 5;
+    Object.assign(d.pick, pk); this.save(); return true;
   },
 };
 
@@ -328,7 +336,8 @@ const Mastery = {
   Fighter.prototype.draw = function (g) {
     const fn = this.variant ? varFn(this.ch, this.variant) : null;
     if (!fn) return fd.call(this, g);
-    withRecolor(fn, () => fd.call(this, g));
+    const V0 = varDef(this.ch, this.variant), pc = RC.cos; RC.cos = V0 && V0.cos ? this.ch.id : null;
+    try { withRecolor(fn, () => fd.call(this, g)); } finally { RC.cos = pc; }
     const V = varDef(this.ch, this.variant);
     if (V.glow && !this.hidden) {     // top-tier colour: rising soul sparks (draw-only, deterministic from T)
       const T = this.T, s = this.s;

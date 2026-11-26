@@ -76,6 +76,8 @@ let fails = 0; const ok = (c, m) => { if (!c) { fails++; console.log('FAIL', m);
   const tbo = Boss.v.token;
   ok((await call('sb_admin_grant', { p_token: tbo, p_user: 'BOB_99', p_ch: 'kazuma', p_lv: 7 })).v.grants.kazuma === 7, 'admin grants kazuma LV7');
   ok((await call('sb_admin_grant', { p_token: tbo, p_user: 'bob_99', p_ch: '*', p_lv: 4 })).v.grants['*'] === 4, 'admin grants all LV4');
+  ok((await call('sb_admin_grant', { p_token: tbo, p_user: 'bob_99', p_ch: 'arc_cardmaster', p_lv: 1 })).v.grants.arc_cardmaster === 1, 'admin grants an arcade skin (key arc_<id>, no SQL change needed)');
+  ok((await call('sb_admin_grant', { p_token: tbo, p_user: 'bob_99', p_ch: 'arc_all', p_lv: 1 })).v.grants.arc_all === 1, 'admin grants all arcade skins');
   ok((await call('sb_me', { p_token: tb })).v.grants.kazuma === 7, 'player sees grants');
   ok(!('kazuma' in (await call('sb_admin_grant', { p_token: tbo, p_user: 'bob_99', p_ch: 'kazuma', p_lv: 0 })).v.grants), 'LV0 removes grant');
   ok((await call('sb_admin_grant', { p_token: tbo, p_user: 'ghost', p_ch: '*', p_lv: 4 })).e === 'NO_USER', 'unknown user');

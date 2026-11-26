@@ -35,16 +35,16 @@ const { open } = require('./harness');
     const d0 = dmgOf(0), d3 = dmgOf(3), d4 = dmgOf(4); ok(d0[0] === d3[0] && d0[0] === d4[0] && d0[1] === d4[1], `skins don't change stats (${d0} ${d3} ${d4})`);
     // special unlock: MIDNIGHT DRESS after an Arcade clear with her
     localStorage.clear(); Mastery.d = null;
-    ok(!Mastery.unlocked('aimi', 3) && !Mastery.unlocked('aimi', 4), 'dress + cloak locked at start');
+    ok(!Mastery.unlocked('aimi', 5) && !Mastery.unlocked('aimi', 4), 'dress + cloak locked at start');
     const fake = clear => ({ mode: 'versus', practice: false, cfg: { cpu: { arcade: true, level: 1 }, arcade: { i: clear ? 6 : 2, order: [0, 1, 2, 3, 4, 5, 6] } }, wins: [2, 0], p1: { ch: CHARS[T.idx('aimi')] }, p2: { ch: CHARS[0] } });
-    let r = Mastery.award(fake(false)); ok(!Mastery.unlocked('aimi', 3), 'arcade win without clear: still locked');
-    r = Mastery.award(fake(true)); ok(Mastery.unlocked('aimi', 3) && r.unlocks.includes(3), 'arcade clear unlocks MIDNIGHT DRESS (+ toast)');
+    let r = Mastery.award(fake(false)); ok(!Mastery.unlocked('aimi', 5), 'arcade win without clear: still locked');
+    r = Mastery.award(fake(true)); ok(Mastery.unlocked('aimi', 5) && r.unlocks.includes(5), 'arcade clear unlocks MIDNIGHT DRESS (+ toast)');
     ok(!Mastery.unlocked('aimi', 4), 'LAST HORIZON still needs LV 10');
-    const ex = Mastery.export(); localStorage.clear(); Mastery.d = null; ok(!Mastery.unlocked('aimi', 3), 'fresh profile locked');
-    Mastery.import(ex); ok(Mastery.unlocked('aimi', 3), 'import (cloud merge) keeps the unlock');
-    Mastery.import({ v: 1, chars: {}, unl: {} }); ok(Mastery.unlocked('aimi', 3), 'an older save never removes it');
-    localStorage.clear(); Mastery.d = null; Mastery.unlockAll(); ok(Mastery.unlocked('aimi', 3) && Mastery.unlocked('aimi', 4), 'hidden cheat opens all skins');
-    ok(Mastery.export().unl === undefined || !Mastery.export().unl['aimi:3'], 'cheat does not write the real unlock');
+    const ex = Mastery.export(); localStorage.clear(); Mastery.d = null; ok(!Mastery.unlocked('aimi', 5), 'fresh profile locked');
+    Mastery.import(ex); ok(Mastery.unlocked('aimi', 5), 'import (cloud merge) keeps the unlock');
+    Mastery.import({ v: 1, chars: {}, unl: {} }); ok(Mastery.unlocked('aimi', 5), 'an older save never removes it');
+    localStorage.clear(); Mastery.d = null; Mastery.unlockAll(); ok(Mastery.unlocked('aimi', 5) && Mastery.unlocked('aimi', 4), 'hidden cheat opens all skins');
+    ok(Mastery.export().unl === undefined || !Mastery.export().unl['aimi:5'], 'cheat does not write the real unlock');
     // ult cleanup
     [A, D] = fresh('tokine', 110); A.meter = 100; A.startMove('ult'); let n = 0; while (!BT.cine && n++ < 160) T.frame(); ok(!!BT.cine, 'ult connects');
     const df = D.facing; n = 0; while (BT.cine && n++ < 420) T.frame(); T.run(80);

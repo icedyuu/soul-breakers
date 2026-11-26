@@ -10,7 +10,7 @@ const fs = require('fs');
   await snap('battle_zone', new Function(start(3) + "BT.p1.startMove('sp2d'); T.run(48); T.draw(); return canvas.toDataURL();"));
   await snap('battle_unstable', new Function(start(4) + "BT.p1.obs = 100; T.run(30); BT.p1.startMove('sp1f'); T.run(16); T.draw(); return canvas.toDataURL();"));
   await snap('battle_pursuit', new Function(start(0) + "BT.p2.x = 1100; BT.p1.startMove('sp2'); T.run(24); T.draw(); return canvas.toDataURL();"));
-  await snap('select', () => { Mastery.unlockAll(); Mastery.setPick('aimi', 3); go(new CharSelectScene('versus')); scene.cur = [T.idx('aimi'), T.idx('tokine')]; for (let i = 0; i < 30; i++) scene.update(); T.draw(); return canvas.toDataURL(); });
+  await snap('select', () => { Mastery.unlockAll(); Mastery.setPick('aimi', 5); go(new CharSelectScene('versus')); scene.cur = [T.idx('aimi'), T.idx('tokine')]; for (let i = 0; i < 30; i++) scene.update(); T.draw(); return canvas.toDataURL(); });
   console.log(errors.length ? errors.slice(0, 5).join('\n') : 'no errors');
   await browser.close();
 })();
