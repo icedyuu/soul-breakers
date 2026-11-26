@@ -259,18 +259,18 @@ const AIMI = {
 };
 makeChibi(AIMI, { build: { arm: 0.95, leg: 0.97, torso: 0.97 }, colors: {} });
 AIMI.faceFn = aimFace;
-// skin 3 — MIDNIGHT DRESS (clear Arcade with her): black dress, sleeveless with long black gloves, crimson lacing, rose choker
+// skin 5 — MIDNIGHT DRESS (clear Arcade with her): black dress, sleeveless with long black gloves, crimson lacing, rose choker
 const AIM_DRESS = { ...AIMI.colors, skin3: 1, top: '#141016', uarm: '#fde9e2', farm: '#141016', cuff: '#141016', belt: null, collar: '#141016', warm: '#1a1418', boot: '#0e0a0e', foot: '#0e0a0e', sole: '#3a0a18', pad: '#c8103a',
   tie: '#141016', tie2: '#c8103a', rose: '#c8103a', gun: '#1a1a20', grip: '#3a0a18', heart: '#c8103a', accent: '#ff3a64' };
 // skin 4 — LAST HORIZON (Mastery LV 10): long dark mantle over a white dress, gold heart-lock clasp
 const AIM_CLOAK = { ...AIMI.colors, skin4: 1, top: '#efe8f0', uarm: '#2c2232', farm: '#2c2232', cuff: '#e0b84e', belt: null, collar: '#efe8f0', dress: '#efe8f0', cloak: '#2c2232', lining: '#7a1a44', warm: '#2c2232', boot: '#3a2a22', foot: '#3a2a22', sole: '#1a1210', pad: '#e0b84e',
   tie: '#2c2232', tie2: '#e0b84e', accent: '#ff6a9a' };
-AIMI.varColors = vi => vi === 3 ? AIM_DRESS : vi === 4 ? AIM_CLOAK : null;
+AIMI.varColors = vi => vi === 5 ? AIM_DRESS : vi === 4 ? AIM_CLOAK : null;
 
 // ---------------------------------- obsession ----------------------------------
 const AIM_PAL = {};
 AIMI.palette = F => {
-  const ul = F.ulT > 0, ex = F.aimEx || null, v = F.variant === 3 ? 3 : F.variant === 4 ? 4 : 0, key = v + (ul ? 'u' : '') + (ex || '');
+  const ul = F.ulT > 0, ex = F.aimEx || null, v = F.variant === 5 ? 3 : F.variant === 4 ? 4 : 0, key = v + (ul ? 'u' : '') + (ex || '');
   return AIM_PAL[key] || (AIM_PAL[key] = { ...(v === 3 ? AIM_DRESS : v === 4 ? AIM_CLOAK : AIMI.colors), ul, ex, accent: ul ? AMR : v === 3 ? AIM_DRESS.accent : v === 4 ? AIM_CLOAK.accent : AM });
 };
 function aimGain(F, n, label) {

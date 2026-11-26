@@ -468,7 +468,7 @@ class CollectionScene {
   }
   get ch() { return CHARS[this.ci]; }
   load() {
-    const c = Cos.get(this.ch.id); this.sel = { i: c.i, w: c.w }; this.lv = Mastery.level(this.ch.id);
+    const c = Cos.get(this.ch.id); this.sel = { i: c.i, w: c.w }; this.lv = Mastery.level(this.ch.id); this.vs = Mastery.pick(this.ch.id); this.vlock = null;
     this.preview(this.row === 2 ? 'w' : 'i');
   }
   preview(k) {
@@ -477,12 +477,17 @@ class CollectionScene {
     this.pIdx = idx;
     this.cp = new CosPlayer(this.ch, def, k === 'i' ? 'intro' : 'victory');
   }
-  rowRects() { return [0, 1, 2, 3].map(r => ({ x: 620, y: 150 + r * 112, w: 620, h: 96 })); }
-  arrowRects(r) { const R = this.rowRects()[r]; return [{ x: R.x + 8, y: R.y + 30, w: 44, h: 56 }, { x: R.x + R.w - 52, y: R.y + 30, w: 44, h: 56 }]; }
+  rowRects() { return [0, 1, 2, 3, 4].map(r => ({ x: 620, y: 140 + r * 92, w: 620, h: 84 })); }
+  arrowRects(r) { const R = this.rowRects()[r]; return [{ x: R.x + 8, y: R.y + 24, w: 44, h: 52 }, { x: R.x + R.w - 52, y: R.y + 24, w: 44, h: 52 }]; }
   change(d) {
     const r = this.row;
     if (r === 0) { this.ci = (this.ci + d + CHARS.length) % CHARS.length; this.load(); Sound.play('menuMove'); return; }
     if (r === 3) return;
+    if (r === 4) {   // SKIN: every colour + the arcade skin; locked ones can be previewed
+      const id = this.ch.id; this.vs = ((this.vs ?? Mastery.pick(id)) + d + VAR_N) % VAR_N; Sound.play('menuMove');
+      if (Mastery.unlocked(id, this.vs)) { Mastery.setPick(id, this.vs); this.vlock = null; } else this.vlock = { v: this.vs, t: 90 };
+      return;
+    }
     const k = r === 1 ? 'i' : 'w', id = this.ch.id;
     let v = this.sel[k] + d; if (v < -1) v = 2; if (v > 2) v = -1;
     this.sel[k] = v; Sound.play('menuMove');
@@ -493,12 +498,13 @@ class CollectionScene {
     this.t++;
     if (this.lock && --this.lock.t <= 0) this.lock = null;
     if (UI.back()) { Sound.play('menuBack'); FX.reset(); go(new TitleScene()); return; }
-    if (UI.up()) { this.row = (this.row + 4) % 5; Sound.play('menuMove'); if (this.row === 1 || this.row === 2) this.preview(this.row === 1 ? 'i' : 'w'); }
-    if (UI.down()) { this.row = (this.row + 1) % 5; Sound.play('menuMove'); if (this.row === 1 || this.row === 2) this.preview(this.row === 1 ? 'i' : 'w'); }
-    if (this.row < 4) { if (UI.left()) this.change(-1); if (UI.right()) this.change(1); }
-    if (UI.ok()) { if (this.row === 4) { Sound.play('menuBack'); FX.reset(); go(new TitleScene()); return; } this.preview(this.pk); Sound.play('menuOk'); }
+    if (UI.up()) { this.row = (this.row + 5) % 6; Sound.play('menuMove'); if (this.row === 1 || this.row === 2) this.preview(this.row === 1 ? 'i' : 'w'); }
+    if (UI.down()) { this.row = (this.row + 1) % 6; Sound.play('menuMove'); if (this.row === 1 || this.row === 2) this.preview(this.row === 1 ? 'i' : 'w'); }
+    if (this.vlock && --this.vlock.t <= 0) this.vlock = null;
+    if (this.row < 5) { if (UI.left()) this.change(-1); if (UI.right()) this.change(1); }
+    if (UI.ok()) { if (this.row === 5) { Sound.play('menuBack'); FX.reset(); go(new TitleScene()); return; } this.preview(this.pk); Sound.play('menuOk'); }
     if (Mouse.clicked) {
-      for (let r = 0; r < 4; r++) {
+      for (let r = 0; r < 5; r++) {
         const [a, b] = this.arrowRects(r);
         if (inRect(a) || inRect(b)) { this.row = r; this.change(inRect(a) ? -1 : 1); Mouse.clicked = false; break; }
         if (inRect(this.rowRects()[r])) { this.row = r; if (r === 1 || r === 2) this.preview(r === 1 ? 'i' : 'w'); Sound.play('menuMove'); Mouse.clicked = false; break; }
@@ -514,7 +520,7 @@ class CollectionScene {
     }
     this.cp.step(300, 640, 1.9); FX.update();
   }
-  backRect() { return { x: 620 + 310 - 130, y: 600, w: 260, h: 44 }; }
+  backRect() { return { x: 620 + 310 - 130, y: 612, w: 260, h: 44 }; }
   draw(g) {
     const t = this.t, ch = this.ch, c = ch.colors.accent;
     drawMenuBG(g, t, c);
@@ -525,7 +531,7 @@ class CollectionScene {
     g.save(); g.beginPath(); g.rect(42, 142, 516, 516); g.clip();
     const gr = g.createRadialGradient(300, 520, 20, 300, 520, 320); gr.addColorStop(0, c + '55'); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gr; g.fillRect(42, 142, 516, 516);
     g.fillStyle = 'rgba(255,255,255,0.08)'; g.fillRect(42, 640, 516, 2);
-    this.cp.draw(g, 300, 640, 1.9, 1);
+    { const vi = this.vs | 0; withVarPal([[ch, vi]], () => withArt([varFn(ch, vi)], () => { const pc = RC.cos; RC.cos = vi === ARC_VI && varDef(ch, vi) && varDef(ch, vi).cos ? ch.id : null; try { this.cp.draw(g, 300, 640, 1.9, 1); } finally { RC.cos = pc; } })); }
     g.save(); FX.drawParticles(g, false); g.restore();
     g.restore();
     const k = this.pk, lockedPrev = !Cos.open(ch.id, k, this.pIdx);
@@ -536,30 +542,36 @@ class CollectionScene {
     R.forEach((r, i) => {
       const on = this.row === i;
       panel(g, r.x, r.y, r.w, r.h, on ? 'rgba(40,16,60,0.92)' : 'rgba(12,6,28,0.82)', on ? '#ffffff' : 'rgba(255,255,255,0.15)');
-      if (i < 3) for (const [j, a] of this.arrowRects(i).entries()) { g.font = `900 30px ${FONT_UI}`; g.textAlign = 'center'; g.fillStyle = on ? '#ffd84a' : 'rgba(255,255,255,0.4)'; g.fillText(j ? '▶' : '◀', a.x + a.w / 2, a.y + a.h / 2 + 2); }
+      if (i < 3 || i === 4) for (const [j, a] of this.arrowRects(i).entries()) { g.font = `900 30px ${FONT_UI}`; g.textAlign = 'center'; g.fillStyle = on ? '#ffd84a' : 'rgba(255,255,255,0.4)'; g.fillText(j ? '▶' : '◀', a.x + a.w / 2, a.y + a.h / 2 + 2); }
       g.textAlign = 'left'; g.font = `800 13px ${FONT_UI}`; g.fillStyle = '#a89cd0';
-      g.fillText(['FIGHTER', 'INTRO  登場', 'VICTORY POSE  勝利', 'TITLE  称号'][i], r.x + 18, r.y + 18);
+      g.fillText(['FIGHTER', 'INTRO  登場', 'VICTORY POSE  勝利', 'TITLE  称号', 'SKIN  衣装'][i], r.x + 18, r.y + 18);
       g.textAlign = 'center';
       if (i === 0) {
-        g.font = `italic 900 32px ${FONT_T}`; strokeText(g, ch.name, r.x + r.w / 2, r.y + 50, '#ffffff', OUTLINE, 5);
-        g.font = `700 14px ${FONT_JP}`; g.fillStyle = c; g.fillText(`${ch.jp} · ${ch.title}  ·  ${this.ci + 1}/${CHARS.length}`, r.x + r.w / 2, r.y + 80);
+        g.font = `italic 900 32px ${FONT_T}`; strokeText(g, ch.name, r.x + r.w / 2, r.y + 44, '#ffffff', OUTLINE, 5);
+        g.font = `700 14px ${FONT_JP}`; g.fillStyle = c; g.fillText(`${ch.jp} · ${ch.title}  ·  ${this.ci + 1}/${CHARS.length}`, r.x + r.w / 2, r.y + 72);
       } else if (i < 3) {
         const kk = i === 1 ? 'i' : 'w', v = this.sel[kk], lk = this.lock && this.lock.k === kk ? this.lock : null;
         const name = v < 0 ? 'RANDOM' : cosName(ch, kk, v), open = v < 0 || Cos.open(ch.id, kk, v);
-        g.font = `italic 900 28px ${FONT_T}`; strokeText(g, name, r.x + r.w / 2, r.y + 48, open ? '#ffffff' : '#ff9ab0', OUTLINE, 5);
+        g.font = `italic 900 28px ${FONT_T}`; strokeText(g, name, r.x + r.w / 2, r.y + 44, open ? '#ffffff' : '#ff9ab0', OUTLINE, 5);
         g.font = `700 13px ${FONT_UI}`;
         const sub = v < 0 ? 'a random unlocked one each match' : open ? (cosList(ch, kk)[v] ? cosList(ch, kk)[v].jp + '  ·  EQUIPPED' : 'the original  ·  EQUIPPED') : `LOCKED · REACH MASTERY LV ${COS_UNLOCK[kk][v]}`;
-        g.fillStyle = open ? '#7affc0' : '#ff9ab0'; g.fillText(lk ? `LOCKED · REACH MASTERY LV ${COS_UNLOCK[kk][lk.v]} (preview only)` : sub, r.x + r.w / 2, r.y + 76);
+        g.fillStyle = open ? '#7affc0' : '#ff9ab0'; g.fillText(lk ? `LOCKED · REACH MASTERY LV ${COS_UNLOCK[kk][lk.v]} (preview only)` : sub, r.x + r.w / 2, r.y + 70);
         // pips: which of the three are unlocked
         for (let p = 0; p < 3; p++) { const ok = Cos.open(ch.id, kk, p); g.fillStyle = ok ? (v === p ? '#ffd84a' : '#ffffff') : 'rgba(255,255,255,0.2)'; g.fillRect(r.x + r.w - 110 + p * 22, r.y + 12, 16, 8); }
+      } else if (i === 4) {
+        const v = this.vs | 0, open = Mastery.unlocked(ch.id, v), sp = varSpecial(ch.id, v);
+        g.font = `italic 900 26px ${FONT_T}`; strokeText(g, varName(ch, v), r.x + r.w / 2, r.y + 44, open ? (sp ? '#ffd84a' : '#ffffff') : '#ff9ab0', OUTLINE, 5);
+        g.font = `700 13px ${FONT_UI}`; g.fillStyle = open ? '#7affc0' : '#ff9ab0';
+        g.fillText(open ? (sp ? 'ARCADE SKIN  ·  EQUIPPED' : 'EQUIPPED') : `LOCKED · ${varLockText(ch, v)} (preview only)`, r.x + r.w / 2, r.y + 70);
+        for (let q = 0; q < VAR_N; q++) { const ok = Mastery.unlocked(ch.id, q); g.fillStyle = ok ? (v === q ? '#ffd84a' : '#ffffff') : 'rgba(255,255,255,0.2)'; g.fillRect(r.x + r.w - 154 + q * 22, r.y + 12, 16, 8); }
       } else {
         const [tt, tj] = masteryTitle(ch, lv), nx = lv < 10 ? masteryTitle(ch, lv + 1) : null;
-        g.font = `italic 900 28px ${FONT_T}`; strokeText(g, `${tt}  ${tj}`, r.x + r.w / 2, r.y + 48, lv >= 10 ? '#ffd84a' : '#ffffff', OUTLINE, 5);
-        g.font = `700 13px ${FONT_UI}`; g.fillStyle = '#cfc4ee'; g.fillText(`MASTERY LV ${lv}${nx ? `  ·  next: ${nx[0]} at LV ${lv + 1}` : '  ·  highest title!'}${lv < 10 ? `  ·  LV 10: ${masteryTitle(ch, 10)[0]}` : ''}`, r.x + r.w / 2, r.y + 76);
+        g.font = `italic 900 28px ${FONT_T}`; strokeText(g, `${tt}  ${tj}`, r.x + r.w / 2, r.y + 44, lv >= 10 ? '#ffd84a' : '#ffffff', OUTLINE, 5);
+        g.font = `700 13px ${FONT_UI}`; g.fillStyle = '#cfc4ee'; g.fillText(`MASTERY LV ${lv}${nx ? `  ·  next: ${nx[0]} at LV ${lv + 1}` : '  ·  highest title!'}${lv < 10 ? `  ·  LV 10: ${masteryTitle(ch, 10)[0]}` : ''}`, r.x + r.w / 2, r.y + 70);
       }
     });
     const b = this.backRect();
-    drawButton(g, b, 'BACK', '戻る', this.row === 4, t);
+    drawButton(g, b, 'BACK', '戻る', this.row === 5, t);
     drawFooter(g, Settings.mobile ? 'tap ◀ ▶ to change' : '↑/↓ row   ·   ←/→ change   ·   ENTER replay   ·   ESC back');
   }
 }

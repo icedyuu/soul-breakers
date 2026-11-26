@@ -68,6 +68,9 @@ const Cloud = {
       const lv = Math.max(gr['*'] | 0, gr[c.id] | 0); if (!lv) continue;
       const r = Mastery.rec(c.id), x = this.xpFor(lv); if (r.xp < x) { r.xp = x; ch = true; }
     }
+    // arcade skins given by an admin: grant keys 'arc_<fighter id>' / 'arc_all' (any level)
+    const unl = Mastery.data.unl || (Mastery.data.unl = {});
+    for (const c of CHARS) if ((gr.arc_all || gr['arc_' + c.id]) && !unl[c.id + ':' + ARC_VI]) { unl[c.id + ':' + ARC_VI] = 1; ch = true; }
     if (ch) { this.importing = true; try { Mastery.save(); } finally { this.importing = false; } }
   },
   // what goes to the cloud: the real progress (the cheat's LV 10 stays on this device)
@@ -304,7 +307,7 @@ class AdminScene {
   dispose() { DomIn.kill(this.user, this.npw); this.user = this.npw = null; }
   arrow(row, i) { return { x: W / 2 + (i ? 200 : -260), y: 250 + row * 70, w: 60, h: 50 }; }
   btn(i) { const c = i % 3, r = Math.floor(i / 3); return { x: W / 2 - 430 + c * 300, y: 400 + r * 64, w: 260, h: 50 }; }
-  get acts() { return [['grant', 'GIVE LEVEL'], ['look', 'LOOK UP'], ['pw', 'SET PASSWORD'], ['ban', 'BAN'], ['unban', 'UNBAN']]; }
+  get acts() { return [['grant', 'GIVE LEVEL'], ['arc', 'GIVE ARCADE SKIN'], ['look', 'LOOK UP'], ['pw', 'SET PASSWORD'], ['ban', 'BAN'], ['unban', 'UNBAN']]; }
   async run(a) {
     if (this.busy) return;
     const u = this.user.value.trim(); if (!u) { this.out = 'Type a player name first.'; this.isErr = true; return; }
@@ -312,7 +315,9 @@ class AdminScene {
     try {
       const T = Cloud.tok; let r;
       if (a === 'grant') { const id = this.ci < 0 ? '*' : CHARS[this.ci].id; r = await Cloud.rpc('sb_admin_grant', { p_token: T, p_user: u, p_ch: id, p_lv: this.lv }); this.out = `${r.name}: ${this.ci < 0 ? 'ALL FIGHTERS' : CHARS[this.ci].name} → LV ${this.lv}. Unlocks on their next login.`; }
-      if (a === 'look') { r = await Cloud.rpc('sb_admin_user', { p_token: T, p_user: u }); const gr = Object.entries(r.grants || {}).map(([k, v]) => `${k === '*' ? 'ALL' : (chById(k) || { name: k }).name} ${v}`).join(', '); this.out = `${r.name} · rating ${r.rating} · ${r.wins} W / ${r.losses} L${r.banned ? ' · BANNED' : ''} · given: ${gr || 'nothing'}`; }
+      if (a === 'arc') { const id = this.ci < 0 ? 'arc_all' : 'arc_' + CHARS[this.ci].id; r = await Cloud.rpc('sb_admin_grant', { p_token: T, p_user: u, p_ch: id, p_lv: 1 }); this.out = `${r.name}: ARCADE SKIN for ${this.ci < 0 ? 'ALL FIGHTERS' : CHARS[this.ci].name}. Unlocks on their next login.`; }
+      if (a === 'look') { r = await Cloud.rpc('sb_admin_user', { p_token: T, p_user: u }); const gn = k => k === '*' ? 'ALL' : k === 'arc_all' ? 'ARCADE SKINS: ALL' : k.startsWith('arc_') ? 'ARCADE SKIN: ' + (chById(k.slice(4)) || { name: k }).name : (chById(k) || { name: k }).name;
+        const gr = Object.entries(r.grants || {}).map(([k, v]) => k.startsWith('arc_') ? gn(k) : `${gn(k)} ${v}`).join(', '); this.out = `${r.name} · rating ${r.rating} · ${r.wins} W / ${r.losses} L${r.banned ? ' · BANNED' : ''} · given: ${gr || 'nothing'}`; }
       if (a === 'pw') { const p = this.npw.value; if (p.length < 6) throw new Error('BAD_PASSWORD'); r = await Cloud.rpc('sb_admin_setpw', { p_token: T, p_user: u, p_pw: p }); this.out = `New password set for ${r.name}.`; this.npw.value = ''; }
       if (a === 'ban' || a === 'unban') { r = await Cloud.rpc('sb_admin_ban', { p_token: T, p_user: u, p_ban: a === 'ban' }); this.out = `${r.name} is ${r.banned ? 'banned' : 'unbanned'}.`; }
       Sound.play('menuOk');
@@ -341,7 +346,7 @@ class AdminScene {
     drawMenuBG(g, t, '#ffd84a');
     drawTitleText(g, 'ADMIN', W / 2, 70, 70, '#ffd84a', '#ff2a3a');
     g.font = `700 17px ${FONT_UI}`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = '#ffe9a8';
-    g.fillText('Give a player mastery levels (unlocks colours), look them up, set a new password, or ban.', W / 2, 120);
+    g.fillText('Give a player mastery levels (unlocks colours) or arcade skins, look them up, set a new password, or ban.', W / 2, 120);
     DomIn.place(this.user, { x: W / 2 - 430, y: 160, w: 440, h: 50 }); DomIn.place(this.npw, { x: W / 2 + 30, y: 160, w: 400, h: 50 });
     const rows = [['FIGHTER', this.ci < 0 ? 'ALL FIGHTERS' : CHARS[this.ci].name], ['LEVEL', 'LV ' + this.lv + (this.lv >= 10 ? ' (all colours)' : this.lv >= 7 ? ' (3 colours)' : this.lv >= 4 ? ' (2 colours)' : this.lv >= 2 ? ' (1 colour)' : '')]];
     rows.forEach(([k, v], r) => {

@@ -70,7 +70,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   // colour variants: host picks NUE colour 3 (LV 7 unlocked), guest cycles once with SP2 (T)
   const HOST = process.env.SB_NET_P1 || 'nue';   // env SB_NET_P1=<id>: the host's fighter (colour 3)
   await A.evaluate(h => { Mastery.rec(h).xp = 2000; (Mastery.data.unl || (Mastery.data.unl = {}))[h + ':3'] = 1; }, HOST); await Bp.evaluate(() => { for (const c of CHARS) Mastery.rec(c.id).xp = 300; });
-  await A.evaluate(i => { scene.move(0, i); scene.syncVs(); scene.vs[0] = 3; }, Math.max(0, ids.indexOf(HOST)));
+  await A.evaluate(i => { scene.move(0, i); scene.syncVs(); scene.vs[0] = 5; }, Math.max(0, ids.indexOf(HOST)));
   await sleep(300); await A.evaluate(() => scene.confirm(0));
   await Bp.keyboard.press('KeyD'); await sleep(100); await Bp.keyboard.press('KeyD'); await sleep(100); await Bp.keyboard.press('KeyT'); await sleep(300);
   const seenV = await Bp.evaluate(() => scene.vs.slice());
@@ -83,7 +83,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
     console.log(`match ${m}:`, JSON.stringify(info));
     const vA = await A.evaluate(() => [scene.p1.variant, scene.p2.variant]), vB = await Bp.evaluate(() => [scene.p1.variant, scene.p2.variant]);
     console.log('variants host', JSON.stringify(vA), 'guest', JSON.stringify(vB), 'guest select saw', JSON.stringify(seenV));
-    if (JSON.stringify(vA) !== JSON.stringify(vB) || vA[0] !== 3 || vA[1] !== 1 || seenV[1] !== 3) throw new Error('colour variants not synced');
+    if (JSON.stringify(vA) !== JSON.stringify(vB) || vA[0] !== 5 || vA[1] !== 1 || seenV[1] !== 5) throw new Error('colour variants not synced');
     const t0 = Date.now();
     for (;;) {
       await sleep(1000);

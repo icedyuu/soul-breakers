@@ -248,8 +248,9 @@ function drawFace(g, r, c, o) {
     g.lineWidth = 1.6; g.beginPath(); g.moveTo(0.5 * r, 0.56 * r); g.quadraticCurveTo(0.68 * r, 0.7 * r, 0.88 * r, 0.5 * r); g.stroke();
   } else { g.lineWidth = 1.5; g.beginPath(); g.moveTo(0.58 * r, 0.62 * r); g.lineTo(0.8 * r, 0.58 * r); g.stroke(); }
 }
-function drawHead(g, ch, c, R, o) {
+function drawHead(g, ch, c, R, o, cz) {
   const r = ch.dims.headR;
+  if (cz && cz.headBack) cz.headBack(g, r, c, R, o);
   if (ch.hairBack) ch.hairBack(g, r, c, R, o);
   const skull = () => { g.beginPath(); g.arc(0, 0, r, 0, TAU); };
   const jaw = ch.chibi ? () => { g.beginPath(); g.moveTo(-0.55 * r, 0.5 * r); g.quadraticCurveTo(0.1 * r, 1.02 * r, 0.55 * r, 0.86 * r); g.quadraticCurveTo(0.98 * r, 0.6 * r, 0.99 * r, -0.1 * r); g.lineTo(0, -0.2 * r); g.closePath(); }
@@ -262,6 +263,7 @@ function drawHead(g, ch, c, R, o) {
     if (ch.faceFn) ch.faceFn(g, r, c, o); else drawFace(g, r, c, o);
   }
   if (ch.hairFront) ch.hairFront(g, r, c, R, o);
+  if (cz && cz.head) cz.head(g, r, c, R, o);
   if (o.glow && !R.mono && o.expr !== 'hurt' && o.expr !== 'ko') {
     g.save(); g.globalCompositeOperation = 'lighter';
     const ex = 0.55 * r, ey = 0.06 * r;
@@ -277,8 +279,10 @@ function drawFigure(g, ch, p, x, y, facing, o = {}) {
   if (ch.drawCustom) { ch.drawCustom(g, ch, p, x, y, facing, o); return skeleton(p, ch.dims); }
   const s = ch.scale * (o.scale || 1), sk = skeleton(p, ch.dims), c = o.pal || (typeof RC !== 'undefined' && RC.pal && RC.pal[ch.id]) || ch.colors;
   const R = { mono: o.mono || null, ol: 2.4 };
-  if (o.ropes && !o.mono && ch.ropes) {
-    for (const rs of ch.ropes) {
+  const cz = typeof cosOf === 'function' ? cosOf(ch, c) : null;   // arcade-skin costume parts (09cz_arcade.js)
+  const ropeList = cz && cz.ropes ? (ch.ropes || []).concat(cz.ropes) : ch.ropes;
+  if (o.ropes && !o.mono && ropeList) {
+    for (const rs of ropeList) {
       let rope = o.ropes[rs.id]; if (!rope) rope = o.ropes[rs.id] = new Rope(rs.n, rs.seg * s);
       const a = rs.at(sk, ch.dims.headR), wp = toWorld(x, y, facing, s, p, sk, a[0], a[1]);
       const wind = -facing * (rs.wind || 0.55) + Math.sin((o.T || 0) * 0.06 + rs.n) * 0.25;
@@ -290,6 +294,7 @@ function drawFigure(g, ch, p, x, y, facing, o = {}) {
   if (p.rot) { g.translate(sk.hip[0], sk.hip[1]); g.rotate(p.rot); g.translate(-sk.hip[0], -sk.hip[1]); }
   g.lineJoin = 'round'; g.lineCap = 'round';
   const b = ch.build;
+  if (cz && cz.back) cz.back(g, sk, p, c, R, o);
   if (ch.weaponBack) ch.weaponBack(g, sk, p, c, R, o);
   drawArm(g, sk.sB, sk.be, sk.bh, c, R, b.arm, true, null);
   drawLeg(g, sk.hip, sk.bk, sk.bf, c, R, b.leg, true, ch);
@@ -299,11 +304,14 @@ function drawFigure(g, ch, p, x, y, facing, o = {}) {
   drawTorso(g, sk, p, ch, c, R, o);
   drawLeg(g, sk.hip, sk.fk, sk.ff, c, R, b.leg, false, ch);
   if (ch.drawSkirt) ch.drawSkirt(g, sk, p, c, R, o);
+  if (cz && cz.skirt) cz.skirt(g, sk, p, c, R, o);
   limb(g, sk.neck, [lerp(sk.neck[0], sk.head[0], 0.6), lerp(sk.neck[1], sk.head[1], 0.6)], 5.8 * b.torso, 5.2 * b.torso, c.skin, R);
   if (ch.neckWear) ch.neckWear(g, sk, p, c, R, o);
-  g.save(); g.translate(sk.head[0], sk.head[1]); g.rotate(sk.ha); drawHead(g, ch, c, R, o); g.restore();
+  if (cz && cz.neck) cz.neck(g, sk, p, c, R, o);
+  g.save(); g.translate(sk.head[0], sk.head[1]); g.rotate(sk.ha); drawHead(g, ch, c, R, o, cz); g.restore();
   drawArm(g, sk.sF, sk.fe, sk.fh, c, R, b.arm, false, ch.weaponFront ? () => ch.weaponFront(g, sk, p, c, R, o) : null);
   if (ch.shoulderOver) ch.shoulderOver(g, sk, p, c, R, o);
+  if (cz && cz.front) cz.front(g, sk, p, c, R, o);
   g.restore();
   return sk;
 }

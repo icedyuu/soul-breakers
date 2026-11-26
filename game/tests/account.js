@@ -77,10 +77,14 @@ let fails = 0; const ok = (c, m) => { if (!c) fails++; console.log(c ? 'ok  ' : 
   await Boss.evaluate(() => { scene.ci = CHARS.findIndex(c => c.id === 'nue'); scene.lv = 7; });
   await Boss.evaluate(() => scene.run('grant')); await sleep(500);
   ok(await Boss.evaluate(() => /LV 7/.test(scene.out) && !scene.isErr), 'grant ' + await Boss.evaluate(() => scene.out));
+  await Boss.evaluate(() => { scene.ci = CHARS.findIndex(c => c.id === 'hollow'); }); await Boss.evaluate(() => scene.run('arc')); await sleep(500);
+  ok(await Boss.evaluate(() => /ARCADE SKIN/.test(scene.out) && !scene.isErr), 'arcade skin grant ' + await Boss.evaluate(() => scene.out));
   await Boss.evaluate(() => scene.run('look')); await sleep(500);
+  ok(await Boss.evaluate(() => /ARCADE SKIN: THE HOLLOW/.test(scene.out)), 'look up shows the arcade skin grant');
   await Boss.screenshot({ path: OUT + '/admin.png' });
   await Q.evaluate(() => Cloud.refresh());
   ok(await Q.evaluate(() => Mastery.level('nue') >= 7 && Mastery.unlocked('nue', 3)), 'granted level unlocks colours on the player');
+  ok(await Q.evaluate(() => Mastery.unlocked('hollow', 5) && !Mastery.unlocked('kazuma', 5)), 'granted arcade skin unlocks on the player');
   ok(await P.evaluate(() => { const S = new AccountScene(); return true; }), 'account scene without login');
   // rankings: give Alice and Boss a rated match
   const tA = await Q.evaluate(() => Cloud.tok), tB = await Boss.evaluate(() => Cloud.tok);

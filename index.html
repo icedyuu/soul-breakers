@@ -1343,8 +1343,9 @@ function drawFace(g, r, c, o) {
     g.lineWidth = 1.6; g.beginPath(); g.moveTo(0.5 * r, 0.56 * r); g.quadraticCurveTo(0.68 * r, 0.7 * r, 0.88 * r, 0.5 * r); g.stroke();
   } else { g.lineWidth = 1.5; g.beginPath(); g.moveTo(0.58 * r, 0.62 * r); g.lineTo(0.8 * r, 0.58 * r); g.stroke(); }
 }
-function drawHead(g, ch, c, R, o) {
+function drawHead(g, ch, c, R, o, cz) {
   const r = ch.dims.headR;
+  if (cz && cz.headBack) cz.headBack(g, r, c, R, o);
   if (ch.hairBack) ch.hairBack(g, r, c, R, o);
   const skull = () => { g.beginPath(); g.arc(0, 0, r, 0, TAU); };
   const jaw = ch.chibi ? () => { g.beginPath(); g.moveTo(-0.55 * r, 0.5 * r); g.quadraticCurveTo(0.1 * r, 1.02 * r, 0.55 * r, 0.86 * r); g.quadraticCurveTo(0.98 * r, 0.6 * r, 0.99 * r, -0.1 * r); g.lineTo(0, -0.2 * r); g.closePath(); }
@@ -1357,6 +1358,7 @@ function drawHead(g, ch, c, R, o) {
     if (ch.faceFn) ch.faceFn(g, r, c, o); else drawFace(g, r, c, o);
   }
   if (ch.hairFront) ch.hairFront(g, r, c, R, o);
+  if (cz && cz.head) cz.head(g, r, c, R, o);
   if (o.glow && !R.mono && o.expr !== 'hurt' && o.expr !== 'ko') {
     g.save(); g.globalCompositeOperation = 'lighter';
     const ex = 0.55 * r, ey = 0.06 * r;
@@ -1372,8 +1374,10 @@ function drawFigure(g, ch, p, x, y, facing, o = {}) {
   if (ch.drawCustom) { ch.drawCustom(g, ch, p, x, y, facing, o); return skeleton(p, ch.dims); }
   const s = ch.scale * (o.scale || 1), sk = skeleton(p, ch.dims), c = o.pal || (typeof RC !== 'undefined' && RC.pal && RC.pal[ch.id]) || ch.colors;
   const R = { mono: o.mono || null, ol: 2.4 };
-  if (o.ropes && !o.mono && ch.ropes) {
-    for (const rs of ch.ropes) {
+  const cz = typeof cosOf === 'function' ? cosOf(ch, c) : null;   // arcade-skin costume parts (09cz_arcade.js)
+  const ropeList = cz && cz.ropes ? (ch.ropes || []).concat(cz.ropes) : ch.ropes;
+  if (o.ropes && !o.mono && ropeList) {
+    for (const rs of ropeList) {
       let rope = o.ropes[rs.id]; if (!rope) rope = o.ropes[rs.id] = new Rope(rs.n, rs.seg * s);
       const a = rs.at(sk, ch.dims.headR), wp = toWorld(x, y, facing, s, p, sk, a[0], a[1]);
       const wind = -facing * (rs.wind || 0.55) + Math.sin((o.T || 0) * 0.06 + rs.n) * 0.25;
@@ -1385,6 +1389,7 @@ function drawFigure(g, ch, p, x, y, facing, o = {}) {
   if (p.rot) { g.translate(sk.hip[0], sk.hip[1]); g.rotate(p.rot); g.translate(-sk.hip[0], -sk.hip[1]); }
   g.lineJoin = 'round'; g.lineCap = 'round';
   const b = ch.build;
+  if (cz && cz.back) cz.back(g, sk, p, c, R, o);
   if (ch.weaponBack) ch.weaponBack(g, sk, p, c, R, o);
   drawArm(g, sk.sB, sk.be, sk.bh, c, R, b.arm, true, null);
   drawLeg(g, sk.hip, sk.bk, sk.bf, c, R, b.leg, true, ch);
@@ -1394,11 +1399,14 @@ function drawFigure(g, ch, p, x, y, facing, o = {}) {
   drawTorso(g, sk, p, ch, c, R, o);
   drawLeg(g, sk.hip, sk.fk, sk.ff, c, R, b.leg, false, ch);
   if (ch.drawSkirt) ch.drawSkirt(g, sk, p, c, R, o);
+  if (cz && cz.skirt) cz.skirt(g, sk, p, c, R, o);
   limb(g, sk.neck, [lerp(sk.neck[0], sk.head[0], 0.6), lerp(sk.neck[1], sk.head[1], 0.6)], 5.8 * b.torso, 5.2 * b.torso, c.skin, R);
   if (ch.neckWear) ch.neckWear(g, sk, p, c, R, o);
-  g.save(); g.translate(sk.head[0], sk.head[1]); g.rotate(sk.ha); drawHead(g, ch, c, R, o); g.restore();
+  if (cz && cz.neck) cz.neck(g, sk, p, c, R, o);
+  g.save(); g.translate(sk.head[0], sk.head[1]); g.rotate(sk.ha); drawHead(g, ch, c, R, o, cz); g.restore();
   drawArm(g, sk.sF, sk.fe, sk.fh, c, R, b.arm, false, ch.weaponFront ? () => ch.weaponFront(g, sk, p, c, R, o) : null);
   if (ch.shoulderOver) ch.shoulderOver(g, sk, p, c, R, o);
+  if (cz && cz.front) cz.front(g, sk, p, c, R, o);
   g.restore();
   return sk;
 }
@@ -10970,18 +10978,18 @@ const AIMI = {
 };
 makeChibi(AIMI, { build: { arm: 0.95, leg: 0.97, torso: 0.97 }, colors: {} });
 AIMI.faceFn = aimFace;
-// skin 3 — MIDNIGHT DRESS (clear Arcade with her): black dress, sleeveless with long black gloves, crimson lacing, rose choker
+// skin 5 — MIDNIGHT DRESS (clear Arcade with her): black dress, sleeveless with long black gloves, crimson lacing, rose choker
 const AIM_DRESS = { ...AIMI.colors, skin3: 1, top: '#141016', uarm: '#fde9e2', farm: '#141016', cuff: '#141016', belt: null, collar: '#141016', warm: '#1a1418', boot: '#0e0a0e', foot: '#0e0a0e', sole: '#3a0a18', pad: '#c8103a',
   tie: '#141016', tie2: '#c8103a', rose: '#c8103a', gun: '#1a1a20', grip: '#3a0a18', heart: '#c8103a', accent: '#ff3a64' };
 // skin 4 — LAST HORIZON (Mastery LV 10): long dark mantle over a white dress, gold heart-lock clasp
 const AIM_CLOAK = { ...AIMI.colors, skin4: 1, top: '#efe8f0', uarm: '#2c2232', farm: '#2c2232', cuff: '#e0b84e', belt: null, collar: '#efe8f0', dress: '#efe8f0', cloak: '#2c2232', lining: '#7a1a44', warm: '#2c2232', boot: '#3a2a22', foot: '#3a2a22', sole: '#1a1210', pad: '#e0b84e',
   tie: '#2c2232', tie2: '#e0b84e', accent: '#ff6a9a' };
-AIMI.varColors = vi => vi === 3 ? AIM_DRESS : vi === 4 ? AIM_CLOAK : null;
+AIMI.varColors = vi => vi === 5 ? AIM_DRESS : vi === 4 ? AIM_CLOAK : null;
 
 // ---------------------------------- obsession ----------------------------------
 const AIM_PAL = {};
 AIMI.palette = F => {
-  const ul = F.ulT > 0, ex = F.aimEx || null, v = F.variant === 3 ? 3 : F.variant === 4 ? 4 : 0, key = v + (ul ? 'u' : '') + (ex || '');
+  const ul = F.ulT > 0, ex = F.aimEx || null, v = F.variant === 5 ? 3 : F.variant === 4 ? 4 : 0, key = v + (ul ? 'u' : '') + (ex || '');
   return AIM_PAL[key] || (AIM_PAL[key] = { ...(v === 3 ? AIM_DRESS : v === 4 ? AIM_CLOAK : AIMI.colors), ul, ex, accent: ul ? AMR : v === 3 ? AIM_DRESS.accent : v === 4 ? AIM_CLOAK.accent : AM });
 };
 function aimGain(F, n, label) {
@@ -15648,7 +15656,7 @@ function rcMaker(V, protect) {
 }
 
 // ---------------- canvas colour hook ----------------
-const RC = { fn: null, pal: null };   // pal: {charId: outfit palette} for menu figures drawn in a variant (ch.varColors)
+const RC = { fn: null, pal: null, cos: null };   // cos: fighter id whose arcade costume every figure of that fighter wears right now   // pal: {charId: outfit palette} for menu figures drawn in a variant (ch.varColors)
 (() => {
   const P = CanvasRenderingContext2D.prototype;
   for (const k of ['fillStyle', 'strokeStyle', 'shadowColor']) {
@@ -15666,8 +15674,8 @@ const RC = { fn: null, pal: null };   // pal: {charId: outfit palette} for menu 
 })();
 function withRecolor(fn, body) { const prev = RC.fn; RC.fn = fn; try { return body(); } finally { RC.fn = prev; } }
 
-// ---------------- variant designs (index 0 = default; 1-4 unlock at mastery LV 2 / 4 / 7 / 10) ----------------
-const VAR_UNLOCK = [1, 2, 4, 7, 10];
+// ---------------- variant designs (index 0 = default; 1-4 unlock at mastery LV 2 / 4 / 7 / 10; 5 = arcade-clear skin) ----------------
+const VAR_UNLOCK = [1, 2, 4, 7, 10, 99];   // slot 5 = ARCADE skin (special: clear Arcade with the fighter, see 09cz_arcade.js)
 const VAR_N = VAR_UNLOCK.length;
 const LIGHT = [0.55, 1], DARK = [0, 0.4];
 const VARIANTS = {
@@ -15776,8 +15784,9 @@ const VARIANTS = {
   aimi: [
     { n: 'LAVENDER VOW', rules: [{ h: [320, 360], hue: 275 }, { h: [0, 12], hue: 275 }] },
     { n: 'MINT DIARY', rules: [{ h: [320, 360], hue: 160, s: 0.8 }, { h: [0, 12], hue: 160, s: 0.8 }, { h: [220, 245], hue: 170, ss: 0.35 }] },
-    { n: 'MIDNIGHT DRESS', rules: [], special: 'arcade' },   // her black dress (see AIMI.varColors) — unlocked by clearing Arcade with her
+    { n: 'CRIMSON VOW', rules: [{ h: [320, 360], hue: 352, s: 1.1, lm: 0.85 }, { h: [0, 12], hue: 352, s: 1.1, lm: 0.85 }] },
     { n: 'LAST HORIZON', glow: '#ffc0d6', rules: [] },        // LV 10: the long mantle (see AIMI.varColors)
+    { n: 'MIDNIGHT DRESS', rules: [], special: 'arcade' },   // her black dress (see AIMI.varColors) — unlocked by clearing Arcade with her
   ],
   hollow: [
     { n: 'CRIMSON SEAL', rules: [{ h: [240, 300], hue: 355 }] },
@@ -15806,14 +15815,15 @@ function varPal(ch, vi, pal) {
   const fn = varFn(ch, vi); if (!fn || !pal) return pal;
   let m = VAR_PAL.get(pal); if (!m) VAR_PAL.set(pal, m = []);
   if (m[vi]) return m[vi];
-  const o = {}; for (const k in pal) o[k] = typeof pal[k] === 'string' ? fn(pal[k]) : pal[k];
+  const V = varDef(ch, vi), src = V && V.cos ? { ...pal, ...(V.pal || {}), cos: V.cos } : pal;   // arcade skins: costume colours + parts (09cz_arcade.js)
+  const o = {}; for (const k in src) o[k] = typeof src[k] === 'string' && k !== 'cos' ? fn(src[k]) : src[k];
   return (m[vi] = o);
 }
 function varSwatch(ch, vi) { const fn = varFn(ch, vi) || (v => v), c = (vi && ch.varColors && ch.varColors(vi)) || ch.colors; return [fn(c.top || c.skin || c.accent), fn(c.hair || c.leg || c.accent), fn(c.accent)]; }
 // effective variants of a match: a mirror match with identical colours gives P2 the next colour
 function cfgVariants(cfg) {
   const v1 = clamp(cfg.v1 | 0, 0, VAR_N - 1); let v2 = clamp(cfg.v2 | 0, 0, VAR_N - 1);
-  if (cfg.p1 === cfg.p2 && v1 === v2) v2 = (v2 + 1) % VAR_N;
+  if (cfg.p1 === cfg.p2 && v1 === v2) v2 = v2 + 1 >= VAR_N - 1 ? 0 : v2 + 1;   // (never hands out the arcade skin)
   return [v1, v2];
 }
 
@@ -15842,7 +15852,12 @@ const Mastery = {
   load() {
     let d = null; try { d = JSON.parse(localStorage.getItem(this.KEY)); } catch (e) { }
     this.d = d && d.v === 1 && d.chars ? d : this.fresh(); if (!this.d.pick) this.d.pick = {};
+    this.migrate(this.d);
     return this.d;
+  },
+  // Aimi's MIDNIGHT DRESS moved from slot 3 to the arcade slot 5 (all fighters now have their arcade skin in slot 5)
+  migrate(d) {
+    if (d.unl && d.unl['aimi:3']) { delete d.unl['aimi:3']; d.unl['aimi:5'] = 1; if ((d.pick.aimi | 0) === 3) d.pick.aimi = 5; }
   },
   get data() { return this.d || this.load(); },
   save() { this.data.upd = Date.now(); try { localStorage.setItem(this.KEY, JSON.stringify(this.d)); } catch (e) { } },
@@ -15883,8 +15898,9 @@ const Mastery = {
     if (!o || o.v !== 1 || !o.chars) return false;
     const d = this.data;
     for (const id in o.chars) { const a = this.rec(id), b = o.chars[id]; if ((b.xp | 0) > a.xp) Object.assign(a, { xp: b.xp | 0, w: b.w | 0, l: b.l | 0 }); }
-    if (o.unl && typeof o.unl === 'object') { d.unl = d.unl || {}; for (const k in o.unl) if (o.unl[k]) d.unl[k] = 1; }   // special skin unlocks only ever add
-    Object.assign(d.pick, o.pick || {}); this.save(); return true;
+    if (o.unl && typeof o.unl === 'object') { d.unl = d.unl || {}; for (const k in o.unl) if (o.unl[k]) d.unl[k === 'aimi:3' ? 'aimi:5' : k] = 1; }   // special skin unlocks only ever add
+    const pk = { ...(o.pick || {}) }; if (o.unl && o.unl['aimi:3'] && (pk.aimi | 0) === 3) pk.aimi = 5;
+    Object.assign(d.pick, pk); this.save(); return true;
   },
 };
 
@@ -15896,7 +15912,8 @@ const Mastery = {
   Fighter.prototype.draw = function (g) {
     const fn = this.variant ? varFn(this.ch, this.variant) : null;
     if (!fn) return fd.call(this, g);
-    withRecolor(fn, () => fd.call(this, g));
+    const V0 = varDef(this.ch, this.variant), pc = RC.cos; RC.cos = V0 && V0.cos ? this.ch.id : null;
+    try { withRecolor(fn, () => fd.call(this, g)); } finally { RC.cos = pc; }
     const V = varDef(this.ch, this.variant);
     if (V.glow && !this.hidden) {     // top-tier colour: rising soul sparks (draw-only, deterministic from T)
       const T = this.T, s = this.s;
@@ -16128,6 +16145,360 @@ Mastery.unlockAll = function () { let max = 0; for (let lv = 1; lv < this.MAX; l
     g.fillText('ALL FIGHTERS MASTERY LV 10 · ALL COLORS UNLOCKED', W / 2, H / 2 + 38);
     for (let k = 0; k < 24; k++) { const ph = ((150 - t) * 3 + k * 53) % 300; g.fillStyle = k % 2 ? '#ffd84a' : '#ff6a2a'; g.fillRect((k * 97) % W, H / 2 + 70 + ph - 300, 6, 6); }
     g.restore();
+  };
+}
+
+// ===================== ARCADE SKINS: one costume per fighter, unlocked by clearing Arcade with them =====================
+// Slot 5 of every fighter's VARIANTS list (Mastery.unlocked → data.unl['id:5'], the same system as Aimi's MIDNIGHT DRESS).
+// A costume = extra colours (pal, merged into the fighter's palette by varPal / varColors) + parts drawn by drawFigure
+// at fixed layers: back (behind everything), skirt (over the hips/torso), neck, headBack / head (head space), front (over
+// the front arm), plus optional cloth ropes. Purely visual: the sim never reads it, so online lockstep stays deterministic.
+const ARC_VI = 5;
+
+// ---------------- part helpers (body space: +x = forward, y up = negative; head space: r = head radius) ----------------
+function cosFloor(sk) { return Math.max(sk.ff[1], sk.bf[1]) + 8; }
+function cosSway(o, k = 1, sp = 0.07) { return Math.sin((o.T || 0) * sp) * 3 * k; }
+// a cape / mantle hanging from the shoulders behind the body. len 0..1 = neck .. floor
+function cosCape(g, sk, c, R, o, { len = 0.8, flare = 10, col, lin, trim, tatter = 0, fur = null, w = 1 }) {
+  const n = sk.neck, h = sk.hip, fy = cosFloor(sk), hy = lerp(n[1], fy, len), sw = cosSway(o), sw2 = cosSway(o, 1.4, 0.05);
+  const A = [n[0] - 9 * w, n[1] - 7], B = [n[0] + 8 * w, n[1] - 5], S = [sk.sB[0] - 19 * w, sk.sB[1] + 8];
+  const Kb = [h[0] - 40 * w - flare * 1.3 + sw2, hy], Kf = [h[0] + 10 * w + sw * 0.4, hy - 3], Ff = [sk.sF[0] + 13 * w, sk.sF[1] + 8];
+  const hem = []; const N = tatter ? 7 : 3;
+  for (let i = 1; i < N; i++) { const t = i / N, P = lerpP(Kb, Kf, t); hem.push([P[0], P[1] + (tatter ? (i % 2 ? tatter : -tatter * 0.4) : Math.sin(t * Math.PI) * 4)]); }
+  const pts = [A, S, [h[0] - 30 * w - flare + sw2 * 0.6, lerp(n[1], hy, 0.55)], Kb, ...hem, Kf, [h[0] + 16 * w, lerp(n[1], hy, 0.55)], Ff, B];
+  if (lin && !R.mono) poly(g, pts.map(([x, y], i) => [x + (i > 2 && i < pts.length - 2 ? 5 : 0), y + 2]), lin, R);   // lining peeking out at the hem
+  poly(g, pts, col, R);
+  if (R.mono) return;
+  g.save(); g.beginPath(); pts.forEach((p, i) => i ? g.lineTo(...p) : g.moveTo(...p)); g.closePath(); g.clip();
+  g.strokeStyle = 'rgba(0,0,0,0.22)'; g.lineWidth = 2;
+  for (const d of [-14, -26, -36]) { g.beginPath(); g.moveTo(n[0] + d * 0.3, n[1] + 8); g.quadraticCurveTo(h[0] + d, h[1], h[0] + d * 1.1 + sw2 * 0.5, hy); g.stroke(); }
+  g.restore();
+  if (trim) { g.strokeStyle = trim; g.lineWidth = 3; g.beginPath(); g.moveTo(...Kb); hem.forEach(p => g.lineTo(...p)); g.lineTo(...Kf); g.stroke(); }
+  if (fur) cosFur(g, [S, A, B, Ff], fur, R, 6);
+}
+// fluffy fur trim along a polyline
+function cosFur(g, pts, col, R, rad = 6) {
+  for (let i = 0; i < pts.length - 1; i++) for (let t = 0; t < 1; t += 0.34) { const P = lerpP(pts[i], pts[i + 1], t); circ(g, P[0], P[1], rad * (0.85 + 0.3 * ((i * 3 + t * 9) % 2 > 1 ? 1 : 0)), col, R); }
+}
+// mantle front edge over the near shoulder (+ clasp)
+function cosDrape(g, sk, c, R, col, trim, clasp) {
+  const n = sk.neck, s = sk.sF;
+  poly(g, [[n[0] - 6, n[1] - 5], [s[0] + 12, s[1] - 5], [s[0] + 15, s[1] + 16], [s[0] + 3, s[1] + 23], [n[0] - 2, n[1] + 16]], col, R, 2.4);
+  if (R.mono) return;
+  if (trim) { g.strokeStyle = trim; g.lineWidth = 2; g.beginPath(); g.moveTo(s[0] + 14, s[1] + 14); g.lineTo(s[0] + 3, s[1] + 21); g.stroke(); }
+  if (clasp) { g.fillStyle = clasp; g.strokeStyle = OUTLINE; g.lineWidth = 1.2; g.beginPath(); g.arc(n[0] + 3, n[1] + 7, 3.4, 0, TAU); g.fill(); g.stroke(); }
+}
+function cosEpaulette(g, P, col, R, fringe) {
+  ell(g, P[0] + 1, P[1] - 2, 11, 5, col, R, -0.1);
+  if (R.mono || !fringe) return;
+  g.strokeStyle = fringe; g.lineWidth = 1.6; for (let i = -3; i <= 3; i++) { g.beginPath(); g.moveTo(P[0] + i * 3, P[1] + 2); g.lineTo(P[0] + i * 3.2, P[1] + 8); g.stroke(); }
+}
+// crown in head space (base y, height, spikes, colours)
+function cosCrown(g, r, R, { y = -1.0, h = 0.5, n = 5, col, dark, gem, tilt = -0.06, x0 = -0.72, x1 = 0.8 }) {
+  const pts = [[x0 * r, (y + 0.16) * r], [x1 * r, (y + 0.16 + tilt) * r]];
+  for (let i = n * 2; i >= 0; i--) { const t = i / (n * 2), x = lerp(x1, x0, 1 - t) * r, base = (y + tilt * t) * r; pts.push([x, base - (i % 2 ? 0.32 * h : h) * r]); }
+  poly(g, pts, col, R, 2.2);
+  if (R.mono) return;
+  g.fillStyle = dark || 'rgba(0,0,0,0.25)'; g.fillRect(x0 * r, (y + 0.02) * r, (x1 - x0) * r, 0.1 * r);
+  for (let i = 0; i <= n * 2; i += 2) { const t = i / (n * 2), x = lerp(x0, x1, t) * r, yy = (y + tilt * t - h) * r; g.fillStyle = gem; g.beginPath(); g.arc(x, yy, 0.07 * r, 0, TAU); g.fill(); }
+  g.save(); g.shadowColor = gem; g.shadowBlur = FX.hq ? 8 : 0; g.fillStyle = gem; g.strokeStyle = OUTLINE; g.lineWidth = 1;
+  const cx = lerp(x0, x1, 0.5) * r, cy = (y + tilt * 0.5 - 0.02) * r; g.beginPath(); g.moveTo(cx, cy - 0.13 * r); g.lineTo(cx + 0.09 * r, cy); g.lineTo(cx, cy + 0.11 * r); g.lineTo(cx - 0.09 * r, cy); g.closePath(); g.fill(); g.stroke(); g.restore();
+}
+function cosRose(g, x, y, s, col, R) {
+  if (R.mono) return;
+  g.fillStyle = col; g.strokeStyle = OUTLINE; g.lineWidth = 1;
+  g.beginPath(); g.arc(x, y, s, 0, TAU); g.fill(); g.stroke();
+  g.strokeStyle = 'rgba(0,0,0,0.35)'; g.beginPath(); g.arc(x - s * 0.1, y, s * 0.55, 0.5, 5.2); g.stroke(); g.beginPath(); g.arc(x + s * 0.1, y - s * 0.1, s * 0.25, 2, 7); g.stroke();
+}
+function cosHorn(g, r, base, pts, col, R, w = 0.16) { tube(g, [base, ...pts].map(([x, y]) => [x * r, y * r]), w * r, 0.03 * r, col, R); }
+
+// ---------------- the eighteen designs (Aimi's MIDNIGHT DRESS is in 04_zzzz9b_aimi.js) ----------------
+const ARC = {
+  kazuma: { n: 'CHAMPION\'S ROBE', jp: '覇者', pal: { kc: '#b8141e', kl: '#ffd25a', kt: '#ffd25a', kb: '#e6b23a', kg: '#ff3a4a' },
+    back(g, sk, p, c, R, o) {   // a boxing champion's satin robe worn as a cape, hood folded behind the neck
+      cosCape(g, sk, c, R, o, { len: 0.72, flare: 8, col: c.kc, lin: c.kl, trim: c.kt });
+      const n = sk.neck; poly(g, [[n[0] - 20, n[1] - 2], [n[0] - 6, n[1] - 12], [n[0] + 4, n[1] + 2], [n[0] - 10, n[1] + 12], [n[0] - 24, n[1] + 8]], c.kc, R, 2);
+      if (!R.mono) { g.strokeStyle = c.kt; g.lineWidth = 2; g.beginPath(); g.moveTo(n[0] - 20, n[1] - 1); g.lineTo(n[0] - 6, n[1] - 11); g.stroke(); }
+    },
+    skirt(g, sk, p, c, R) {   // golden championship belt
+      const h = sk.hip;
+      poly(g, [[h[0] - 15, h[1] - 10], [h[0] + 14, h[1] - 11], [h[0] + 14, h[1] + 1], [h[0] - 15, h[1] + 2]], c.kb, R, 2.4);
+      poly(g, [[h[0] - 4, h[1] - 15], [h[0] + 11, h[1] - 15], [h[0] + 13, h[1] + 5], [h[0] - 6, h[1] + 5]], c.kb, R, 2.4);
+      if (R.mono) return;
+      g.fillStyle = c.kg; g.beginPath(); g.arc(h[0] + 3.5, h[1] - 5, 4, 0, TAU); g.fill(); g.fillStyle = 'rgba(255,255,255,0.6)'; g.fillRect(h[0] + 1.5, h[1] - 7.5, 2, 2);
+    },
+    front(g, sk, p, c, R) { cosDrape(g, sk, c, R, c.kc, c.kt, null); },
+  },
+  yoru: { n: 'FOX SHRINE', jp: '狐社', pal: { kc: '#f6f1e8', kl: '#c8102e', kt: '#c8102e', km: '#ffffff', kr: '#d8203a' },
+    ropes: [{ id: 'cyr1', at: (sk, r) => headPt(sk, -r * 0.85, -r * 0.35), n: 6, seg: 10, w0: 4, w1: 3, color: 'kr', grav: 0.45, wind: 0.6 },
+      { id: 'cyr2', at: (sk, r) => headPt(sk, -r * 0.9, -r * 0.2), n: 5, seg: 10, w0: 4, w1: 3, color: 'kr', grav: 0.5, wind: 0.5 }],
+    back(g, sk, p, c, R, o) { cosCape(g, sk, c, R, o, { len: 0.5, flare: 4, col: c.kc, lin: c.kl, trim: c.kt, w: 0.9 }); },
+    head(g, r, c, R) {   // white fox mask pushed to the side of the head
+      g.save(); g.translate(-0.42 * r, -0.62 * r); g.rotate(-0.55);
+      poly(g, [[-0.42 * r, -0.28 * r], [-0.36 * r, -0.78 * r], [-0.12 * r, -0.36 * r], [0.12 * r, -0.36 * r], [0.36 * r, -0.78 * r], [0.42 * r, -0.28 * r], [0.34 * r, 0.22 * r], [0, 0.52 * r], [-0.34 * r, 0.22 * r]], c.km, R, 2);
+      if (!R.mono) {
+        g.strokeStyle = c.kr; g.lineWidth = 0.06 * r; g.lineCap = 'round';
+        g.beginPath(); g.moveTo(-0.26 * r, -0.06 * r); g.lineTo(-0.08 * r, 0.02 * r); g.moveTo(0.26 * r, -0.06 * r); g.lineTo(0.08 * r, 0.02 * r); g.stroke();
+        g.fillStyle = c.kr; g.beginPath(); g.moveTo(-0.3 * r, -0.62 * r); g.lineTo(-0.22 * r, -0.36 * r); g.lineTo(-0.36 * r, -0.36 * r); g.fill(); g.beginPath(); g.moveTo(0.3 * r, -0.62 * r); g.lineTo(0.22 * r, -0.36 * r); g.lineTo(0.36 * r, -0.36 * r); g.fill();
+        g.beginPath(); g.arc(0, -0.2 * r, 0.06 * r, 0, TAU); g.fill(); g.fillStyle = OUTLINE; g.beginPath(); g.arc(0, 0.42 * r, 0.05 * r, 0, TAU); g.fill();
+      }
+      g.restore();
+    },
+    front(g, sk, p, c, R) { cosDrape(g, sk, c, R, c.kc, c.kt, c.kr); },
+  },
+  sera: { n: 'STARFALL WITCH', jp: '星降る魔女', pal: { kc: '#1e2458', kl: '#ffd46b', kt: '#ffd46b', kh: '#232a66', kh2: '#161b44', ks: '#fff3a8' },
+    back(g, sk, p, c, R, o) {
+      cosCape(g, sk, c, R, o, { len: 0.86, flare: 14, col: c.kc, lin: c.kl, trim: c.kt });
+      if (R.mono) return; const n = sk.neck, h = sk.hip, T = o.T || 0;
+      for (let i = 0; i < 7; i++) { const x = h[0] - 34 + (i * 13) % 34, y = n[1] + 22 + (i * 29) % 70; g.globalAlpha = 0.6 + 0.4 * Math.sin(T * 0.1 + i); g.fillStyle = c.ks; g.fillRect(x - 1.5, y - 1.5, 3, 3); }
+      g.globalAlpha = 1;
+    },
+    head(g, r, c, R, o) {   // a tall pointed witch hat with a gold band and a star
+      const T = o.T || 0, bend = Math.sin(T * 0.05) * 0.08;
+      ell(g, 0.05 * r, -0.98 * r, 1.6 * r, 0.3 * r, c.kh2, R, -0.08);
+      poly(g, [[-0.82 * r, -1.02 * r], [-0.5 * r, -1.85 * r], [(-1.15 + bend) * r, -2.75 * r], [-0.05 * r, -1.95 * r], [0.88 * r, -1.1 * r]], c.kh, R);
+      if (R.mono) return;
+      g.strokeStyle = c.kt; g.lineWidth = 0.14 * r; g.beginPath(); g.moveTo(-0.78 * r, -1.14 * r); g.quadraticCurveTo(0.05 * r, -1.32 * r, 0.84 * r, -1.2 * r); g.stroke();
+      g.save(); g.translate(0.2 * r, -1.24 * r); g.shadowColor = c.ks; g.shadowBlur = FX.hq ? 10 : 0; g.fillStyle = c.ks; g.strokeStyle = OUTLINE; g.lineWidth = 1.1;
+      g.beginPath(); for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, rr = (i % 2 ? 0.08 : 0.19) * r; g.lineTo(Math.cos(a) * rr, Math.sin(a) * rr); } g.closePath(); g.fill(); g.stroke(); g.restore();
+      g.fillStyle = 'rgba(255,255,255,0.18)'; g.beginPath(); g.moveTo(-0.5 * r, -1.2 * r); g.lineTo(-0.4 * r, -1.8 * r); g.lineTo(-0.2 * r, -1.25 * r); g.fill();
+    },
+    front(g, sk, p, c, R) { cosDrape(g, sk, c, R, c.kc, c.kt, c.ks); },
+  },
+  goro: { n: 'RED SHOGUN', jp: '赤備え', pal: { kc: '#b0161c', kd: '#6a0a10', kt: '#e8b440', kf: '#f2e6c8', kp: '#3a2a1a' },
+    back(g, sk, p, c, R, o) {   // a sashimono war banner strapped to his back
+      const n = sk.neck, sw = cosSway(o, 1.2, 0.09), base = [n[0] - 14, n[1] + 30], top = [n[0] - 22, n[1] - 92];
+      tube(g, [base, top], 2.6, 2.2, c.kp, R);
+      const fl = [[top[0] - 1, top[1] + 4], [top[0] - 40 + sw, top[1] + 2 + sw * 0.3], [top[0] - 38 + sw * 1.4, top[1] + 64], [top[0] + 1, top[1] + 62]];
+      poly(g, fl, c.kf, R);
+      if (R.mono) return;
+      g.fillStyle = c.kc; g.fillRect(top[0] - 36 + sw * 1.2, top[1] + 8, 6, 52);
+      g.save(); g.translate(top[0] - 18 + sw * 0.8, top[1] + 33); g.font = `900 22px ${FONT_JP}`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = OUTLINE; g.fillText('鬼', 0, 0); g.restore();
+      circ(g, top[0], top[1], 3.5, c.kt, R);
+    },
+    front(g, sk, p, c, R) {   // red-lacquered shoulder guards with gold lacing
+      const s = sk.sF;
+      for (let i = 0; i < 3; i++) poly(g, [[s[0] - 12, s[1] - 6 + i * 7], [s[0] + 13, s[1] - 8 + i * 7], [s[0] + 15, s[1] - 1 + i * 7], [s[0] - 11, s[1] + 1 + i * 7]], i % 2 ? c.kd : c.kc, R, 2);
+      if (R.mono) return; g.strokeStyle = c.kt; g.lineWidth = 1.5; for (const dx of [-5, 6]) { g.beginPath(); g.moveTo(s[0] + dx, s[1] - 7); g.lineTo(s[0] + dx + 1, s[1] + 15); g.stroke(); }
+    },
+  },
+  frogs: { n: 'FROG ROYALS', jp: '蛙の王族', pal: { kc: '#a0142a', kl: '#ffd25a', kt: '#f4f0f8', kg: '#ffd25a', kj: '#3ad0ff' } },   // drawn by the frog hook below
+  conductor: { n: 'ROYAL EXPRESS', jp: '御召列車', pal: { kc: '#8e1024', kl: '#2a1a4a', kt: '#ffd25a', kf: '#f8f4ec', ke: '#ffd25a' },
+    back(g, sk, p, c, R, o) { cosCape(g, sk, c, R, o, { len: 0.58, flare: 10, col: c.kc, lin: c.kl, trim: c.kt, fur: c.kf }); },
+    skirt(g, sk, p, c, R) {   // gold sash across the chest
+      const n = sk.neck, h = sk.hip;
+      poly(g, [[n[0] - 9, n[1] + 4], [n[0] - 2, n[1] + 1], [h[0] + 14, h[1] - 6], [h[0] + 8, h[1] + 1]], c.kt, R, 2);
+      if (!R.mono) { g.fillStyle = '#c8102e'; g.beginPath(); g.arc(h[0] + 10, h[1] - 4, 3, 0, TAU); g.fill(); }
+    },
+    front(g, sk, p, c, R) { cosEpaulette(g, sk.sF, c.ke, R, c.kt); },
+  },
+  cardmaster: { n: 'PHANTOM MAGICIAN', jp: '幻影奇術師', pal: { kc: '#121018', kl: '#c8102e', kt: '#f2c14e', km: '#f2c14e', kr: '#e0103a' },
+    back(g, sk, p, c, R, o) {   // magician's cape with a tall pointed collar
+      cosCape(g, sk, c, R, o, { len: 0.82, flare: 16, col: c.kc, lin: c.kl, trim: c.kt });
+      const n = sk.neck;
+      poly(g, [[n[0] - 12, n[1] + 4], [n[0] - 26, n[1] - 34], [n[0] - 12, n[1] - 22], [n[0] - 4, n[1] - 40], [n[0] + 4, n[1] - 14], [n[0] + 8, n[1] + 2]], c.kc, R);
+      if (!R.mono) poly(g, [[n[0] - 9, n[1]], [n[0] - 20, n[1] - 28], [n[0] - 10, n[1] - 18], [n[0] - 4, n[1] - 32], [n[0] + 2, n[1] - 10]], c.kl, R, 1);
+    },
+    head(g, r, c, R) {   // a gold monocle over the near eye
+      if (R.mono) return;
+      g.strokeStyle = c.km; g.lineWidth = 0.07 * r; g.beginPath(); g.arc(0.5 * r, 0.25 * r, 0.33 * r, 0, TAU); g.stroke();
+      g.fillStyle = 'rgba(200,230,255,0.18)'; g.fill();
+      g.lineWidth = 0.035 * r; g.beginPath(); g.moveTo(0.5 * r, 0.58 * r); g.quadraticCurveTo(0.2 * r, 1.0 * r, -0.1 * r, 0.9 * r); g.stroke();
+    },
+    front(g, sk, p, c, R) { cosDrape(g, sk, c, R, c.kc, c.kt, null); cosRose(g, sk.neck[0] + 4, sk.neck[1] + 9, 3.6, c.kr, R); },
+  },
+  nue: { n: 'WILD MONARCH', jp: '獣王', pal: { kc: '#8a7a68', kl: '#3a2c22', kt: '#c8b89a', kf: '#f4eee2', ka: '#efe6d2' },
+    back(g, sk, p, c, R, o) { cosCape(g, sk, c, R, o, { len: 0.66, flare: 12, col: c.kc, lin: c.kl, tatter: 6 }); },
+    headBack(g, r, c, R) {   // bone antlers rising behind the beanie
+      for (const [sx, k] of [[-0.55, 0.85], [0.2, 1]]) {
+        cosHorn(g, r, [sx, -0.8], [[sx - 0.2 * k, -1.5 * k], [sx - 0.55 * k, -2.1 * k], [sx - 0.95 * k, -2.35 * k]], c.ka, R, 0.11);
+        cosHorn(g, r, [sx - 0.2 * k, -1.55 * k], [[sx + 0.2 * k, -2.0 * k], [sx + 0.18 * k, -2.35 * k]], c.ka, R, 0.08);
+        cosHorn(g, r, [sx - 0.5 * k, -2.05 * k], [[sx - 0.45 * k, -2.5 * k]], c.ka, R, 0.07);
+      }
+    },
+    neck(g, sk, p, c, R) { const n = sk.neck; cosFur(g, [[n[0] - 16, n[1] + 6], [n[0] - 6, n[1] - 4], [n[0] + 10, n[1] - 2], [n[0] + 14, n[1] + 8]], c.kf, R, 7); },
+  },
+  saint: { n: 'MIDNIGHT COUNTESS', jp: '真夜中の伯爵', pal: { kc: '#120a10', kl: '#a00c24', kt: '#c8a04a', kr: '#d0102e' },
+    back(g, sk, p, c, R, o) {   // floor-length cape with a towering collar
+      cosCape(g, sk, c, R, o, { len: 0.97, flare: 20, col: c.kc, lin: c.kl, trim: c.kt });
+      const n = sk.neck, H = sk.head;
+      poly(g, [[n[0] - 14, n[1] + 6], [H[0] - 58, H[1] - 30], [H[0] - 40, H[1] - 22], [H[0] - 38, H[1] - 58], [H[0] - 20, H[1] - 34], [H[0] - 6, H[1] - 56], [n[0] + 6, n[1] - 4], [n[0] + 10, n[1] + 4]], c.kc, R);
+      if (!R.mono) poly(g, [[n[0] - 10, n[1] + 2], [H[0] - 50, H[1] - 26], [H[0] - 36, H[1] - 18], [H[0] - 34, H[1] - 48], [H[0] - 20, H[1] - 28], [H[0] - 9, H[1] - 46], [n[0] + 3, n[1] - 4]], c.kl, R, 1);
+    },
+    front(g, sk, p, c, R) { cosDrape(g, sk, c, R, c.kc, c.kt, null); cosRose(g, sk.neck[0] + 4, sk.neck[1] + 9, 4.2, c.kr, R); },
+  },
+  borgar: { n: 'WOLF JARL', jp: '狼の首長', pal: { kc: '#6e6a70', kl: '#3a2a20', kf: '#a8a4ac', kt: '#e8b440', kd: '#4a464e' },
+    back(g, sk, p, c, R, o) { cosCape(g, sk, c, R, o, { len: 0.74, flare: 12, col: c.kc, lin: c.kl, tatter: 5, fur: c.kf, w: 1.1 }); },
+    neck(g, sk, p, c, R) {   // a twisted gold torc
+      const n = sk.neck; if (R.mono) return;
+      g.strokeStyle = OUTLINE; g.lineWidth = 6; g.beginPath(); g.ellipse(n[0] + 1, n[1] + 4, 12, 5, -0.1, 0.2, Math.PI - 0.2); g.stroke();
+      g.strokeStyle = c.kt; g.lineWidth = 3.6; g.stroke(); circ(g, n[0] + 12, n[1] + 4, 3, c.kt, R);
+    },
+    front(g, sk, p, c, R) {   // a wolf-pelt shoulder with ears
+      const s = sk.sF;
+      poly(g, [[s[0] - 8, s[1] - 12], [s[0] - 2, s[1] - 22], [s[0] + 3, s[1] - 12], [s[0] + 9, s[1] - 20], [s[0] + 12, s[1] - 8]], c.kd, R, 2);
+      ell(g, s[0] + 2, s[1] - 3, 15, 10, c.kf, R, -0.15);
+      if (!R.mono) { g.fillStyle = OUTLINE; g.beginPath(); g.arc(s[0] + 10, s[1] - 6, 1.6, 0, TAU); g.fill(); }
+    },
+  },
+  buzzu: { n: 'DEVIL PRINCE', jp: '魔界の王子', pal: { kc: '#2a0e18', kl: '#c8102e', kw: '#2a0e18', kw2: '#5a1426', kt: '#ffd25a', kg: '#ff3050', kx: '#c8c8d0' },
+    back(g, sk, p, c, R, o) {   // little bat wings + a short cape
+      const T = o.T || 0, flap = Math.sin(T * 0.14) * 0.18, root = [sk.neck[0] - 8, sk.neck[1] + 14];
+      for (const [far, k] of [[1, 0.8], [0, 1]]) {
+        const b = addP(root, far ? [6, -4] : [0, 0]), a0 = Math.PI + 0.5 + flap - far * 0.2;
+        const t1 = addP(b, polar(a0 - 0.5, 34 * k)), t2 = addP(b, polar(a0, 42 * k)), t3 = addP(b, polar(a0 + 0.55, 30 * k));
+        poly(g, [b, t1, addP(b, polar(a0 - 0.25, 22 * k)), t2, addP(b, polar(a0 + 0.28, 20 * k)), t3], far ? c.kw2 : c.kw, R, 2);
+      }
+      cosCape(g, sk, c, R, o, { len: 0.42, flare: 4, col: c.kc, lin: c.kl, w: 0.85 });
+    },
+    neck(g, sk, p, c, R) {   // spiked collar
+      const n = sk.neck; poly(g, [[n[0] - 12, n[1] + 6], [n[0] - 10, n[1] - 2], [n[0] + 11, n[1] - 4], [n[0] + 13, n[1] + 4]], c.kc, R, 2);
+      for (const dx of [-7, 0, 7]) poly(g, [[n[0] + dx - 2.5, n[1] + 4], [n[0] + dx, n[1] + 10], [n[0] + dx + 2.5, n[1] + 4]], c.kx, R, 1.2);
+    },
+    head(g, r, c, R) { g.save(); g.translate(0.15 * r, -0.12 * r); g.rotate(0.22); cosCrown(g, r, R, { y: -1.0, h: 0.42, n: 3, col: c.kt, gem: c.kg, x0: -0.42, x1: 0.48 }); g.restore(); },
+  },
+  reika: { n: 'SUPREME COMMANDER', jp: '最高司令官', pal: { kc: '#16141c', kl: '#a00c24', kt: '#d8b040', kh: '#1a1820', kb: '#a00c24', ke: '#d8b040' },
+    ropes: [{ id: 'crs', at: sk => [sk.sB[0] - 8, sk.sB[1] + 4], n: 4, seg: 10, w0: 7, w1: 8, color: 'kc', grav: 0.6, wind: 0.3 }],
+    back(g, sk, p, c, R, o) { cosCape(g, sk, c, R, o, { len: 0.9, flare: 14, col: c.kc, lin: c.kl, trim: c.kt }); },
+    head(g, r, c, R) {   // peaked officer cap
+      poly(g, [[-1.0 * r, -0.66 * r], [-1.08 * r, -1.18 * r], [0.15 * r, -1.55 * r], [1.08 * r, -1.2 * r], [1.02 * r, -0.72 * r]], c.kh, R);
+      poly(g, [[-1.02 * r, -0.84 * r], [1.04 * r, -0.86 * r], [1.03 * r, -0.66 * r], [-1.0 * r, -0.62 * r]], c.kb, R, 2);
+      poly(g, [[0.55 * r, -0.72 * r], [1.5 * r, -0.58 * r], [1.42 * r, -0.44 * r], [0.5 * r, -0.56 * r]], OUTLINE, R, 1.5);
+      if (R.mono) return;
+      g.fillStyle = c.kt; g.beginPath(); g.moveTo(0.45 * r, -1.22 * r); g.lineTo(0.58 * r, -0.98 * r); g.lineTo(0.45 * r, -0.82 * r); g.lineTo(0.32 * r, -0.98 * r); g.closePath(); g.fill();
+      g.strokeStyle = c.kt; g.lineWidth = 1.4; g.beginPath(); g.moveTo(0.6 * r, -0.7 * r); g.lineTo(1.4 * r, -0.6 * r); g.stroke();
+    },
+    front(g, sk, p, c, R) { cosDrape(g, sk, c, R, c.kc, c.kt, c.kt); cosEpaulette(g, sk.sF, c.ke, R, c.kt); },
+  },
+  yamika: { n: 'ABYSS QUEEN', jp: '深淵の女王', pal: { kc: '#140e22', kl: '#6a1aa8', kt: '#b070ff', kh: '#2a2236', kh2: '#c8a0ff' },
+    back(g, sk, p, c, R, o) { cosCape(g, sk, c, R, o, { len: 0.84, flare: 18, col: c.kc, lin: c.kl, tatter: 8 }); },
+    headBack(g, r, c, R) {   // curled demon horns
+      cosHorn(g, r, [-0.65, -0.72], [[-0.95, -1.25], [-1.45, -1.4], [-1.65, -1.05], [-1.45, -0.85]], c.kh, R, 0.17);
+      cosHorn(g, r, [0.25, -0.92], [[0.15, -1.5], [-0.25, -1.82], [-0.6, -1.7], [-0.55, -1.45]], c.kh, R, 0.17);
+      if (!R.mono) { g.strokeStyle = c.kh2; g.lineWidth = 0.04 * r; g.beginPath(); g.moveTo(0.18 * r, -1.2 * r); g.lineTo(0.08 * r, -1.55 * r); g.stroke(); }
+    },
+    front(g, sk, p, c, R) { cosDrape(g, sk, c, R, c.kc, c.kt, c.kt); },
+  },
+  lunaria: { n: 'SILVER ARCHON', jp: '銀の大天使', pal: { kc: '#eef0fa', kl: '#5a6ad8', kt: '#b8c4e8', km: '#fff6c8', kr: '#d8e0ff' },
+    back(g, sk, p, c, R, o) {
+      // halo of seven moons behind the head
+      const H = sk.head, T = o.T || 0, cx = H[0] - 6, cy = H[1] - 6;
+      if (!R.mono) {
+        g.save(); g.globalCompositeOperation = 'lighter'; g.strokeStyle = c.kr; g.lineWidth = 2; g.globalAlpha = 0.7; g.shadowColor = c.kr; g.shadowBlur = FX.hq ? 10 : 0;
+        g.beginPath(); g.arc(cx, cy, 46, 0, TAU); g.stroke(); g.restore();
+        for (let i = 0; i < 7; i++) { const a = T * 0.01 + i * TAU / 7, x = cx + Math.cos(a) * 46, y = cy + Math.sin(a) * 46; g.fillStyle = c.km; g.beginPath(); g.arc(x, y, 4.5, 0, TAU); g.fill(); g.fillStyle = 'rgba(20,20,60,0.85)'; g.beginPath(); g.arc(x + 2, y - 1, 3.6, 0, TAU); g.fill(); }
+      }
+      cosCape(g, sk, c, R, o, { len: 0.97, flare: 18, col: c.kc, lin: c.kl, trim: c.kt });
+    },
+    front(g, sk, p, c, R) { cosDrape(g, sk, c, R, c.kc, c.kt, c.km); },
+  },
+  honored: { n: 'HEAVEN\'S HAORI', jp: '天の羽織', pal: { kc: '#f6f8fc', kl: '#4aa8ff', kt: '#7ac8ff', kb: '#3a2a22', kb2: '#e8c070' },
+    back(g, sk, p, c, R, o) {
+      cosCape(g, sk, c, R, o, { len: 0.72, flare: 12, col: c.kc, lin: c.kl, trim: c.kt });
+      if (R.mono) return; const h = sk.hip, fy = lerp(sk.neck[1], cosFloor(sk), 0.72);
+      g.strokeStyle = c.kt; g.lineWidth = 2; g.beginPath(); for (let i = 0; i <= 6; i++) { const x = h[0] - 30 + i * 7, y = fy - 9 + (i % 2 ? -3 : 3); i ? g.lineTo(x, y) : g.moveTo(x, y); } g.stroke();   // cloud-wave hem pattern
+    },
+    neck(g, sk, p, c, R) {   // prayer-bead necklace
+      const n = sk.neck;
+      for (let i = 0; i <= 8; i++) { const a = 0.25 + i * (Math.PI - 0.5) / 8; circ(g, n[0] + 1 + Math.cos(a) * 13, n[1] + 3 + Math.sin(a) * 12, i === 4 ? 3.4 : 2.4, i === 4 ? c.kb2 : c.kb, R); }
+    },
+    front(g, sk, p, c, R) { cosDrape(g, sk, c, R, c.kc, c.kt, null); },
+  },
+  hollow: { n: 'THE VEILED KING', jp: '帳の王', glow: null, pal: { kc: '#1e1828', kl: '#4c2470', kt: '#c4c0d4', kv: 'rgba(16,10,26,0.62)', kv2: 'rgba(16,10,26,0.42)', kk: '#d6d2e4', kd: '#6a6680', kg: '#a36bff' },
+    ropes: [{ id: 'chm1', at: sk => [sk.hip[0] - 24, sk.hip[1] + 20], n: 4, seg: 10, w0: 9, w1: 6, color: 'kc', grav: 0.55, wind: 0.5 }],
+    back(g, sk, p, c, R, o) { cosCape(g, sk, c, R, o, { len: 1.0, flare: 22, col: c.kc, lin: c.kl, trim: c.kt, tatter: 5, w: 1.1 }); },
+    headBack(g, r, c, R, o) {   // the veil falling down his back
+      const sw = cosSway(o, 0.25, 0.05) * r / 26 * 3;
+      const pts = [[-0.55 * r, -1.0 * r], [0.35 * r, -1.08 * r], [0.2 * r, -0.2 * r], [-0.3 * r, 1.3 * r], [(-0.8 + sw * 0.01) * r, 3.4 * r], [(-1.6 + sw * 0.02) * r, 3.2 * r], [-1.55 * r, 1.0 * r], [-1.25 * r, -0.35 * r]];
+      if (R.mono) { poly(g, pts, R.mono, R); return; }
+      g.save(); g.fillStyle = c.kv; g.beginPath(); pts.forEach((p, i) => i ? g.lineTo(...p) : g.moveTo(...p)); g.closePath(); g.fill();
+      g.strokeStyle = 'rgba(200,190,230,0.35)'; g.lineWidth = 1.4; g.stroke(); g.restore();
+    },
+    head(g, r, c, R, o) {
+      // sheer veil over the featureless face, lace hem at the chin
+      if (!R.mono) {
+        g.save(); g.fillStyle = c.kv2; g.beginPath(); g.moveTo(-0.8 * r, -0.85 * r); g.quadraticCurveTo(0.2 * r, -1.25 * r, 1.08 * r, -0.7 * r);
+        g.quadraticCurveTo(1.22 * r, 0.3 * r, 1.02 * r, 0.95 * r);
+        for (let i = 0; i <= 6; i++) { const x = lerp(1.02, -0.7, i / 6) * r, y = (0.95 + (i % 2 ? 0.1 : 0) + i * 0.04) * r; g.lineTo(x, y); }
+        g.closePath(); g.fill(); g.strokeStyle = 'rgba(210,200,240,0.4)'; g.lineWidth = 1.2; g.stroke();
+        g.strokeStyle = 'rgba(210,200,240,0.25)'; g.lineWidth = 0.8; for (const x of [-0.2, 0.3, 0.75]) { g.beginPath(); g.moveTo(x * r, -0.9 * r); g.lineTo((x + 0.08) * r, 0.95 * r); g.stroke(); }
+        g.restore();
+      }
+      // a pale iron crown with violet gems
+      cosCrown(g, r, R, { y: -0.86, h: 0.58, n: 5, col: c.kk, dark: c.kd, gem: c.kg, x0: -0.82, x1: 0.86, tilt: -0.08 });
+    },
+    front(g, sk, p, c, R) {
+      cosDrape(g, sk, c, R, c.kc, c.kt, null);
+      if (R.mono) return; const n = sk.neck;   // silver chain clasp
+      g.strokeStyle = c.kt; g.lineWidth = 1.5; g.beginPath(); g.moveTo(n[0] - 4, n[1] + 6); g.quadraticCurveTo(n[0] + 4, n[1] + 14, n[0] + 12, n[1] + 8); g.stroke();
+      g.fillStyle = c.kg; g.beginPath(); g.arc(n[0] + 4, n[1] + 11, 2.4, 0, TAU); g.fill();
+    },
+  },
+  kanae: { n: 'THORN QUEEN', jp: '茨の女王', pal: { kc: '#16301e', kl: '#6a0c1e', kt: '#3e6a2a', kv: '#2e5a24', kr: '#d0103a', kr2: '#ff5a7a' },
+    back(g, sk, p, c, R, o) { cosCape(g, sk, c, R, o, { len: 0.62, flare: 12, col: c.kc, lin: c.kl, trim: c.kt, tatter: 4 }); },
+    head(g, r, c, R) {   // a crown of thorny vines with three roses
+      if (!R.mono) {
+        g.strokeStyle = OUTLINE; g.lineWidth = 0.14 * r; g.beginPath(); g.moveTo(-0.95 * r, -0.62 * r); g.quadraticCurveTo(0, -1.38 * r, 1.0 * r, -0.86 * r); g.stroke();
+        g.strokeStyle = c.kv; g.lineWidth = 0.08 * r; g.stroke();
+        g.fillStyle = c.kv; for (let i = 0; i < 7; i++) { const t = i / 6, x = lerp(-0.9, 0.95, t) * r, y = (-0.66 - Math.sin(t * Math.PI) * 0.5 - t * 0.2) * r; g.beginPath(); g.moveTo(x - 2, y); g.lineTo(x + 1, y - 0.2 * r); g.lineTo(x + 2.5, y); g.fill(); }
+      } else poly(g, [[-0.95 * r, -0.62 * r], [0, -1.2 * r], [1.0 * r, -0.86 * r], [0, -1.0 * r]], R.mono, R);
+      cosRose(g, -0.55 * r, -1.0 * r, 0.17 * r, c.kr, R); cosRose(g, 0.1 * r, -1.18 * r, 0.21 * r, c.kr2, R); cosRose(g, 0.7 * r, -1.0 * r, 0.16 * r, c.kr, R);
+    },
+    front(g, sk, p, c, R) { cosDrape(g, sk, c, R, c.kc, c.kt, null); cosRose(g, sk.neck[0] + 4, sk.neck[1] + 9, 4, c.kr, R); },
+  },
+  tokine: { n: 'MIDNIGHT ORACLE', jp: '真夜中の神託', pal: { kc: '#1a0e14', kl: '#ffcf5a', kt: '#ffcf5a', kf: 'rgba(255,214,120,0.16)', kr: '#ffcf5a', kh: '#c8102e' },
+    ropes: [{ id: 'ctr1', at: (sk, r) => headPt(sk, -r * 0.6, -r * 0.9), n: 7, seg: 10, w0: 3.5, w1: 3, color: 'kr', grav: 0.45, wind: 0.6 },
+      { id: 'ctr2', at: (sk, r) => headPt(sk, -r * 0.95, -r * 0.5), n: 6, seg: 10, w0: 3.5, w1: 3, color: 'kh', grav: 0.5, wind: 0.5 }],
+    back(g, sk, p, c, R, o) {   // a great clock face turning behind her
+      const H = sk.head, T = o.T || 0, cx = H[0] - 14, cy = H[1] + 10, rr = 54;
+      if (R.mono) { g.globalAlpha *= 0.4; g.fillStyle = R.mono; g.beginPath(); g.arc(cx, cy, rr, 0, TAU); g.fill(); g.globalAlpha /= 0.4; return; }
+      g.save(); g.fillStyle = c.kf; g.beginPath(); g.arc(cx, cy, rr, 0, TAU); g.fill();
+      g.strokeStyle = OUTLINE; g.lineWidth = 5; g.stroke(); g.strokeStyle = c.kr; g.lineWidth = 3; g.stroke();
+      g.beginPath(); g.arc(cx, cy, rr - 8, 0, TAU); g.lineWidth = 1; g.stroke();
+      for (let i = 0; i < 12; i++) { const a = i * TAU / 12, L = i % 3 ? 4 : 8; g.lineWidth = i % 3 ? 1.5 : 3; g.beginPath(); g.moveTo(cx + Math.cos(a) * (rr - 8), cy + Math.sin(a) * (rr - 8)); g.lineTo(cx + Math.cos(a) * (rr - 8 - L), cy + Math.sin(a) * (rr - 8 - L)); g.stroke(); }
+      const ah = T * 0.004 - 1.2, am = T * 0.05;
+      g.strokeStyle = c.kh; g.lineWidth = 3; g.beginPath(); g.moveTo(cx, cy); g.lineTo(cx + Math.cos(ah) * 24, cy + Math.sin(ah) * 24); g.stroke();
+      g.strokeStyle = c.kr; g.lineWidth = 2; g.beginPath(); g.moveTo(cx, cy); g.lineTo(cx + Math.cos(am) * 38, cy + Math.sin(am) * 38); g.stroke();
+      g.restore();
+      cosCape(g, sk, c, R, o, { len: 0.44, flare: 6, col: c.kc, lin: c.kl, trim: c.kt, w: 0.9 });
+    },
+    front(g, sk, p, c, R) { cosDrape(g, sk, c, R, c.kc, c.kt, c.kr); },
+  },
+};
+
+// ---------------- registration: slot 5 for every fighter ----------------
+function cosPal(ch) { const A = ARC[ch.id]; return A ? (ch._cosPal || (ch._cosPal = { ...ch.colors, ...A.pal, cos: ch.id })) : null; }
+function cosOf(ch, c) {
+  const id = (c && c.cos) || (RC.cos === ch.id ? ch.id : null);
+  return id === ch.id ? ARC[id] || null : null;
+}
+for (const ch of CHARS) {
+  const L = VARIANTS[ch.id] || (VARIANTS[ch.id] = VAR_FALLBACK.map(v => ({ ...v })));
+  const A = ARC[ch.id];
+  if (A && !L[ARC_VI - 1]) L[ARC_VI - 1] = { n: A.n, rules: A.rules || [], special: 'arcade', cos: ch.id, pal: A.pal };
+  if (!L[ARC_VI - 1]) L[ARC_VI - 1] = { n: 'ARCADE', rules: [{ dh: 60 }], special: 'arcade' };   // fighters added later without a costume
+  if (A) { const ov = ch.varColors; ch.varColors = vi => vi === ARC_VI ? cosPal(ch) : ov ? ov(vi) : null; }
+}
+
+// ---------------- the Frog Trinity: tiny crowns for all three, a royal cape on the big one ----------------
+{
+  const fd = FROGS.drawCustom;
+  FROGS.drawCustom = function (g, ch, p, x, y, facing, o) {
+    const c = o.pal || (RC.pal && RC.pal[ch.id]) || null, on = (c && c.cos === 'frogs') || RC.cos === 'frogs';
+    if (!on) return fd.call(this, g, ch, p, x, y, facing, o);
+    const P = c && c.cos ? c : cosPal(ch), s = ch.scale * (o.scale || 1), T = o.T || 0, R = { mono: o.mono || null, ol: 2.2 }, L = frogLayout(p, T);
+    const at = (f, body) => { g.save(); g.translate(x, y); g.scale(facing * s, s); if (p.rot) { g.translate(0, -50); g.rotate(p.rot); g.translate(0, 50); } g.translate(f.x, f.y); g.rotate(f.rot || 0); body(); g.restore(); };
+    const B = FROG.big, sw = cosSway(o, 1, 0.06);
+    at(L.big, () => {   // cape behind the big frog
+      poly(g, [[-0.2 * B.w, -0.95 * B.h], [0.2 * B.w, -0.9 * B.h], [-0.25 * B.w, -0.1 * B.h], [-0.72 * B.w + sw, 0.02 * B.h], [-0.6 * B.w, -0.7 * B.h]], P.kc, R);
+      if (!R.mono) { g.strokeStyle = P.kl; g.lineWidth = 2.5; g.beginPath(); g.moveTo(-0.25 * B.w, -0.1 * B.h); g.lineTo(-0.72 * B.w + sw, 0.02 * B.h); g.stroke(); cosFur(g, [[-0.6 * B.w, -0.72 * B.h], [-0.2 * B.w, -0.96 * B.h], [0.2 * B.w, -0.92 * B.h]], P.kt, R, 5); }
+    });
+    fd.call(this, g, ch, p, x, y, facing, o);
+    for (const [k, sp] of [['mid', FROG.mid], ['big', FROG.big], ['small', FROG.small]]) {
+      if (k === 'small' && (p.ph || 0) >= 0.5) continue;
+      const er = (sp.eye === 'sparkle' ? 0.25 : 0.19) * sp.w, sz = sp.w / 26 * (k === 'big' ? 0.36 : 0.42);
+      at(L[k], () => { g.translate(0.1 * sp.w, -1.0 * sp.h - er * 0.7); g.rotate(-0.08); cosCrown(g, 26 * sz, R, { y: 0, h: 0.6, n: k === 'big' ? 3 : 2, col: P.kg, gem: k === 'small' ? P.kc : P.kj, x0: -0.6, x1: 0.6, tilt: 0 }); });
+    }
   };
 }
 
@@ -16432,6 +16803,9 @@ const Cloud = {
       const lv = Math.max(gr['*'] | 0, gr[c.id] | 0); if (!lv) continue;
       const r = Mastery.rec(c.id), x = this.xpFor(lv); if (r.xp < x) { r.xp = x; ch = true; }
     }
+    // arcade skins given by an admin: grant keys 'arc_<fighter id>' / 'arc_all' (any level)
+    const unl = Mastery.data.unl || (Mastery.data.unl = {});
+    for (const c of CHARS) if ((gr.arc_all || gr['arc_' + c.id]) && !unl[c.id + ':' + ARC_VI]) { unl[c.id + ':' + ARC_VI] = 1; ch = true; }
     if (ch) { this.importing = true; try { Mastery.save(); } finally { this.importing = false; } }
   },
   // what goes to the cloud: the real progress (the cheat's LV 10 stays on this device)
@@ -16668,7 +17042,7 @@ class AdminScene {
   dispose() { DomIn.kill(this.user, this.npw); this.user = this.npw = null; }
   arrow(row, i) { return { x: W / 2 + (i ? 200 : -260), y: 250 + row * 70, w: 60, h: 50 }; }
   btn(i) { const c = i % 3, r = Math.floor(i / 3); return { x: W / 2 - 430 + c * 300, y: 400 + r * 64, w: 260, h: 50 }; }
-  get acts() { return [['grant', 'GIVE LEVEL'], ['look', 'LOOK UP'], ['pw', 'SET PASSWORD'], ['ban', 'BAN'], ['unban', 'UNBAN']]; }
+  get acts() { return [['grant', 'GIVE LEVEL'], ['arc', 'GIVE ARCADE SKIN'], ['look', 'LOOK UP'], ['pw', 'SET PASSWORD'], ['ban', 'BAN'], ['unban', 'UNBAN']]; }
   async run(a) {
     if (this.busy) return;
     const u = this.user.value.trim(); if (!u) { this.out = 'Type a player name first.'; this.isErr = true; return; }
@@ -16676,7 +17050,9 @@ class AdminScene {
     try {
       const T = Cloud.tok; let r;
       if (a === 'grant') { const id = this.ci < 0 ? '*' : CHARS[this.ci].id; r = await Cloud.rpc('sb_admin_grant', { p_token: T, p_user: u, p_ch: id, p_lv: this.lv }); this.out = `${r.name}: ${this.ci < 0 ? 'ALL FIGHTERS' : CHARS[this.ci].name} → LV ${this.lv}. Unlocks on their next login.`; }
-      if (a === 'look') { r = await Cloud.rpc('sb_admin_user', { p_token: T, p_user: u }); const gr = Object.entries(r.grants || {}).map(([k, v]) => `${k === '*' ? 'ALL' : (chById(k) || { name: k }).name} ${v}`).join(', '); this.out = `${r.name} · rating ${r.rating} · ${r.wins} W / ${r.losses} L${r.banned ? ' · BANNED' : ''} · given: ${gr || 'nothing'}`; }
+      if (a === 'arc') { const id = this.ci < 0 ? 'arc_all' : 'arc_' + CHARS[this.ci].id; r = await Cloud.rpc('sb_admin_grant', { p_token: T, p_user: u, p_ch: id, p_lv: 1 }); this.out = `${r.name}: ARCADE SKIN for ${this.ci < 0 ? 'ALL FIGHTERS' : CHARS[this.ci].name}. Unlocks on their next login.`; }
+      if (a === 'look') { r = await Cloud.rpc('sb_admin_user', { p_token: T, p_user: u }); const gn = k => k === '*' ? 'ALL' : k === 'arc_all' ? 'ARCADE SKINS: ALL' : k.startsWith('arc_') ? 'ARCADE SKIN: ' + (chById(k.slice(4)) || { name: k }).name : (chById(k) || { name: k }).name;
+        const gr = Object.entries(r.grants || {}).map(([k, v]) => k.startsWith('arc_') ? gn(k) : `${gn(k)} ${v}`).join(', '); this.out = `${r.name} · rating ${r.rating} · ${r.wins} W / ${r.losses} L${r.banned ? ' · BANNED' : ''} · given: ${gr || 'nothing'}`; }
       if (a === 'pw') { const p = this.npw.value; if (p.length < 6) throw new Error('BAD_PASSWORD'); r = await Cloud.rpc('sb_admin_setpw', { p_token: T, p_user: u, p_pw: p }); this.out = `New password set for ${r.name}.`; this.npw.value = ''; }
       if (a === 'ban' || a === 'unban') { r = await Cloud.rpc('sb_admin_ban', { p_token: T, p_user: u, p_ban: a === 'ban' }); this.out = `${r.name} is ${r.banned ? 'banned' : 'unbanned'}.`; }
       Sound.play('menuOk');
@@ -16705,7 +17081,7 @@ class AdminScene {
     drawMenuBG(g, t, '#ffd84a');
     drawTitleText(g, 'ADMIN', W / 2, 70, 70, '#ffd84a', '#ff2a3a');
     g.font = `700 17px ${FONT_UI}`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = '#ffe9a8';
-    g.fillText('Give a player mastery levels (unlocks colours), look them up, set a new password, or ban.', W / 2, 120);
+    g.fillText('Give a player mastery levels (unlocks colours) or arcade skins, look them up, set a new password, or ban.', W / 2, 120);
     DomIn.place(this.user, { x: W / 2 - 430, y: 160, w: 440, h: 50 }); DomIn.place(this.npw, { x: W / 2 + 30, y: 160, w: 400, h: 50 });
     const rows = [['FIGHTER', this.ci < 0 ? 'ALL FIGHTERS' : CHARS[this.ci].name], ['LEVEL', 'LV ' + this.lv + (this.lv >= 10 ? ' (all colours)' : this.lv >= 7 ? ' (3 colours)' : this.lv >= 4 ? ' (2 colours)' : this.lv >= 2 ? ' (1 colour)' : '')]];
     rows.forEach(([k, v], r) => {
@@ -17273,7 +17649,7 @@ class CollectionScene {
   }
   get ch() { return CHARS[this.ci]; }
   load() {
-    const c = Cos.get(this.ch.id); this.sel = { i: c.i, w: c.w }; this.lv = Mastery.level(this.ch.id);
+    const c = Cos.get(this.ch.id); this.sel = { i: c.i, w: c.w }; this.lv = Mastery.level(this.ch.id); this.vs = Mastery.pick(this.ch.id); this.vlock = null;
     this.preview(this.row === 2 ? 'w' : 'i');
   }
   preview(k) {
@@ -17282,12 +17658,17 @@ class CollectionScene {
     this.pIdx = idx;
     this.cp = new CosPlayer(this.ch, def, k === 'i' ? 'intro' : 'victory');
   }
-  rowRects() { return [0, 1, 2, 3].map(r => ({ x: 620, y: 150 + r * 112, w: 620, h: 96 })); }
-  arrowRects(r) { const R = this.rowRects()[r]; return [{ x: R.x + 8, y: R.y + 30, w: 44, h: 56 }, { x: R.x + R.w - 52, y: R.y + 30, w: 44, h: 56 }]; }
+  rowRects() { return [0, 1, 2, 3, 4].map(r => ({ x: 620, y: 140 + r * 92, w: 620, h: 84 })); }
+  arrowRects(r) { const R = this.rowRects()[r]; return [{ x: R.x + 8, y: R.y + 24, w: 44, h: 52 }, { x: R.x + R.w - 52, y: R.y + 24, w: 44, h: 52 }]; }
   change(d) {
     const r = this.row;
     if (r === 0) { this.ci = (this.ci + d + CHARS.length) % CHARS.length; this.load(); Sound.play('menuMove'); return; }
     if (r === 3) return;
+    if (r === 4) {   // SKIN: every colour + the arcade skin; locked ones can be previewed
+      const id = this.ch.id; this.vs = ((this.vs ?? Mastery.pick(id)) + d + VAR_N) % VAR_N; Sound.play('menuMove');
+      if (Mastery.unlocked(id, this.vs)) { Mastery.setPick(id, this.vs); this.vlock = null; } else this.vlock = { v: this.vs, t: 90 };
+      return;
+    }
     const k = r === 1 ? 'i' : 'w', id = this.ch.id;
     let v = this.sel[k] + d; if (v < -1) v = 2; if (v > 2) v = -1;
     this.sel[k] = v; Sound.play('menuMove');
@@ -17298,12 +17679,13 @@ class CollectionScene {
     this.t++;
     if (this.lock && --this.lock.t <= 0) this.lock = null;
     if (UI.back()) { Sound.play('menuBack'); FX.reset(); go(new TitleScene()); return; }
-    if (UI.up()) { this.row = (this.row + 4) % 5; Sound.play('menuMove'); if (this.row === 1 || this.row === 2) this.preview(this.row === 1 ? 'i' : 'w'); }
-    if (UI.down()) { this.row = (this.row + 1) % 5; Sound.play('menuMove'); if (this.row === 1 || this.row === 2) this.preview(this.row === 1 ? 'i' : 'w'); }
-    if (this.row < 4) { if (UI.left()) this.change(-1); if (UI.right()) this.change(1); }
-    if (UI.ok()) { if (this.row === 4) { Sound.play('menuBack'); FX.reset(); go(new TitleScene()); return; } this.preview(this.pk); Sound.play('menuOk'); }
+    if (UI.up()) { this.row = (this.row + 5) % 6; Sound.play('menuMove'); if (this.row === 1 || this.row === 2) this.preview(this.row === 1 ? 'i' : 'w'); }
+    if (UI.down()) { this.row = (this.row + 1) % 6; Sound.play('menuMove'); if (this.row === 1 || this.row === 2) this.preview(this.row === 1 ? 'i' : 'w'); }
+    if (this.vlock && --this.vlock.t <= 0) this.vlock = null;
+    if (this.row < 5) { if (UI.left()) this.change(-1); if (UI.right()) this.change(1); }
+    if (UI.ok()) { if (this.row === 5) { Sound.play('menuBack'); FX.reset(); go(new TitleScene()); return; } this.preview(this.pk); Sound.play('menuOk'); }
     if (Mouse.clicked) {
-      for (let r = 0; r < 4; r++) {
+      for (let r = 0; r < 5; r++) {
         const [a, b] = this.arrowRects(r);
         if (inRect(a) || inRect(b)) { this.row = r; this.change(inRect(a) ? -1 : 1); Mouse.clicked = false; break; }
         if (inRect(this.rowRects()[r])) { this.row = r; if (r === 1 || r === 2) this.preview(r === 1 ? 'i' : 'w'); Sound.play('menuMove'); Mouse.clicked = false; break; }
@@ -17319,7 +17701,7 @@ class CollectionScene {
     }
     this.cp.step(300, 640, 1.9); FX.update();
   }
-  backRect() { return { x: 620 + 310 - 130, y: 600, w: 260, h: 44 }; }
+  backRect() { return { x: 620 + 310 - 130, y: 612, w: 260, h: 44 }; }
   draw(g) {
     const t = this.t, ch = this.ch, c = ch.colors.accent;
     drawMenuBG(g, t, c);
@@ -17330,7 +17712,7 @@ class CollectionScene {
     g.save(); g.beginPath(); g.rect(42, 142, 516, 516); g.clip();
     const gr = g.createRadialGradient(300, 520, 20, 300, 520, 320); gr.addColorStop(0, c + '55'); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gr; g.fillRect(42, 142, 516, 516);
     g.fillStyle = 'rgba(255,255,255,0.08)'; g.fillRect(42, 640, 516, 2);
-    this.cp.draw(g, 300, 640, 1.9, 1);
+    { const vi = this.vs | 0; withVarPal([[ch, vi]], () => withArt([varFn(ch, vi)], () => { const pc = RC.cos; RC.cos = vi === ARC_VI && varDef(ch, vi) && varDef(ch, vi).cos ? ch.id : null; try { this.cp.draw(g, 300, 640, 1.9, 1); } finally { RC.cos = pc; } })); }
     g.save(); FX.drawParticles(g, false); g.restore();
     g.restore();
     const k = this.pk, lockedPrev = !Cos.open(ch.id, k, this.pIdx);
@@ -17341,30 +17723,36 @@ class CollectionScene {
     R.forEach((r, i) => {
       const on = this.row === i;
       panel(g, r.x, r.y, r.w, r.h, on ? 'rgba(40,16,60,0.92)' : 'rgba(12,6,28,0.82)', on ? '#ffffff' : 'rgba(255,255,255,0.15)');
-      if (i < 3) for (const [j, a] of this.arrowRects(i).entries()) { g.font = `900 30px ${FONT_UI}`; g.textAlign = 'center'; g.fillStyle = on ? '#ffd84a' : 'rgba(255,255,255,0.4)'; g.fillText(j ? '▶' : '◀', a.x + a.w / 2, a.y + a.h / 2 + 2); }
+      if (i < 3 || i === 4) for (const [j, a] of this.arrowRects(i).entries()) { g.font = `900 30px ${FONT_UI}`; g.textAlign = 'center'; g.fillStyle = on ? '#ffd84a' : 'rgba(255,255,255,0.4)'; g.fillText(j ? '▶' : '◀', a.x + a.w / 2, a.y + a.h / 2 + 2); }
       g.textAlign = 'left'; g.font = `800 13px ${FONT_UI}`; g.fillStyle = '#a89cd0';
-      g.fillText(['FIGHTER', 'INTRO  登場', 'VICTORY POSE  勝利', 'TITLE  称号'][i], r.x + 18, r.y + 18);
+      g.fillText(['FIGHTER', 'INTRO  登場', 'VICTORY POSE  勝利', 'TITLE  称号', 'SKIN  衣装'][i], r.x + 18, r.y + 18);
       g.textAlign = 'center';
       if (i === 0) {
-        g.font = `italic 900 32px ${FONT_T}`; strokeText(g, ch.name, r.x + r.w / 2, r.y + 50, '#ffffff', OUTLINE, 5);
-        g.font = `700 14px ${FONT_JP}`; g.fillStyle = c; g.fillText(`${ch.jp} · ${ch.title}  ·  ${this.ci + 1}/${CHARS.length}`, r.x + r.w / 2, r.y + 80);
+        g.font = `italic 900 32px ${FONT_T}`; strokeText(g, ch.name, r.x + r.w / 2, r.y + 44, '#ffffff', OUTLINE, 5);
+        g.font = `700 14px ${FONT_JP}`; g.fillStyle = c; g.fillText(`${ch.jp} · ${ch.title}  ·  ${this.ci + 1}/${CHARS.length}`, r.x + r.w / 2, r.y + 72);
       } else if (i < 3) {
         const kk = i === 1 ? 'i' : 'w', v = this.sel[kk], lk = this.lock && this.lock.k === kk ? this.lock : null;
         const name = v < 0 ? 'RANDOM' : cosName(ch, kk, v), open = v < 0 || Cos.open(ch.id, kk, v);
-        g.font = `italic 900 28px ${FONT_T}`; strokeText(g, name, r.x + r.w / 2, r.y + 48, open ? '#ffffff' : '#ff9ab0', OUTLINE, 5);
+        g.font = `italic 900 28px ${FONT_T}`; strokeText(g, name, r.x + r.w / 2, r.y + 44, open ? '#ffffff' : '#ff9ab0', OUTLINE, 5);
         g.font = `700 13px ${FONT_UI}`;
         const sub = v < 0 ? 'a random unlocked one each match' : open ? (cosList(ch, kk)[v] ? cosList(ch, kk)[v].jp + '  ·  EQUIPPED' : 'the original  ·  EQUIPPED') : `LOCKED · REACH MASTERY LV ${COS_UNLOCK[kk][v]}`;
-        g.fillStyle = open ? '#7affc0' : '#ff9ab0'; g.fillText(lk ? `LOCKED · REACH MASTERY LV ${COS_UNLOCK[kk][lk.v]} (preview only)` : sub, r.x + r.w / 2, r.y + 76);
+        g.fillStyle = open ? '#7affc0' : '#ff9ab0'; g.fillText(lk ? `LOCKED · REACH MASTERY LV ${COS_UNLOCK[kk][lk.v]} (preview only)` : sub, r.x + r.w / 2, r.y + 70);
         // pips: which of the three are unlocked
         for (let p = 0; p < 3; p++) { const ok = Cos.open(ch.id, kk, p); g.fillStyle = ok ? (v === p ? '#ffd84a' : '#ffffff') : 'rgba(255,255,255,0.2)'; g.fillRect(r.x + r.w - 110 + p * 22, r.y + 12, 16, 8); }
+      } else if (i === 4) {
+        const v = this.vs | 0, open = Mastery.unlocked(ch.id, v), sp = varSpecial(ch.id, v);
+        g.font = `italic 900 26px ${FONT_T}`; strokeText(g, varName(ch, v), r.x + r.w / 2, r.y + 44, open ? (sp ? '#ffd84a' : '#ffffff') : '#ff9ab0', OUTLINE, 5);
+        g.font = `700 13px ${FONT_UI}`; g.fillStyle = open ? '#7affc0' : '#ff9ab0';
+        g.fillText(open ? (sp ? 'ARCADE SKIN  ·  EQUIPPED' : 'EQUIPPED') : `LOCKED · ${varLockText(ch, v)} (preview only)`, r.x + r.w / 2, r.y + 70);
+        for (let q = 0; q < VAR_N; q++) { const ok = Mastery.unlocked(ch.id, q); g.fillStyle = ok ? (v === q ? '#ffd84a' : '#ffffff') : 'rgba(255,255,255,0.2)'; g.fillRect(r.x + r.w - 154 + q * 22, r.y + 12, 16, 8); }
       } else {
         const [tt, tj] = masteryTitle(ch, lv), nx = lv < 10 ? masteryTitle(ch, lv + 1) : null;
-        g.font = `italic 900 28px ${FONT_T}`; strokeText(g, `${tt}  ${tj}`, r.x + r.w / 2, r.y + 48, lv >= 10 ? '#ffd84a' : '#ffffff', OUTLINE, 5);
-        g.font = `700 13px ${FONT_UI}`; g.fillStyle = '#cfc4ee'; g.fillText(`MASTERY LV ${lv}${nx ? `  ·  next: ${nx[0]} at LV ${lv + 1}` : '  ·  highest title!'}${lv < 10 ? `  ·  LV 10: ${masteryTitle(ch, 10)[0]}` : ''}`, r.x + r.w / 2, r.y + 76);
+        g.font = `italic 900 28px ${FONT_T}`; strokeText(g, `${tt}  ${tj}`, r.x + r.w / 2, r.y + 44, lv >= 10 ? '#ffd84a' : '#ffffff', OUTLINE, 5);
+        g.font = `700 13px ${FONT_UI}`; g.fillStyle = '#cfc4ee'; g.fillText(`MASTERY LV ${lv}${nx ? `  ·  next: ${nx[0]} at LV ${lv + 1}` : '  ·  highest title!'}${lv < 10 ? `  ·  LV 10: ${masteryTitle(ch, 10)[0]}` : ''}`, r.x + r.w / 2, r.y + 70);
       }
     });
     const b = this.backRect();
-    drawButton(g, b, 'BACK', '戻る', this.row === 4, t);
+    drawButton(g, b, 'BACK', '戻る', this.row === 5, t);
     drawFooter(g, Settings.mobile ? 'tap ◀ ▶ to change' : '↑/↓ row   ·   ←/→ change   ·   ENTER replay   ·   ESC back');
   }
 }
