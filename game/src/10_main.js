@@ -27,6 +27,7 @@ function globalKeys() {
 }
 let errShown = null;
 function tick() {
+  Pad.poll();
   globalKeys();
   scene.update();
 }
@@ -38,6 +39,7 @@ function frame(now) {
     while (acc >= STEP && n < 4) { tick(); Keys.pressed.clear(); Mouse.clicked = false; Mouse.moved = false; acc -= STEP; n++; }
     if (n >= 4) acc = 0;
     ctx.setTransform(VIEW_K, 0, 0, VIEW_K, 0, 0); ctx.imageSmoothingEnabled = !Settings.pixel; ctx.save(); scene.draw(ctx); ctx.restore();
+    Pad.draw(ctx);
     if (muteToast > 0) {
       muteToast--; ctx.save(); ctx.globalAlpha = Math.min(1, muteToast / 20); ctx.fillStyle = 'rgba(0,0,0,0.7)'; ctx.fillRect(W - 200, H - 70, 180, 40);
       ctx.font = `800 18px ${FONT_UI}`; ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(Settings.muted ? '🔇 MUTED' : '🔊 SOUND ON', W - 110, H - 50); ctx.restore();
