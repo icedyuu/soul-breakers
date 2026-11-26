@@ -22,7 +22,7 @@ const fs = require('fs'); const out = require('path').resolve(__dirname, '../sho
   const a = await page.evaluate(() => ({ s: scene.constructor.name, arc: scene.cfg && scene.cfg.arcade }));
   console.log('arcade →', a.s, JSON.stringify(a.arc));
   // force a P1 win to see results/next fight
-  await run(200); await page.evaluate(() => { const bt = BT; bt.wins = [1, 0]; for (let i = 0; i < 900 && scene === bt; i++) { if (bt.phase === 'fight') bt.p2.hp = 0; Keys.down = new Set(); scene.update(); } });
+  await run(20); await key('Escape'); await run(200); await page.evaluate(() => { const bt = BT; bt.wins = [1, 0]; for (let i = 0; i < 900 && scene === bt; i++) { if (bt.phase === 'fight') bt.p2.hp = 0; Keys.down = new Set(); scene.update(); } });
   await run(40); console.log('after win →', await name()); await shot('results_arcade');
   await key('Enter'); await run(5); const n2 = await page.evaluate(() => ({ s: scene.constructor.name, i: scene.cfg && scene.cfg.arcade && scene.cfg.arcade.i }));
   console.log('next →', JSON.stringify(n2));
