@@ -25,7 +25,7 @@ const netRandom = () => NetRng.next();
 // audio must never consume the sim RNG (muted / locked audio would desync the peers)
 // (FX.update only uses randomness for screen shake, which draw code can also trigger; stage
 // updates are pure ambience — e.g. neon rain starts at per-device random positions)
-for (const [o, k] of [[Sound, 'play'], [Sound, 'speak'], [Music, 'play'], [FX, 'update'], ...STAGES.filter(st => st.update).map(st => [st, 'update'])]) {
+for (const [o, k] of [[Sound, 'play'], [Sound, 'speak'], [Sound, 'announce'], [Music, 'play'], [FX, 'update'], ...STAGES.filter(st => st.update).map(st => [st, 'update'])]) {
   const fn = o[k];
   o[k] = function (...a) { const r = Math.random; Math.random = NetRng.orig; try { return fn.apply(this, a); } finally { Math.random = r; } };
 }
