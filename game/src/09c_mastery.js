@@ -80,7 +80,7 @@ function rcMaker(V, protect) {
 }
 
 // ---------------- canvas colour hook ----------------
-const RC = { fn: null };
+const RC = { fn: null, pal: null };   // pal: {charId: outfit palette} for menu figures drawn in a variant (ch.varColors)
 (() => {
   const P = CanvasRenderingContext2D.prototype;
   for (const k of ['fillStyle', 'strokeStyle', 'shadowColor']) {
@@ -343,6 +343,10 @@ let RC_ART = null;
   const af = artFigure;
   artFigure = function (g, x, y, sc, fn) { const f = RC_ART && RC_ART.length ? RC_ART.shift() : null; return f ? withRecolor(f, () => af(g, x, y, sc, fn)) : af(g, x, y, sc, fn); };
 }
+function withVarPal(pairs, body) {   // pairs [[ch, vi], ...]: menu figures of these fighters use their variant outfit (ch.varColors)
+  const m = {}; for (const [ch, vi] of pairs) { const p = ch && ch.varColors && ch.varColors(vi); if (!p) continue; m[ch.id] = m[ch.id] === undefined ? p : null; }
+  const prev = RC.pal; RC.pal = m; try { return body(); } finally { RC.pal = prev; }
+}
 function withArt(list, body) { const prev = RC_ART; RC_ART = list; try { return body(); } finally { RC_ART = prev; } }
 
 // ---------------- character select: mastery bar + colour picker ----------------
@@ -404,7 +408,7 @@ function swatchRect(s, vi) { const left = s === 0, sz = 26, gap = 6; return { x:
   P.drawSide = function (g, s, t) {
     this.syncVs();
     const ch = CHARS[this.cur[s]], vi = this.vs[s];
-    withArt([varFn(ch, vi)], () => ds.call(this, g, s, t));
+    withVarPal([[ch, vi]], () => withArt([varFn(ch, vi)], () => ds.call(this, g, s, t)));
     const hidden = this.single && s === 1 && (!this.ready[0] || this.cpu?.arcade);
     const net = this instanceof NetSelectScene;
     if (hidden || (!this.localSlot(s) && !net)) return;
@@ -440,7 +444,7 @@ function keyName(code) { return !code ? '?' : code.startsWith('Key') ? code.slic
 // ---------------- VS screen + results ----------------
 {
   const vd = VSScene.prototype.draw;
-  VSScene.prototype.draw = function (g) { const [v1, v2] = cfgVariants(this.cfg); return withArt([varFn(this.a, v1), varFn(this.b, v2)], () => vd.call(this, g)); };
+  VSScene.prototype.draw = function (g) { const [v1, v2] = cfgVariants(this.cfg); return withVarPal(this.a === this.b ? [] : [[this.a, v1], [this.b, v2]], () => withArt([varFn(this.a, v1), varFn(this.b, v2)], () => vd.call(this, g))); };
 
   const RP = ResultsScene.prototype, ru = RP.update, rd = RP.draw;
   RP.update = function () {
@@ -450,7 +454,7 @@ function keyName(code) { return !code ? '?' : code.startsWith('Key') ? code.slic
   RP.draw = function (g) {
     if (!this.mxDone) { this.mxDone = true; this.mx = Mastery.award(this.bt); }
     const F = this.win;
-    withArt([varFn(F.ch, F.variant)], () => rd.call(this, g));
+    withVarPal([[F.ch, F.variant]], () => withArt([varFn(F.ch, F.variant)], () => rd.call(this, g)));
     if (this.mx) drawMasteryGain(g, this.mx, this.t);
   };
 }
