@@ -129,14 +129,14 @@ Combo trials: `{ name, notation, seq:[moveKeys], pre?:[...] }` — checked by th
 | 18 | TOKINE トキネ | The Nightmare Clock 刻の悪夢 | Time / Clones | 990 | **chibi** |
 
 ### Signature specials & ultimates
-- **Kazuma:** Blazing Knuckle → Second Blaze, Burst Shot, Iron Wall (counter), Rising Flame, Earth Breaker, Burning Hammer · Ult **Hundred Inferno Fists**.
-- **Yoru:** Kunai, Shuriken Storm, Utsusemi (counter), Shadow Step → Shadow Return, Falling Moon, Thousand Needles · Ult **Thousand Petal Dance**.
-- **Sera:** Flame Orb (+ Detonate), Thunder Spear, Mirror Ward, Flame Ring, Storm Call, Staff Flurry; staff drawn in `weaponBack` along `p.sa` (length 84, used by `staffTop()`) · Ult **Celestial Judgement**.
-- **Goro:** Oni Charge, Oni Crusher, Unbreakable (armor counter), Skybreaker, Quake, Twin Cleaver, Oni Toss · Ult **Demon Awakening**.
-- **Frog Trinity:** Tongue Snare/Yank, Frog Cannon, Belly Bounce, Triple Trouble, Frog Pile, Frog Relay · Ult **Swamp Apocalypse**.
-- **Tetsumichi:** All Aboard!, Railway Crossing, Ticket Punch, Express Delivery, Last Departure, Semaphore Rush, Through Train · Ult **The Final Express**.
+- **Kazuma:** Blazing Knuckle → Second Blaze, Burst Shot, Iron Wall (counter), Rising Flame, Flame Cyclone (↓→SP2), Earth Breaker, Burning Hammer · Ult **Hundred Inferno Fists**.
+- **Yoru:** Kunai, Shuriken Storm, Utsusemi (counter), Shadow Step → Shadow Return, Shadow Bind (↓→SP2), Falling Moon, Thousand Needles · Ult **Thousand Petal Dance**.
+- **Sera:** Flame Orb (+ Detonate), Thunder Spear, Mirror Ward, Flame Ring, Gale Step (↓→SP2), Storm Call, Staff Flurry; staff drawn in `weaponBack` along `p.sa` (length 84, used by `staffTop()`) · Ult **Celestial Judgement**.
+- **Goro:** Oni Charge, Oni Crusher, Unbreakable (armor counter), Skybreaker, Oni Roar (↓→SP2), Quake, Twin Cleaver, Oni Toss · Ult **Demon Awakening**.
+- **Frog Trinity:** Tongue Snare/Yank, Frog Cannon, Belly Bounce, Triple Trouble, Leapfrog (↓→SP2), Frog Pile, Frog Relay · Ult **Swamp Apocalypse**.
+- **Tetsumichi:** All Aboard!, Railway Crossing, Ticket Punch, Express Delivery, Pantograph Spark (↓→SP2), Last Departure, Semaphore Rush, Through Train · Ult **The Final Express**.
 - **Fudagami:** deck/hand system — Play Card / Cycle Card with 8 cards (Blade, Meteor, Shadow Beast, Dragon, Mirror Trap, Gravity, Shield, Reversal), Card Storm, Wild Card, Summoner's Command, Deck Shuffle · Ult **The Final Collection**. Card fan/single card via `cf`/`cs` pose keys.
-- **Nue:** human form + 5 random beast forms from a fair shuffle bag (Drake, Phantom Wolf, Abyssal Serpent, Celestial Stag, Nightmare Raven), Beast Unleash (SP2), Beast Cancel, Seal Release / Seal Rise, timer & cooldown, form-specific moves · Ult **Primal Ascension**. Forms are `Object.create(NUE)` via `mkForm`, so they inherit Nue's look.
+- **Nue:** human form + 5 random beast forms from a fair shuffle bag (Drake, Phantom Wolf, Abyssal Serpent, Celestial Stag, Nightmare Raven), Beast Unleash (SP2), Beast Cancel, Seal Drop (↓↓SP2, human form), Seal Release / Seal Rise, timer & cooldown, form-specific moves · Ult **Primal Ascension**. Forms are `Object.create(NUE)` via `mkForm`, so they inherit Nue's look.
 - **Vespera:** see §7.
 - **Borgar / Buzzu / Reika:** see §7b.
 - **Yamika / Lunaria:** see §7e.
@@ -145,6 +145,8 @@ Combo trials: `{ name, notation, seq:[moveKeys], pre?:[...] }` — checked by th
 - **Kanae / Tokine:** see §7j.
 
 All characters have 3–7 combo trials (74 total).
+
+**Six specials for everyone (2026-11-26, `04_zzzza_six.js`):** every fighter now fills all six slots SP1, ↓→SP1, ↓←SP1, SP2, ↓→SP2, ↓↓SP2. The classics got a ↓→SP2: Kazuma Flame Cyclone (4-hit travelling spin kick), Yoru Shadow Bind (low ground shadow, long hitstun "BOUND"), Sera Gale Step (wind blast + invulnerable backwards escape), Goro Oni Roar (armored roar, erases projectiles in front, dizzies), Frog Trinity Leapfrog (invulnerable anti-air launcher), Tetsumichi Pantograph Spark (invulnerable anti-air launcher). Nue's human form got ↓↓SP2 Seal Drop (overhead leap slam, −1.5 s seal cooldown on hit); beast forms keep their own sets. Fudagami and Vespera already had six. The default HUD badge row now shows ↓→SP2 too. Existing moves unchanged.
 
 ## 6. Chibi style kit (`04_zz_chibi.js`)
 
@@ -388,6 +390,7 @@ Beni's request: a Nakamura-inspired and a Kurumi-inspired fighter from his refer
 18. Kanae, The Spiteful Bloom (Nakamura-inspired trickster/counter, REBELLION + UNRESTRAINED, eye-flower ult) and Tokine, The Nightmare Clock (Kurumi-inspired time/clone fighter, TIME + SOVEREIGNTY, clock ult), each with an LV10 alt outfit.
 19. Game controller support (Xbox/PlayStation/generic via the Gamepad API, P1/P2, menus, online, remapping in SETTINGS → CONTROLLER).
 20. Better audio: CC0 sound effects (Kenney), announcer voice, CC0 music per menu/stage/results, richer synthesized ultimates; procedural sound stays as fallback (§7l).
+21. Six specials for every fighter: new ↓→SP2 moves for the six classics and ↓↓SP2 Seal Drop for Nue (see §5).
 
 ## 9. Open ideas / possible next steps
 

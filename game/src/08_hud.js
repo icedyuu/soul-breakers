@@ -128,7 +128,7 @@ function drawHUD(g, bt) {
     g.font = `900 13px ${FONT_UI}`; g.textAlign = side > 0 ? 'left' : 'right'; g.textBaseline = 'middle';
     strokeText(g, full ? '魂 ULTIMATE READY — SP1+SP2' : `魂 SOUL ${Math.floor(F.meter)}%`, side > 0 ? mx + 6 : mx + mw - 6, my - 16, full ? (t % 20 < 10 ? '#ffffff' : F.colors.accent) : '#cfc4ee', OUTLINE, 4);
     // special move indicators
-    const specials = [['sp1', 'SP1'], ['sp1f', '↓→SP1'], ['counter', '↓←SP1'], ['sp2', 'SP2'], ['sp2d', '↓↓SP2']];
+    const specials = [['sp1', 'SP1'], ['sp1f', '↓→SP1'], ['counter', '↓←SP1'], ['sp2', 'SP2'], ['sp2f', '↓→SP2'], ['sp2d', '↓↓SP2']];
     if (F.ch.drawHand) F.ch.drawHand(g, F, side, t);
     else specials.forEach(([k, lab], i) => {
       const m = F.ch.moves[k]; if (!m) return;
