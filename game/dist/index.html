@@ -15965,15 +15965,27 @@ class CpuSetupScene {
 }
 
 // --------------------------- CHARACTER SELECT ---------------------------
+function drawLockIcon(g, x, y, k) {   // small padlock
+  g.save(); g.translate(x, y); g.scale(k, k);
+  g.strokeStyle = '#cfc4ee'; g.lineWidth = 3.5; g.beginPath(); g.arc(0, -6, 7, Math.PI, 0); g.lineTo(7, 0); g.moveTo(-7, 0); g.lineTo(-7, -6); g.stroke();
+  g.fillStyle = '#cfc4ee'; g.fillRect(-11, -1, 22, 17); g.fillStyle = '#1a1030'; g.fillRect(-2, 4, 4, 7);
+  g.restore();
+}
 class CharSelectScene {
   constructor(mode, cpu) { this.mode = mode; this.cpu = cpu || null; this.single = mode !== 'versus' || !!this.cpu; this.t = 0; this.cur = [0, 1]; this.ready = [false, false]; this.ropes = [{}, {}]; this.readyT = 0; Music.play('menu'); }
-  get cols() { return CHARS.length > 8 ? Math.ceil(CHARS.length / 2) : 4; }
-  cardRect(i) {   // 2 rows; up to 8 fighters use the classic 4-wide grid, more fighters narrow the cards to fit
-    const C = this.cols, col = i % C, row = Math.floor(i / C), cw = C > 4 ? Math.min(100, Math.floor(452 / C) - 6) : 100, gap = C > 4 ? 6 : 8, x0 = W / 2 - (C * cw + (C - 1) * gap) / 2;
-    return { x: x0 + col * (cw + gap), y: 168 + row * 200, w: cw, h: 186 };
+  get cols() { const n = CHARS.length; return n <= 8 ? 4 : n <= 14 ? Math.ceil(n / 2) : 7; }
+  get rows() { return Math.ceil(CHARS.length / this.cols); }
+  // portrait grid in the middle: rows of up to 7 face tiles; the big info panels stay on the sides
+  cardRect(i) {
+    const C = this.cols, R = this.rows, col = i % C, row = Math.floor(i / C), gap = 8;
+    const tw = Math.min(68, Math.floor((524 - (C - 1) * gap) / C)), th = Math.min(84, Math.floor(((R > 3 ? 352 : 268) - (R - 1) * gap) / R));
+    const rowN = Math.min(C, CHARS.length - row * C), x0 = W / 2 - (rowN * tw + (rowN - 1) * gap) / 2;
+    return { x: x0 + col * (tw + gap), y: 158 + row * (th + gap), w: tw, h: th };
   }
+  // a locked fighter shows a lock, cannot be confirmed and is skipped by RANDOM (see 09g_unlock.js)
+  locked(i) { return false; }
   activeSlot() { return this.single ? (this.ready[0] ? 1 : 0) : null; }
-  confirm(s) { this.ready[s] = true; Sound.play('menuOk'); Sound.play('impactBig'); Sound.speak(CHARS[this.cur[s]].name, 0.6, 1); this.ropes[s] = {}; }
+  confirm(s) { if (this.locked(this.cur[s])) { Sound.play('menuBack'); this.lockT = 70; return; } this.ready[s] = true; Sound.play('menuOk'); Sound.play('impactBig'); Sound.speak(CHARS[this.cur[s]].name, 0.6, 1); this.ropes[s] = {}; }
   move(s, c) { if (c !== this.cur[s]) { this.cur[s] = c; this.ropes[s] = {}; Sound.play('menuMove'); } }
   update() {
     this.t++;
@@ -15984,20 +15996,20 @@ class CharSelectScene {
       const extra = k => this.single && pressedAny(k);
       const L = UI.p(pid, 'left') || extra('ArrowLeft'), R = UI.p(pid, 'right') || extra('ArrowRight'), U = UI.p(pid, 'up') || extra('ArrowUp'), D = UI.p(pid, 'down') || extra('ArrowDown');
       let c = this.cur[s];
-      const n = CHARS.length, C = this.cols, row = Math.floor(c / C), rowN = Math.min(C, n - row * C), col = c % C;
+      const n = CHARS.length, C = this.cols, RN = this.rows, row = Math.floor(c / C), rowN = Math.min(C, n - row * C), col = c % C;
       if (L) c = row * C + (col + rowN - 1) % rowN;
       if (R) c = row * C + (col + 1) % rowN;
-      if (U || D) { const other = row ? 0 : 1, oN = Math.min(C, n - other * C); c = other * C + Math.min(col, oN - 1); }
+      if (U || D) { const other = (row + (D ? 1 : RN - 1)) % RN, oN = Math.min(C, n - other * C); c = other * C + Math.min(col, oN - 1); }
       this.move(s, c);
       if (UI.p(pid, 'medium')) { this.randomPick(s); return; }
-      if (UI.pOk(pid) || (this.single && UI.ok())) { this.confirm(s); this.arcadePick(); return; }
+      if (UI.pOk(pid) || (this.single && UI.ok())) { this.confirm(s); this.arcadePick(); if (this.ready[s]) return; }
     }
     const ms = this.single ? this.activeSlot() : (!this.ready[0] ? 0 : !this.ready[1] ? 1 : null);
     if (ms !== null && Mouse.clicked && inRect(this.randRect())) { this.randomPick(ms); return; }
     if (ms !== null) for (let i = 0; i < CHARS.length; i++) {
       if (!inRect(this.cardRect(i))) continue;
       if (Mouse.moved) this.move(ms, i);
-      if (Mouse.clicked) { this.move(ms, i); this.confirm(ms); this.arcadePick(); return; }
+      if (Mouse.clicked) { this.move(ms, i); this.confirm(ms); this.arcadePick(); Mouse.clicked = false; return; }
     }
     if (!this.single) for (const pid of [1, 2]) if (this.ready[pid - 1] && UI.pBack(pid) && !(this.ready[0] && this.ready[1] && this.readyT > 30)) { this.ready[pid - 1] = false; Sound.play('menuBack'); }
     if (this.single && UI.back()) {
@@ -16006,10 +16018,11 @@ class CharSelectScene {
     } else if (!this.single && Keys.pressed.has('Escape') && !this.ready[0] && !this.ready[1]) { Sound.play('menuBack'); go(new TitleScene()); return; }
     if (this.ready[0] && this.ready[1]) { if (++this.readyT > 50) go(this.cpu?.arcade ? new VSScene(arcadeCfg(this.cur[0], this.cpu.level)) : new StageSelectScene({ mode: this.mode, p1: this.cur[0], p2: this.cur[1], cpu: this.cpu })); } else this.readyT = 0;
   }
-  randRect() { return { x: W / 2 - 90, y: 562, w: 180, h: 36 }; }
-  randomPick(s) {   // RANDOM: pick a fighter and confirm it straight away
-    let c = Math.floor(Math.random() * CHARS.length); if (CHARS.length > 1 && c === this.cur[s]) c = (c + 1 + Math.floor(Math.random() * (CHARS.length - 1))) % CHARS.length;
-    this.move(s, c); this.confirm(s); this.arcadePick(); 
+  randRect() { const r = this.cardRect(CHARS.length - 1); return { x: W / 2 - 90, y: r.y + r.h + 22, w: 180, h: 36 }; }
+  randomPick(s) {   // RANDOM: pick an open fighter (not the current one) and confirm it straight away
+    const open = CHARS.map((_, i) => i).filter(i => !this.locked(i)), pool = open.length > 1 ? open.filter(i => i !== this.cur[s]) : open;
+    if (!pool.length) return;
+    this.move(s, pool[Math.floor(Math.random() * pool.length)]); this.confirm(s); this.arcadePick();
   }
   arcadePick() { if (this.cpu?.arcade && this.ready[0] && !this.ready[1]) { this.cur[1] = (this.cur[0] + 1) % CHARS.length; this.ready[1] = true; } }   // arcade: opponents come from the ladder
   draw(g) {
@@ -16019,28 +16032,19 @@ class CharSelectScene {
     let gr = g.createLinearGradient(0, 0, 460, 0); gr.addColorStop(0, '#ff1a3a'); gr.addColorStop(1, 'rgba(255,26,58,0)'); g.fillStyle = gr; g.fillRect(0, 0, 460, H);
     gr = g.createLinearGradient(W, 0, W - 460, 0); gr.addColorStop(0, '#1a8aff'); gr.addColorStop(1, 'rgba(26,138,255,0)'); g.fillStyle = gr; g.fillRect(W - 460, 0, 460, H);
     g.restore();
-    drawTitleText(g, 'SELECT YOUR FIGHTER', W / 2, 62, 50, '#ffd84a', '#ff2a3a');
-    g.font = `700 20px ${FONT_JP}`; g.textAlign = 'center'; g.fillStyle = '#ffb3c6'; g.fillText(`キャラクター選択 — ${this.cpu ? (this.cpu.arcade ? 'ARCADE' : 'VS CPU') + ' · ' + CPU_LEVELS[this.cpu.level].name : this.mode.toUpperCase()}`, W / 2, 108);
+    drawTitleText(g, 'SELECT YOUR FIGHTER', W / 2, 56, 42, '#ffd84a', '#ff2a3a');
+    g.font = `700 17px ${FONT_JP}`; g.textAlign = 'center'; g.textBaseline = 'alphabetic'; g.fillStyle = '#ffb3c6'; g.fillText(`キャラクター選択 — ${this.cpu ? (this.cpu.arcade ? 'ARCADE' : 'VS CPU') + ' · ' + CPU_LEVELS[this.cpu.level].name : this.mode.toUpperCase()}`, W / 2, 96);
     for (let s = 0; s < 2; s++) this.drawSide(g, s, t);
-    for (let i = 0; i < CHARS.length; i++) {
-      const r = this.cardRect(i), ch = CHARS[i];
-      g.save(); g.beginPath(); g.rect(r.x, r.y, r.w, r.h); g.clip(); { const cd = ch.card, k = cd.width / 100, sw = Math.min(cd.width, r.w * k); g.drawImage(cd, (cd.width - sw) / 2, 0, sw, cd.height, r.x, r.y, r.w, r.h); }
-      g.fillStyle = 'rgba(0,0,0,0.55)'; g.fillRect(r.x, r.y + r.h - 40, r.w, 40);
-      g.font = `italic 900 24px ${FONT_T}`; const nw0 = g.measureText(ch.name).width; g.font = `italic 900 ${Math.min(24, Math.floor(24 * (r.w - 14) / nw0))}px ${FONT_T}`;
-      g.textAlign = 'center'; g.textBaseline = 'middle'; strokeText(g, ch.name, r.x + r.w / 2, r.y + r.h - 24, '#fff', OUTLINE, 4);
-      g.font = `700 11px ${FONT_UI}`; { const st = ch.style.split(' / ')[0], fs = Math.min(11, 11 * (r.w - 8) / Math.max(1, g.measureText(st).width)); g.font = `700 ${fs.toFixed(1)}px ${FONT_UI}`; g.fillStyle = ch.colors.accent; g.fillText(st, r.x + r.w / 2, r.y + r.h - 7); }
-      g.restore();
-      g.strokeStyle = 'rgba(255,255,255,0.25)'; g.lineWidth = 2; g.strokeRect(r.x, r.y, r.w, r.h);
-    }
+    this.drawGrid(g, t);
     for (let s = 0; s < 2; s++) {
       if (this.single && s === 1 && (!this.ready[0] || this.cpu?.arcade)) continue;
       const r = this.cardRect(this.cur[s]), col = s ? P_COL[2] : P_COL[1], both = this.cur[0] === this.cur[1] && !(this.single && !this.ready[0]);
       const o = both ? (s ? 6 : -6) : 0;
       g.save(); g.strokeStyle = col; g.lineWidth = this.ready[s] ? 6 : 4; g.shadowColor = col; g.shadowBlur = 16 + Math.sin(t * 0.2) * 6;
-      g.strokeRect(r.x - 4 + o, r.y - 4 + o, r.w + 8, r.h + 8); g.restore();
-      g.fillStyle = col; const tx = s ? r.x + r.w - 40 + o : r.x - 4 + o; g.fillRect(tx, r.y - 22 + o, 44, 22);
-      g.font = `italic 900 18px ${FONT_T}`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = '#fff';
-      g.fillText(this.single ? (s ? 'CPU' : '1P') : s ? '2P' : '1P', tx + 22, r.y - 11 + o);
+      g.strokeRect(r.x - 3 + o, r.y - 3 + o, r.w + 6, r.h + 6); g.restore();
+      g.fillStyle = col; const tx = s ? r.x + r.w - 33 + o : r.x - 3 + o; g.fillRect(tx, r.y - 3 + o, 36, 17);
+      g.font = `italic 900 14px ${FONT_T}`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = '#fff';
+      g.fillText(this.single ? (s ? 'CPU' : '1P') : s ? '2P' : '1P', tx + 18, r.y + 6 + o);
     }
     { const r = this.randRect(), hot = inRect(r) && (this.single ? this.activeSlot() !== null && !this.ready[this.activeSlot()] : !(this.ready[0] && this.ready[1]));
       drawButton(g, r, '? RANDOM', null, hot, t); }
@@ -16048,6 +16052,22 @@ class CharSelectScene {
       : this.single ? (this.ready[0] ? 'Choose the training DUMMY  ·  F / ENTER: confirm  ·  G / ESC: back' : 'Choose YOUR fighter  ·  A/D/W/S or arrows  ·  F / ENTER: confirm  ·  V: random  ·  ESC: back')
       : '1P: A/D/W/S + F (G back, V random)   ·   2P: ARROWS + K (L back, J random)   ·   ESC: menu';
     drawFooter(g, hint);
+  }
+  drawGrid(g, t) {
+    const hov = new Set(), C = Math.min(CHARS.length, this.cols);
+    for (let s = 0; s < 2; s++) if (!(this.single && s === 1 && (!this.ready[0] || this.cpu?.arcade))) hov.add(this.cur[s]);
+    { const a = this.cardRect(0), e = this.cardRect(C - 1), z = this.cardRect(CHARS.length - 1), x0 = a.x - 14, x1 = e.x + e.w + 14, y0 = a.y - 14, y1 = z.y + z.h + 14;
+      g.fillStyle = 'rgba(8,4,20,0.6)'; g.fillRect(x0, y0, x1 - x0, y1 - y0); g.strokeStyle = 'rgba(255,255,255,0.12)'; g.lineWidth = 1; g.strokeRect(x0 + 0.5, y0 + 0.5, x1 - x0 - 1, y1 - y0 - 1); }
+    for (let i = 0; i < CHARS.length; i++) {
+      const r = this.cardRect(i), ch = CHARS[i], on = hov.has(i), lock = this.locked(i);
+      g.save(); g.beginPath(); g.rect(r.x, r.y, r.w, r.h); g.clip();
+      { const pt = ch.portrait, k = pt.width / 300, sw = 150 * k, sh = sw * r.h / r.w; g.drawImage(pt, 126 * k - sw / 2, 120 * k - sh * 0.42, sw, sh, r.x, r.y, r.w, r.h); }   // zoom on the face
+      if (!on) { g.fillStyle = 'rgba(6,3,16,0.3)'; g.fillRect(r.x, r.y, r.w, r.h); }
+      g.fillStyle = ch.colors.accent; g.fillRect(r.x, r.y + r.h - 4, r.w, 4);
+      if (lock) { g.fillStyle = 'rgba(4,2,10,0.78)'; g.fillRect(r.x, r.y, r.w, r.h); drawLockIcon(g, r.x + r.w / 2, r.y + r.h / 2 - 2, 1); }
+      g.restore();
+      g.strokeStyle = on ? 'rgba(255,255,255,0.75)' : 'rgba(255,255,255,0.18)'; g.lineWidth = on ? 2 : 1.5; g.strokeRect(r.x, r.y, r.w, r.h);
+    }
   }
   drawSide(g, s, t) {
     const ch = CHARS[this.cur[s]], left = s === 0, rdy = this.ready[s];
@@ -16065,9 +16085,9 @@ class CharSelectScene {
     g.font = `900 15px ${FONT_UI}`; g.textBaseline = 'alphabetic'; g.fillStyle = s ? P_COL[2] : P_COL[1]; g.fillText(label, x, 140);
     if (hidden) { g.font = `italic 900 30px ${FONT_T}`; g.fillStyle = 'rgba(255,255,255,0.3)'; g.fillText(this.cpu?.arcade ? `${ARCADE_LEN} OPPONENTS` : 'WAITING…', x, 190); return; }
     g.font = `italic 900 60px ${FONT_T}`; const nmW = g.measureText(ch.name).width;
-    drawTitleText(g, ch.name, x, 184, Math.min(60, Math.floor(60 * 300 / nmW)), '#ffffff', ch.colors.accent, left ? 'left' : 'right');
+    drawTitleText(g, ch.name, x, 184, Math.min(60, Math.floor(60 * 270 / nmW)), '#ffffff', ch.colors.accent, left ? 'left' : 'right');
     g.font = `700 19px ${FONT_JP}`; g.textBaseline = 'alphabetic'; strokeText(g, `${ch.jp} · ${ch.titleJp}`, x, 238, '#ffffff', OUTLINE, 4);
-    { const tl = `${ch.title.toUpperCase()} — ${ch.style}`; g.font = `italic 800 16px ${FONT_UI}`; const tw = g.measureText(tl).width; g.font = `italic 800 ${Math.min(16, Math.floor(16 * 360 / tw))}px ${FONT_UI}`; strokeText(g, tl, x, 260, ch.colors.accent, OUTLINE, 4); }
+    { const tl = `${ch.title.toUpperCase()} — ${ch.style}`; g.font = `italic 800 16px ${FONT_UI}`; const tw = g.measureText(tl).width; g.font = `italic 800 ${Math.min(16, Math.floor(16 * 330 / tw))}px ${FONT_UI}`; strokeText(g, tl, x, 260, ch.colors.accent, OUTLINE, 4); }
     const stats = [['POWER', ch.stats.power], ['SPEED', ch.stats.speed], ['RANGE', ch.stats.range], ['DEFENSE', ch.stats.defense]];
     stats.forEach(([n, v], i) => {
       const col = i % 2, row = i >> 1, sx = left ? 34 + col * 205 : W - 421 + col * 205, by = 588 + row * 26;
@@ -18527,7 +18547,7 @@ class AdminScene {
     this.busy = true; this.out = '…'; this.isErr = false;
     try {
       const T = Cloud.tok; let r;
-      if (a === 'grant') { const id = this.ci < 0 ? '*' : CHARS[this.ci].id; r = await Cloud.rpc('sb_admin_grant', { p_token: T, p_user: u, p_ch: id, p_lv: this.lv }); this.out = `${r.name}: ${this.ci < 0 ? 'ALL FIGHTERS' : CHARS[this.ci].name} → LV ${this.lv}. Unlocks on their next login.`; }
+      if (a === 'grant') { const id = this.ci < 0 ? '*' : CHARS[this.ci].id; r = await Cloud.rpc('sb_admin_grant', { p_token: T, p_user: u, p_ch: id, p_lv: this.lv }); this.out = `${r.name}: ${this.ci < 0 ? 'ALL FIGHTERS' : CHARS[this.ci].name} → LV ${this.lv} (fighter unlocked too). Unlocks on their next login.`; }
       if (a === 'arc') { const id = this.ci < 0 ? 'arc_all' : 'arc_' + CHARS[this.ci].id; r = await Cloud.rpc('sb_admin_grant', { p_token: T, p_user: u, p_ch: id, p_lv: 1 }); this.out = `${r.name}: ARCADE SKIN for ${this.ci < 0 ? 'ALL FIGHTERS' : CHARS[this.ci].name}. Unlocks on their next login.`; }
       if (a === 'look') { r = await Cloud.rpc('sb_admin_user', { p_token: T, p_user: u }); const gn = k => k === '*' ? 'ALL' : k === 'arc_all' ? 'ARCADE SKINS: ALL' : k.startsWith('arc_') ? 'ARCADE SKIN: ' + (chById(k.slice(4)) || { name: k }).name : (chById(k) || { name: k }).name;
         const gr = Object.entries(r.grants || {}).map(([k, v]) => k.startsWith('arc_') ? gn(k) : `${gn(k)} ${v}`).join(', '); this.out = `${r.name} · rating ${r.rating} · ${r.wins} W / ${r.losses} L${r.banned ? ' · BANNED' : ''} · given: ${gr || 'nothing'}`; }
@@ -19544,6 +19564,174 @@ class FriendInviteScene extends NetLobbyScene {
     const n = Friends.online(), rq = Friends.requests();
     g.save(); g.font = `800 13px ${FONT_UI}`; g.textAlign = 'left'; g.textBaseline = 'middle';
     g.fillStyle = n ? '#5affb0' : '#a89ec8'; g.fillText(`● ${n} friend${n === 1 ? '' : 's'} online${rq ? `  ·  ${rq} friend request${rq === 1 ? '' : 's'}` : ''}`, ACCT_BTN.x + 16, ACCT_BTN.y + ACCT_BTN.h + 36);
+    g.restore();
+  };
+}
+
+// ---------------- FIGHTER UNLOCKS ----------------
+// New players start with the 9 original fighters in ARCADE and 1P VS CPU. The others unlock:
+//  · every ARCADE clear unlocks one random locked fighter
+//  · once ANY fighter reaches mastery LV FREE_PICK_LV, the player gets one FREE PICK: unlock any fighter they like
+// Local VERSUS, ONLINE, PRACTICE and TRAINING always have everyone (the CPU opponent can be any fighter, too).
+// Saved in the mastery profile (synced by accounts): fu = { id: 1 }, fuAll = everything open, fuFree = free picks used.
+// Old profiles that already played keep everything (migration). The hidden cheat opens everything on this device only.
+// Admin: GIVE LEVEL (fighter or ALL) also unlocks that fighter; grant keys 'f_<id>' / 'f_all' work as well.
+const FREE_FIGHTERS = ['kazuma', 'yoru', 'sera', 'goro', 'frogs', 'conductor', 'cardmaster', 'nue', 'saint'];
+const FREE_PICK_LV = 3;
+const Roster = {
+  get d() { return Mastery.data; },
+  open(id) { const d = this.d; return FREE_FIGHTERS.includes(id) || !!(d.fuAll || d.clean || (d.fu && d.fu[id])); },
+  openIdx(i) { return this.open(CHARS[i].id); },
+  lockedIds() { return CHARS.filter(c => !this.open(c.id)).map(c => c.id); },
+  topLevel() { let m = 1; for (const c of CHARS) m = Math.max(m, Mastery.level(c.id)); return m; },
+  freePicks() { return (this.topLevel() >= FREE_PICK_LV ? 1 : 0) - (this.d.fuFree | 0); },
+  freeReady() { return this.freePicks() > 0 && this.lockedIds().length > 0; },
+  unlock(id, free) { const d = this.d; (d.fu || (d.fu = {}))[id] = 1; if (free) d.fuFree = (d.fuFree | 0) + 1; Mastery.save(); },
+  played(o) { return Object.values(o.chars || {}).some(r => (r.xp | 0) > 0 || (r.w | 0) > 0 || (r.l | 0) > 0); },
+};
+{
+  // migration: profiles from before this system keep every fighter
+  const ld = Mastery.load, fr = Mastery.fresh;
+  Mastery.fresh = function () { const d = fr.call(this); d.fuV = 1; return d; };
+  const mig = d => { if (!d.fuV) { d.fuV = 1; if (Roster.played(d)) d.fuAll = 1; try { localStorage.setItem(Mastery.KEY, JSON.stringify(d)); } catch (e) { } } return d; };
+  Mastery.load = function () { return mig(ld.call(this)); };
+  if (Mastery.d) mig(Mastery.d);
+  // account sync: unlocks only ever add up
+  const im = Mastery.import;
+  Mastery.import = function (o) {
+    const d = this.data, wasOld = o && o.v === 1 && !o.fuV && Roster.played(o);
+    const r = im.call(this, o);
+    if (r) {
+      if (o.fuAll || wasOld) d.fuAll = 1;
+      if (o.fu && typeof o.fu === 'object') { d.fu = d.fu || {}; for (const k in o.fu) if (o.fu[k] && chById(k)) d.fu[k] = 1; }
+      d.fuFree = Math.max(d.fuFree | 0, o.fuFree | 0);
+      this.save();
+    }
+    return r;
+  };
+  // admin grants
+  const ag = Cloud.applyGrants;
+  Cloud.applyGrants = function (gr) {
+    ag.call(this, gr);
+    if (!gr) return;
+    const d = Mastery.data; let ch = false;
+    for (const c of CHARS) if ((gr['*'] || gr[c.id] || gr.f_all || gr['f_' + c.id]) && !Roster.open(c.id)) { (d.fu || (d.fu = {}))[c.id] = 1; ch = true; }
+    if (ch) { this.importing = true; try { Mastery.save(); } finally { this.importing = false; } }
+  };
+  // arcade clear: one random locked fighter
+  const aw = Mastery.award;
+  Mastery.award = function (bt) {
+    const freeBefore = Roster.freeReady();
+    const r = aw.call(this, bt);
+    if (r && r.clear) { const L = Roster.lockedIds(); if (L.length) { const id = L[Math.floor(Math.random() * L.length)]; Roster.unlock(id); r.fighter = chById(id); } }
+    if (r && !freeBefore && Roster.freeReady()) r.freePick = true;
+    return r;
+  };
+}
+
+// ---------------- character select: locks only for YOUR fighter in ARCADE / 1P VS CPU ----------------
+{
+  const P = CharSelectScene.prototype, up = P.update, cf = P.confirm, dr = P.draw, ds = P.drawSide;
+  P.lockMode = function () { return !!this.cpu && !(this instanceof NetSelectScene) && !this.ready[0]; };
+  P.locked = function (i) { return this.lockMode() && !Roster.openIdx(i); };
+  P.confirm = function (s) {
+    if (s === 0 && this.locked(this.cur[s])) {
+      if (Roster.freeReady()) { this.ask = { i: this.cur[s], t: 0 }; Sound.play('menuMove'); }
+      else { this.lockT = 70; Sound.play('menuBack'); }
+      return;
+    }
+    return cf.call(this, s);
+  };
+  P.askRects = function () { return [{ x: W / 2 - 200, y: 420, w: 180, h: 44 }, { x: W / 2 + 20, y: 420, w: 180, h: 44 }]; };
+  P.update = function () {
+    if (this.lockT) this.lockT--;
+    if (this.ask) {
+      this.t++; this.ask.t++;
+      const [yes, no] = this.askRects();
+      const ok = UI.pOk(1) || UI.ok() || (Mouse.clicked && inRect(yes)), back = UI.back() || (Mouse.clicked && inRect(no));
+      Mouse.clicked = false;
+      if (ok && this.ask.t > 2) { const ch = CHARS[this.ask.i]; Roster.unlock(ch.id, true); this.ask = null; this.flash = { i: ch, t: 80 }; Sound.play('menuOk'); Sound.play('impactBig'); }
+      else if (back) { this.ask = null; Sound.play('menuBack'); }
+      return;
+    }
+    if (this.flash && --this.flash.t <= 0) this.flash = null;
+    return up.call(this);
+  };
+  P.drawSide = function (g, s, t) {
+    ds.call(this, g, s, t);
+    if (s !== 0 || !this.locked(this.cur[0])) return;
+    const ch = CHARS[this.cur[0]];
+    g.save(); g.textAlign = 'left'; g.textBaseline = 'middle';
+    g.fillStyle = 'rgba(8,4,20,0.82)'; g.fillRect(26, 346, 330, 64); g.strokeStyle = '#ffd84a'; g.lineWidth = 2; g.strokeRect(26, 346, 330, 64);
+    drawLockIcon(g, 52, 380, 1.1);
+    g.font = `italic 900 22px ${FONT_T}`; strokeText(g, 'LOCKED', 78, 366, '#ffd84a', OUTLINE, 4);
+    g.font = `700 11px ${FONT_UI}`; g.fillStyle = (this.lockT | 0) % 20 > 10 ? '#ff9ab0' : '#e8e0ff';
+    g.fillText(Roster.freeReady() ? `Confirm: unlock with your FREE PICK` : 'Clear ARCADE to unlock new fighters', 78, 390);
+    if (!Roster.freeReady()) g.fillText(`or any fighter at Mastery LV ${FREE_PICK_LV} = 1 free pick`, 78, 404);
+    g.restore();
+  };
+  P.draw = function (g) {
+    dr.call(this, g);
+    const t = this.t;
+    // status line under RANDOM (only where locks apply)
+    if (this.lockMode()) {
+      const L = Roster.lockedIds().length, rr = this.randRect();
+      if (L) {
+        const fp = Roster.freeReady();
+        g.save(); g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = `800 13px ${FONT_UI}`;
+        g.fillStyle = fp ? (t % 40 < 26 ? '#ffd84a' : '#ffffff') : '#cfc4ee';
+        g.fillText(fp ? '★ FREE PICK READY: choose any locked fighter to unlock it' : `${CHARS.length - L} / ${CHARS.length} FIGHTERS UNLOCKED`, W / 2, rr.y + rr.h + 22);
+        if (!fp) { g.font = `600 12px ${FONT_UI}`; g.fillStyle = '#a89cd0'; g.fillText('Arcade clear = new fighter  ·  versus, online & training: everyone', W / 2, rr.y + rr.h + 42); }
+        g.restore();
+      }
+    }
+    if (this.flash) {
+      const a = Math.min(1, this.flash.t / 20);
+      g.save(); g.globalAlpha = a; g.fillStyle = 'rgba(8,4,20,0.85)'; g.fillRect(W / 2 - 260, 300, 520, 90); g.strokeStyle = '#ffd84a'; g.lineWidth = 3; g.strokeRect(W / 2 - 260, 300, 520, 90);
+      g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = `italic 900 18px ${FONT_T}`; strokeText(g, 'NEW FIGHTER UNLOCKED!', W / 2, 326, '#ffd84a', OUTLINE, 4);
+      drawTitleText(g, this.flash.i.name, W / 2, 362, 34, '#ffffff', this.flash.i.colors.accent);
+      g.restore();
+    }
+    if (this.ask) {
+      const ch = CHARS[this.ask.i], [yes, no] = this.askRects();
+      g.save(); g.fillStyle = 'rgba(4,2,10,0.72)'; g.fillRect(0, 0, W, H);
+      panel(g, W / 2 - 300, 230, 600, 260, 'rgba(14,8,30,0.96)', '#ffd84a');
+      g.drawImage(ch.portrait, W / 2 - 280, 250, 120, 120);
+      g.textAlign = 'left'; g.textBaseline = 'middle';
+      g.font = `italic 900 18px ${FONT_T}`; strokeText(g, 'USE YOUR FREE PICK?', W / 2 - 145, 272, '#ffd84a', OUTLINE, 4);
+      g.font = `italic 900 40px ${FONT_T}`; const nw = g.measureText(ch.name).width;
+      drawTitleText(g, ch.name, W / 2 - 145, 318, Math.min(40, Math.floor(40 * 420 / nw)), '#ffffff', ch.colors.accent, 'left');
+      g.font = `700 14px ${FONT_UI}`; g.fillStyle = '#e8e0ff'; g.fillText(`${ch.title.toUpperCase()} — ${ch.style}`, W / 2 - 145, 356);
+      g.font = `600 13px ${FONT_UI}`; g.fillStyle = '#a89cd0'; g.fillText('You only get one free pick. Other fighters unlock by clearing Arcade.', W / 2 - 280, 396);
+      drawButton(g, yes, 'UNLOCK', null, inRect(yes), t); drawButton(g, no, 'NOT NOW', null, inRect(no), t);
+      g.textAlign = 'center'; g.font = `700 11px ${FONT_UI}`; g.fillStyle = '#a89cd0'; g.fillText(Settings.mobile ? 'TAP A BUTTON' : 'F / ENTER: unlock   ·   G / ESC: not now', W / 2, 478);
+      g.restore();
+    }
+  };
+}
+
+// ---------------- results: tell the player about a new fighter / free pick ----------------
+{
+  const RP = ResultsScene.prototype, rd = RP.draw;
+  RP.draw = function (g) {
+    rd.call(this, g);
+    const M = this.mx; if (!M || !(M.fighter || M.freePick)) return;
+    const a = clamp((this.t - 120) / 14, 0, 1); if (a <= 0) return;
+    const tw = 440, th = 74, tx = W - tw - 24;
+    g.save(); g.globalAlpha = a; g.translate((1 - a) * 60, 0); g.textBaseline = 'middle'; g.textAlign = 'left';
+    let ty = 12;
+    if (M.fighter) {
+      panel(g, tx, ty, tw, th, 'rgba(30,14,4,0.92)', '#ffd84a');
+      g.drawImage(M.fighter.portrait, tx + 8, ty + 7, 60, 60);
+      g.font = `italic 900 18px ${FONT_T}`; strokeText(g, 'NEW FIGHTER UNLOCKED!', tx + 80, ty + 24, this.t % 30 < 18 ? '#ffd84a' : '#ffffff', OUTLINE, 4);
+      g.font = `italic 900 24px ${FONT_T}`; strokeText(g, M.fighter.name, tx + 80, ty + 52, '#ffffff', OUTLINE, 4);
+      ty += th + 8;
+    }
+    if (M.freePick) {
+      panel(g, tx, ty, tw, th, 'rgba(30,14,4,0.92)', '#ffd84a');
+      g.font = `italic 900 18px ${FONT_T}`; strokeText(g, `MASTERY LV ${FREE_PICK_LV}: FREE PICK EARNED!`, tx + 18, ty + 24, this.t % 30 < 18 ? '#ffd84a' : '#ffffff', OUTLINE, 4);
+      g.font = `700 13px ${FONT_UI}`; g.fillStyle = '#ffe2a8'; g.fillText('Unlock any fighter you like in character select.', tx + 18, ty + 52);
+    }
     g.restore();
   };
 }
