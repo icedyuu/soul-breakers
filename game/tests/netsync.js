@@ -19,7 +19,7 @@ const FR = +(process.argv[2] || 1500), MODE = process.argv[3] || 'ring';
       Settings.voice = false; Settings.muted = true; Settings.mobile = false; Net.role = 'host';
       if (warm) { const b = new Battle({ mode: 'versus', p1: 3, p2: 7, stage: 1, cpu: { level: 1 } }); for (let i = 0; i < 600; i++) { b.update(); if (i % 5 === 0) b.draw(ctx); } }
       window.runPair = (p1, p2, stage, frames, seed) => {
-        const cfg = { mode: 'versus', p1, p2, stage, seed, delay: 3, roundTime: 99, online: true };
+        const all = { lv: 10, i: [0, 1, 2], w: [0, 1, 2] }, cfg = { mode: 'versus', p1, p2, stage, seed, delay: 3, roundTime: 99, online: true, cos: [all, all] };   // random intros / victory poses must stay in sync
         const bt = new NetBattle(cfg); scene = bt;
         let s = seed * 7 + 1; const rnd = () => (s = (Math.imul(s, 1103515245) + 12345) >>> 0) / 4294967296;
         const hs = []; let hold = [0, 0];
