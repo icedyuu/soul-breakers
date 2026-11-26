@@ -74,6 +74,7 @@ cd game && python3 build.py   # → dist/index.html
 | `09a_peerjs.js`, `09b_net.js` | ONLINE 1v1: PeerJS lib, `Net`, lobby, net select/VS/battle/results (see §7h) |
 | `09c_mastery.js` | MASTERY + COLOR VARIANTS: canvas recolour hook, `VARIANTS` designs, `Mastery` profile (localStorage), select picker, results XP panel, online variant sync (see §7i) |
 | `09d_gamepad.js` | Game controllers via the Gamepad API: `Pad` (presses bound keyboard codes), `PadScene` (SETTINGS → CONTROLLER remapping), see §7k |
+| `09e_cosmetics.js` | COSMETICS: animated intros + victory poses per fighter, mastery titles, COLLECTION screen, online loadout sync (see §7m) |
 | `10_main.js` | Boot, main loop (fixed 60 fps), resize (`VIEW_K` device-resolution scaling 1–3×), portrait/card/cut-in generation |
 
 ## 4. Engine essentials
@@ -370,6 +371,16 @@ Beni's request: a Nakamura-inspired and a Kurumi-inspired fighter from his refer
 - Web build: `build_web.py` copies `audio/` into the site; `sw.js` caches sfx/voice on first use (offline), music goes to the network (range requests). The cache version hashes the audio files too.
 - Test: `tests/audio.js [webdir]` (local http server: all samples decode, every sound/announcer plays, all 5 tracks stream, voice cap, file:// fallback).
 
+## 7m. Cosmetics: intros, victory poses, titles (`09e_cosmetics.js`)
+
+- Every fighter has 3 intros and 3 victory poses: index 0 = CLASSIC (the old static `intro`/`victory` pose + `introFx`), 1–2 = animated, unlocked by Mastery: intros LV 1/3/6, victory poses LV 1/5/8 (`COS_UNLOCK`). Colours stay at LV 2/4/7/10, so every level unlocks something.
+- **Titles** per mastery level: LV 1–9 shared (ROOKIE … GRANDMASTER, `TITLE_GEN`), LV 10 unique per fighter (`TITLE_TOP`, e.g. Kazuma LIVING INFERNO, The Hollow THE LAST REMNANT). `masteryTitle(ch, lv)`. Shown on the select screen (next to MASTERY LV), VS screen, intro card, COLLECTION, and as NEW TITLE / NEW INTRO / NEW VICTORY POSE toasts on the results screen.
+- Animations are keyframe lists built from the fighter's OWN poses and move poses (`cosAnim`, templates in `TPL`: drop, warp, walk/dash, charge, combo, poses, leap) + effects in the fighter's colours (`CFX`). Key: `[frame, pose|'m:<move>[:i]', {r, dx, dy, e, h, x, fx}]`; `dx/dy/h` are DRAW-ONLY offsets/hiding (Fighter.draw wrapper), so x/y and hitboxes never change. Content table: `cosAdd(id, P, …)`; fighters without an entry get `cosFallback`.
+- **Loadout** saved in the mastery profile: `Mastery.data.cos = {id: {i, w}}` (-1 = RANDOM among unlocked, default). `Mastery.import` merges it, so the future account sync carries it. Picked in **COLLECTION** (title menu): fighter / intro / victory / title rows, live preview (`CosPlayer`), locked ones can be previewed.
+- Battle: `cfg.cos = [{lv, i:[allowed], w:[allowed]}, …]` (local: built from the profile each first round, `cosAuto`; CPU: all three, lv 0). Intro picked in `newRound(first)`, victory pose in `updateKO` (pf 150), both with `Math.random` = seeded NetRng online. Intro still skippable (ENTER/F/K, OK bit online). The results screen replays the winner's victory pose with effects.
+- Online: `sel` carries `cs` (loadout), host puts both into the `start` cfg (`cos`), guest + rematch reuse it; `Cos.clean` sanitises. `netsync.js` now runs with random intros/victories.
+- Test: `tests/cosmetics.js [ids|all] [-shots]` (every fighter × every intro/victory, pixel + vector, NaN/flow checks, skip, loadout rules; shots to `../../shots_cosmetics/`).
+
 ## 8. History of requests (in order)
 
 1. Original anime fighting game (Kazuma, Yoru, Sera, Goro).
@@ -393,6 +404,7 @@ Beni's request: a Nakamura-inspired and a Kurumi-inspired fighter from his refer
 19. Game controller support (Xbox/PlayStation/generic via the Gamepad API, P1/P2, menus, online, remapping in SETTINGS → CONTROLLER).
 20. Better audio: CC0 sound effects (Kenney), announcer voice, CC0 music per menu/stage/results, richer synthesized ultimates; procedural sound stays as fallback (§7l).
 21. Six specials for every fighter: new ↓→SP2 moves for the six classics and ↓↓SP2 Seal Drop for Nue (see §5).
+22. Cosmetics (2026-11-26): 2 animated intros + 2 victory poses per fighter, mastery titles (unique LV 10 title per fighter), COLLECTION screen (§7m).
 
 ## 9. Open ideas / possible next steps
 
