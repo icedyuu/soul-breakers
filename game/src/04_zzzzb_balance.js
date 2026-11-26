@@ -4,7 +4,7 @@ const BALANCE = {
   goro:    { dmg: 0.76, hp: 1030 },
   borgar:  { dmg: 0.84, hp: 1130 },
   saint:   { dmg: 0.72 },
-  buzzu:   { dmg: 0.82 },
+  buzzu:   { dmg: 0.98, hp: 960 },   // re-tuned with the bigger hurtbox (09h_combobook.js)
   conductor: { dmg: 0.86 },
   frogs:   { dmg: 0.91 },
   nue:     { dmg: 0.97 },
