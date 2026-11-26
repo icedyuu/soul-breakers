@@ -5,16 +5,16 @@
 // (09b samples Keys) all work unchanged. Controller 1 = P1 keys, controller 2 = P2 keys.
 // Battle layout is remappable (SETTINGS → CONTROLLER), menus always use A = OK, B = back.
 // Hooks: Pad.poll() at the start of every tick (10_main), Pad.draw(ctx) after the scene.
-const PAD_ACTS = ['light', 'medium', 'heavy', 'sp1', 'sp2', 'block', 'ult'];
-const PAD_ACT_LABELS = { ...ACTION_LABELS, ult: 'Ultimate (SP1+SP2)' };
-const PAD_DEFAULT = { 0: 'sp1', 1: 'heavy', 2: 'light', 3: 'medium', 4: 'block', 5: 'sp2', 6: 'block', 7: 'ult' };
+const PAD_ACTS = ['light', 'medium', 'heavy', 'sp1', 'sp2', 'block', 'ult', 'grab'];
+const PAD_ACT_LABELS = { ...ACTION_LABELS, ult: 'Ultimate (SP1+SP2)', grab: 'Grab (M+H)' };
+const PAD_DEFAULT = { 0: 'sp1', 1: 'heavy', 2: 'light', 3: 'medium', 4: 'block', 5: 'sp2', 6: 'grab', 7: 'ult' };
 const PAD_NAMES = {
   xbox: ['A', 'B', 'X', 'Y', 'LB', 'RB', 'LT', 'RT', 'VIEW', 'MENU', 'L-STICK', 'R-STICK', 'D↑', 'D↓', 'D←', 'D→', 'HOME'],
   ps: ['CROSS ✕', 'CIRCLE ○', 'SQUARE □', 'TRIANGLE △', 'L1', 'R1', 'L2', 'R2', 'SHARE', 'OPTIONS', 'L3', 'R3', 'D↑', 'D↓', 'D←', 'D→', 'PS'],
 };
 Settings.padMap = { ...PAD_DEFAULT };
 Settings.KEYS.push('padMap');
-try { const s = JSON.parse(localStorage.getItem('soulbreakers_v1') || 'null'); if (s && s.padMap) Settings.padMap = s.padMap; } catch (e) { /* storage unavailable */ }
+try { const s = JSON.parse(localStorage.getItem('soulbreakers_v1') || 'null'); if (s && s.padMap) { Settings.padMap = s.padMap; if (s.padMap[6] === 'block' && s.padMap[4] === 'block') Settings.padMap[6] = 'grab'; } } catch (e) { /* storage unavailable */ }
 
 const Pad = {
   list: [], st: [], kb: new Set(), n: 0, lastUse: -1e9, toast: null, capture: null, ctx: '', nav: null,
@@ -51,7 +51,7 @@ const Pad = {
     if (ctx === 'battle') {
       for (const i of B_) {
         const a = Settings.padMap[i];
-        if (a === 'ult') { add(bd.sp1); add(bd.sp2); } else if (a) add(bd[a]);
+        if (a === 'ult') { add(bd.sp1); add(bd.sp2); } else if (a === 'grab') { add(bd.medium); add(bd.heavy); } else if (a) add(bd[a]);
       }
       if (B_.has(9)) add('Escape');
       if (B_.has(8)) add('Digit5');
@@ -222,7 +222,7 @@ class PadScene {
   HowToScene.prototype.drawControls = function (g) {
     dc.call(this, g);
     g.save(); g.font = `700 15px ${FONT_UI}`; g.textAlign = 'center'; g.fillStyle = '#7ad8ff';
-    const m = Settings.padMap, lab = { light: 'Light', medium: 'Med', heavy: 'Heavy', sp1: 'SP1', sp2: 'SP2', block: 'Block', ult: 'ULT' };
+    const m = Settings.padMap, lab = { light: 'Light', medium: 'Med', heavy: 'Heavy', sp1: 'SP1', sp2: 'SP2', block: 'Block', ult: 'ULT', grab: 'Grab' };
     const parts = PAD_ACTS.map(a => { const b = Object.keys(m).filter(i => m[i] === a).map(i => Pad.name(+i)); return b.length ? `${b.join('/')} ${lab[a]}` : null; }).filter(Boolean);
     g.fillText(`🎮 CONTROLLER: stick/d-pad move · ${parts.join(' · ')} · remap: SETTINGS → CONTROLLER`, W / 2, 646);
     g.restore();

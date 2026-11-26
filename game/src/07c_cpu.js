@@ -4,9 +4,9 @@
 // Fairness: it sees the opponent (and projectiles) only through a delayed snapshot (reaction time per level)
 // and never reads the human's inputs. It may read its own fighter state (cooldowns, meter), like a player reads the HUD.
 const CPU_LEVELS = [
-  { name: 'EASY', jp: '易', color: '#7aff9a', react: 26, think: 22, block: 0.22, lowRead: 0.2, aggro: 0.35, depth: 1, special: 0.3, ult: 0.35, anti: 0.1, burst: 0, idle: 0.3, jumpIn: 0.12, mix: 0.1, counter: 0 },
-  { name: 'NORMAL', jp: '普通', color: '#ffd84a', react: 16, think: 13, block: 0.58, lowRead: 0.55, aggro: 0.55, depth: 2, special: 0.55, ult: 0.7, anti: 0.4, burst: 0.25, idle: 0.12, jumpIn: 0.1, mix: 0.3, counter: 0.08 },
-  { name: 'HARD', jp: '難', color: '#ff4a5a', react: 10, think: 7, block: 0.86, lowRead: 0.85, aggro: 0.7, depth: 4, special: 0.75, ult: 0.95, anti: 0.75, burst: 0.55, idle: 0.03, jumpIn: 0.08, mix: 0.55, counter: 0.2 },
+  { name: 'EASY', jp: '易', color: '#7aff9a', tech: 0.08, throw: 0.05, react: 26, think: 22, block: 0.22, lowRead: 0.2, aggro: 0.35, depth: 1, special: 0.3, ult: 0.35, anti: 0.1, burst: 0, idle: 0.3, jumpIn: 0.12, mix: 0.1, counter: 0 },
+  { name: 'NORMAL', jp: '普通', color: '#ffd84a', tech: 0.3, throw: 0.18, react: 16, think: 13, block: 0.58, lowRead: 0.55, aggro: 0.55, depth: 2, special: 0.55, ult: 0.7, anti: 0.4, burst: 0.25, idle: 0.12, jumpIn: 0.1, mix: 0.3, counter: 0.08 },
+  { name: 'HARD', jp: '難', color: '#ff4a5a', tech: 0.5, throw: 0.3, react: 10, think: 7, block: 0.86, lowRead: 0.85, aggro: 0.7, depth: 4, special: 0.75, ult: 0.95, anti: 0.75, burst: 0.55, idle: 0.03, jumpIn: 0.08, mix: 0.55, counter: 0.2 },
 ];
 const CPU_SPECIALS = ['sp1', 'sp1f', 'counter', 'sp2', 'sp2f', 'sp2d'];
 
@@ -66,6 +66,11 @@ class CpuBot {
     this.f++; this.v.btn.press.clear();
     const bt = this.bt, me = this.me;
     this.observe();
+    const C = bt.cine;
+    if (C && C.thr && C.D === me && C.f >= 1 && C.f <= THROW_TECH) {   // being thrown: guess a tech (like a human must)
+      if (C.f === 1) this.techAt = this.roll(this.L.tech) ? 2 + Math.floor(Math.random() * (THROW_TECH - 3)) : -1;
+      if (C.f === this.techAt) { this.apply({ d: 'n', p: ['medium', 'heavy'] }); return; }
+    }
     if (bt.phase !== 'fight' || bt.cine || bt.freeze || me.ko || me.opp.ko) { this.q = []; this.neutral(); return; }
     if (bt.hitstop > 0 && !this.q.length) { this.apply({ d: this.hold.d, block: this.hold.block }); this.comboLogic(); return; }
     if (this.q.length) { this.apply(this.q.shift()); return; }
@@ -80,6 +85,7 @@ class CpuBot {
       case 'cL': case 'cM': case 'cH': return [{ d: 'd', p: [btn[k]] }, { d: 'd' }];
       case 'jL': case 'jM': case 'jH': return [{ d: 'n', p: [btn[k]] }];
       case 'LH': return [{ d: 'n', p: ['light', 'heavy'] }];
+      case 'THROW': return [{ d: 'n', p: ['medium', 'heavy'] }];
       case 'FF': return [{ d: 'f' }, { d: 'n' }, { d: 'f', p: ['heavy'] }];
       case 'sp1': case 'sp2': return [...pad(23 - (this.f - this.lastDown)), { d: 'n', p: [k] }];   // let old ↓ inputs expire so no motion is read
       case 'sp1f': return [{ d: 'd' }, { d: 'df' }, { d: 'f', p: ['sp1'] }];
@@ -204,6 +210,7 @@ class CpuBot {
       if (!this.roll(L.aggro + 0.2)) { this.hold = { d: this.roll(0.5) ? 'b' : 'n', t: L.think, block: this.roll(L.block * 0.5) }; this.apply(this.hold); return; }
       this.steps = 0;
       if (this.roll(L.special * 0.35)) { const k = this.pickSpecial(dist, P => P.kind === 'melee' || P.kind === 'grab'); if (k) { this.doMove(k); return; } }
+      if (dist < 78 * me.s && o.onGround && (o.state === 'idle' || o.state === 'crouch' || o.state === 'walk') && this.roll(o.guard ? L.throw * 2.5 : L.throw) && this.can('THROW')) { this.doMove('THROW'); return; }
       const mixLow = o.guard && !o.crouch && this.roll(L.mix);
       const k = mixLow ? pick(['cM', 'cH', 'cL']) : pick(['L', 'L', 'M', 'cL', 'cM', 'H', 'LH', 'cH']);
       if (this.can(k)) { this.doMove(k); this.wait = this.level === 0 ? 10 : 0; return; }

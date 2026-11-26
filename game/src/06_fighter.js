@@ -187,6 +187,7 @@ class Fighter {
     if (this.ch.tryCustom && this.ch.tryCustom(this, inp, air, minLvl)) return true;
     const go = (key, ...btns) => { this.goPressF = inp.pressF[btns[0]] ?? -99; btns.forEach(b => inp.use(b)); this.startMove(key); return true; };
     if (inp.p('sp1') && inp.p('sp2')) { if (this.canUse('ult', air, minLvl)) return go('ult', 'sp1', 'sp2'); }
+    if (!air && minLvl === 0 && inp.p('medium') && inp.p('heavy') && !inp.p('sp1') && !inp.p('sp2') && this.canUse('THROW', false, 0)) return go('THROW', 'medium', 'heavy');   // universal throw
     if (inp.p('sp1')) {
       k = inp.motion('qcf') ? 'sp1f' : inp.motion('qcb') ? 'counter' : 'sp1';
       if (this.canUse(k, air, minLvl)) { inp.clearMotion(); return go(k, 'sp1'); }
@@ -250,6 +251,7 @@ class Fighter {
     if (!this.move) { this.setState(this.onGround ? 'idle' : 'jump'); return; }   // move cleared externally (e.g. time over mid-attack)
     const m = this.move, f = ++this.mf, inp = this.input;
     // late conversions (lenient simultaneous presses)
+    if (f <= 3 && this.onGround && !this.lastFD?.cancelled && THROW_FROM.includes(this.moveKey) && inp.p(this.moveKey.includes('M') ? 'heavy' : 'medium') && this.canUse('THROW', false, 0)) { inp.use('medium'); inp.use('heavy'); this.startMove('THROW'); return; }   // lenient M+H
     if (f <= 3 && (this.moveKey === 'L' || this.moveKey === 'cL') && inp.p('heavy') && this.canUse('LH', false, 0)) { inp.use('heavy'); this.startMove('LH'); return; }
     if (f <= 3 && (m.special || m.cardMove) && !m.ult && (inp.p('sp1') || inp.p('sp2')) && this.meter >= 100 && this.ch.moves.ult && this.onGround) {
       const s1 = this.moveKey.startsWith('sp1') || m.cardMove, s2 = this.moveKey.startsWith('sp2');
@@ -430,6 +432,7 @@ class Fighter {
 }
 
 // ============================ PROJECTILES =============================
+const THROW_FROM = ['M', 'H', 'cM', 'cH', 'dM', 'dH'];
 const SEAL_SLOTS = ['sp1', 'sp1f', 'counter', 'sp2', 'sp2f', 'sp2d'];
 class Proj {
   constructor(o) {

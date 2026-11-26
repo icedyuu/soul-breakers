@@ -20,6 +20,7 @@ const TOUCH_BTNS = [
   { a: 'sp2', label: 'SP2', sub: '+→  +↓', x: 1062, y: 470, r: 44, col: '#ff7ad8' },
   { a: 'block', label: 'BLOCK', x: 1214, y: 452, r: 42, col: '#9affb0' },
   { a: 'ult', label: 'ULT', x: 1186, y: 350, r: 38, col: '#ff8a1a' },
+  { a: 'grab', label: 'GRAB', sub: 'M+H', x: 1226, y: 572, r: 36, col: '#ffb070' },
 ];
 const TOUCH_PAUSE = { x: W / 2 - 34, y: 96, w: 68, h: 40 };
 const TOUCH_RESET = { x: W - 150, y: 140, w: 120, h: 40 };
@@ -62,7 +63,7 @@ const TouchPad = {
     if (t.kind === 'stick') this.stick = null;
     this.touches.delete(id);
   },
-  press(b) { if (b.a === 'ult') { this.pend.add('sp1'); this.pend.add('sp2'); this.pend.add('ult'); } else this.pend.add(b.a); this.flash[b.a] = 8; },
+  press(b) { if (b.a === 'ult') { this.pend.add('sp1'); this.pend.add('sp2'); this.pend.add('ult'); } else if (b.a === 'grab') { this.pend.add('medium'); this.pend.add('heavy'); } else this.pend.add(b.a); this.flash[b.a] = 8; },
   stickDir() {
     const s = this.stick; if (!s) return { l: false, r: false, u: false, d: false };
     const dx = s.x - s.ox, dy = s.y - s.oy, len = Math.hypot(dx, dy);
@@ -98,7 +99,7 @@ const TouchPad = {
     }
     Object.assign(v, dir);
     const held = new Set();
-    for (const t of this.touches.values()) if (t.kind === 'btn' && t.b) { if (t.b.a === 'ult') { held.add('sp1'); held.add('sp2'); } else held.add(t.b.a); }
+    for (const t of this.touches.values()) if (t.kind === 'btn' && t.b) { if (t.b.a === 'ult') { held.add('sp1'); held.add('sp2'); } else if (t.b.a === 'grab') { held.add('medium'); held.add('heavy'); } else held.add(t.b.a); }
     for (const a of ['light', 'medium', 'heavy', 'sp1', 'sp2', 'block']) {
       v.btn.held[a] = held.has(a) || K.has(kb[a]) || pend.has(a);
       if (pend.has(a)) v.btn.press.add(a);
@@ -122,7 +123,7 @@ const TouchPad = {
     // buttons
     const P1 = bt.p1, held = this.v.btn.held;
     for (const b of TOUCH_BTNS) {
-      const on = b.a === 'ult' ? held.sp1 && held.sp2 : held[b.a], fl = this.flash[b.a] > 0;
+      const on = b.a === 'ult' ? held.sp1 && held.sp2 : b.a === 'grab' ? held.medium && held.heavy : held[b.a], fl = this.flash[b.a] > 0;
       const ready = b.a !== 'ult' || P1.meter >= 100;
       g.globalAlpha = on || fl ? 0.85 : ready ? 0.45 : 0.22;
       g.fillStyle = on || fl ? b.col : 'rgba(20,10,40,0.75)'; g.strokeStyle = b.col; g.lineWidth = 4;

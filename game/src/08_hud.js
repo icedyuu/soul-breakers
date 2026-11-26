@@ -267,7 +267,7 @@ function drawMoveList(g, ch, x, y, w, label, page = 0) {
       g.font = `700 14px ${FONT_UI}`; g.fillStyle = ch.colors.accent; g.fillText(lab, x + 30, yy);
       g.textAlign = 'right'; g.fillStyle = '#ffffff'; g.fillText(inp, x + w - 26, yy); g.textAlign = 'left'; yy += 22;
     }
-    yy += 6; g.font = `600 13px ${FONT_UI}`; g.fillStyle = '#cfc4ee'; yy = wrapText(g, `Juggle limit: ${ch.juggleMax || 6} points  ·  Universal: L→M→H→Special→Ultimate, L+H launcher, BLOCK+H burst`, x + 30, yy, w - 60, 16) + 12;
+    yy += 6; g.font = `600 13px ${FONT_UI}`; g.fillStyle = '#cfc4ee'; yy = wrapText(g, `Juggle limit: ${ch.juggleMax || 6} points  ·  Universal: L→M→H→Special→Ultimate, L+H launcher, M+H throw (tech: M+H), BLOCK+H burst`, x + 30, yy, w - 60, 16) + 12;
     g.font = `italic 900 20px ${FONT_T}`; strokeText(g, 'EXAMPLE COMBOS', x + 26, yy, '#ffd84a', OUTLINE, 4); yy += 26;
     (ch.combos || []).forEach((c, i) => {
       g.font = `800 15px ${FONT_UI}`; g.fillStyle = '#ffffff'; g.fillText(`${i + 1}. ${c.name}`, x + 30, yy); yy += 19;
