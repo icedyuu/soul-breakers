@@ -409,6 +409,13 @@ Beni: "can the others also get arcade skins you get when you clear it? e.g. The 
 - COLLECTION has a new SKIN row (cycle all 6, locked ones preview only, sets the pick). Admin: GIVE ARCADE SKIN → grant key `arc_<id>` / `arc_all` (no SQL change: the existing regex/level check accepts it), applied in `Cloud.applyGrants`.
 - Tests: `mech_arcade.js` (unlock, import + Aimi migration, admin grants, mirror rule, every fighter fights + ults in it vector/pixel, select/VS/collection shots `../shots_arcade_*.png`), `arcade_look.js` (sheet), `arcade_preview.js` (poster), `ultdraw.js` with `SB_V=5`.
 
+## 7p. Friends list, online status, match invites (`09f_friends.js`, `cloud/supabase_friends.sql`, 2026-11-26)
+
+Beni: "a friends list so you see if friends are online and can invite them to play".
+- Needs an account. Add-on SQL `cloud/supabase_friends.sql` (run once in the Supabase SQL Editor after `supabase_setup.sql`; rerunnable): `sb_users.online_at/status`, tables `sb_friends (uid,fid)` (friendship = both rows exist, one row = request) and `sb_invites (src,dst,room,ans,at)`; RPCs `sb_friends(token,status)` (= the ping, returns friends/incoming/outgoing/invites/sent), `sb_friend_add`, `sb_friend_remove`, `sb_invite(token,name,room)` (room '' = cancel, friends only, 6 digits), `sb_invite_answer`. Online = ping < 50 s old; invites live 90 s (inviter re-sends every 75 s while the room waits).
+- Client `Friends` polls every 20 s (4 s on the FRIENDS / invite screens), not while the tab is hidden; status 'match' during fights. FRIENDS screen: from ONLINE lobby menu and ACCOUNT menu (text field to add by name; rows invites → requests → friends (online first) → sent requests; ↑/↓ + ←/→ + ENTER or mouse; REMOVE asks twice). INVITE = `FriendInviteScene` (NetLobbyScene subclass: CREATE ROOM + send code; shows sent / said no). Invite pop-up (JOIN / NO) on any menu via `Pad.poll`/`Pad.draw` hooks, hidden in fights and online rooms. Title shows "● N friends online · N requests" under the ACCOUNT chip.
+- Test: `tests/friends.js` (two browsers + local PeerServer + cloudmock; needs both SQL files loaded).
+
 ## 8. History of requests (in order)
 
 1. Original anime fighting game (Kazuma, Yoru, Sera, Goro).
@@ -435,6 +442,7 @@ Beni: "can the others also get arcade skins you get when you clear it? e.g. The 
 22. Cosmetics (2026-11-26): 2 animated intros + 2 victory poses per fighter, mastery titles (unique LV 10 title per fighter), COLLECTION screen (§7m).
 23. Aimi, The Devoted Gaze (2026-11-26): Beni's "Yuno Gasai" request as an original yandere fighter — OBSESSION / UNSTABLE LOVE, pistol kit, THE SKY BREAKS ult, school / MIDNIGHT DRESS (Arcade clear) / LAST HORIZON (LV 10) skins (§7n).
 24. Arcade skins for every fighter (2026-11-26): one costume per fighter unlocked by clearing Arcade with them, The Hollow's THE VEILED KING (veil, crown, long mantle) as Beni described (§7o).
+25. Friends list (2026-11-26): add friends by account name, see who is online, invite them to an ONLINE 1 VS 1 with one click (§7p).
 
 ## 9. Open ideas / possible next steps
 
