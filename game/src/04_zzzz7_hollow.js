@@ -293,9 +293,9 @@ HOLLOW.drawBehind = (g, F) => {
     const s = c.rem;
     if (c.rift > 0.01) {
       const rx = s.rx, ry = GROUND - 120, k = c.rift;
-      g.save(); g.globalAlpha = k * 0.9; g.fillStyle = '#05030a'; g.beginPath(); g.ellipse(rx, ry, 46 * k + Math.sin(T * 0.3) * 3, 150 * k, 0, 0, TAU); g.fill();
+      g.save(); g.globalAlpha = k * 0.9; g.fillStyle = '#05030a'; g.beginPath(); g.ellipse(rx, ry, Math.max(0.1, k * (46 + Math.sin(T * 0.3) * 3)), 150 * k, 0, 0, TAU); g.fill();
       g.globalCompositeOperation = 'lighter'; g.strokeStyle = HV; g.lineWidth = 3; g.globalAlpha = k * 0.6; g.beginPath(); g.ellipse(rx, ry, 50 * k, 156 * k, 0, 0, TAU); g.stroke();
-      g.strokeStyle = HPALE; g.lineWidth = 1.2; g.globalAlpha = k * 0.35; g.beginPath(); g.ellipse(rx, ry, 60 * k + Math.sin(T * 0.2) * 6, 170 * k, 0, 0, TAU); g.stroke(); g.restore();
+      g.strokeStyle = HPALE; g.lineWidth = 1.2; g.globalAlpha = k * 0.35; g.beginPath(); g.ellipse(rx, ry, Math.max(0.1, k * (60 + Math.sin(T * 0.2) * 6)), 170 * k, 0, 0, TAU); g.stroke(); g.restore();
     }
     remDraw(g, s, T);
     return;
