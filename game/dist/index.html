@@ -16979,9 +16979,13 @@ class NetResultsScene extends ResultsScene {
     super(bt);
     this.menu = new MenuList([{ id: 'rematch', label: 'REMATCH', jp: '再戦' }, { id: 'select', label: 'CHARACTER SELECT', jp: 'キャラ選択' }, { id: 'leave', label: 'LEAVE ROOM', jp: '退出' }], 960, 500, { w: 420, h: 50 });
     this.want = false; this.rwant = false; this.won = this.win.pid - 1 === bt.lp;
+    // series score for this room (rematches keep counting)
+    const sr = Net.series && Net.series.code === Net.code ? Net.series : (Net.series = { code: Net.code, me: 0, rv: 0, m: 0 });
+    if (sr.m !== Net.match) { sr.m = Net.match; this.won ? sr.me++ : sr.rv++; }
+    this.series = sr;
   }
   onNet(d) {
-    if (d.t === 'res') { if (d.w === 'rematch') this.rwant = true; if (d.w === 'select') { Sound.play('menuBack'); go(new NetSelectScene()); } }
+    if (d.t === 'res') { if (d.w === 'rematch') { this.rwant = true; this.rwantT = this.t; this.menu.items[0].label = this.want ? 'REMATCH' : 'ACCEPT REMATCH'; this.menu.sel = 0; Sound.play('menuOk'); } if (d.w === 'select') { Sound.play('menuBack'); go(new NetSelectScene()); } }
     if (d.t === 'start' && Net.role === 'guest') netStartMatch(d.cfg, d.m);
   }
   update() {
@@ -16995,7 +16999,7 @@ class NetResultsScene extends ResultsScene {
     if (this.t < 30) return;
     const it = this.menu.update(); if (!it) return;
     Sound.play('menuOk');
-    if (it.id === 'rematch' && !this.want) { this.want = true; Net.send({ t: 'res', w: 'rematch' }); }
+    if (it.id === 'rematch' && !this.want) { this.want = true; this.menu.items[0].label = this.rwant ? 'STARTING…' : 'WAITING…'; Net.send({ t: 'res', w: 'rematch' }); }
     if (it.id === 'select') { Net.send({ t: 'res', w: 'select' }); go(new NetSelectScene()); }
     if (it.id === 'leave') { Net.close(); go(new NetLobbyScene()); }
   }
@@ -17004,6 +17008,21 @@ class NetResultsScene extends ResultsScene {
     g.fillStyle = '#05030a'; g.fillRect(0, H - 34, W, 34);
     drawFooter(g, this.want ? (this.rwant ? 'Starting rematch…' : 'Waiting for your rival to accept the rematch…') : this.rwant ? 'Your rival wants a REMATCH!' : '↑/↓ + ENTER  ·  tap');
     g.save(); g.translate(330, 110); g.rotate(-0.08); drawTitleText(g, this.won ? 'YOU WIN!' : 'YOU LOSE', 0, 0, 64, this.won ? '#7affc0' : '#ff8aa0', this.won ? '#18a85a' : '#a8183a'); g.restore();
+    const sr = this.series;
+    if (sr && sr.me + sr.rv > 1) {   // series score once there was a rematch
+      g.save(); g.font = `italic 900 24px ${FONT_T}`; g.textAlign = 'center'; g.textBaseline = 'middle';
+      const txt = `SERIES  ${sr.me} – ${sr.rv}`, w = g.measureText(txt).width + 34;
+      g.fillStyle = 'rgba(8,4,20,0.85)'; g.fillRect(330 - w / 2, 22, w, 36); g.strokeStyle = sr.me > sr.rv ? '#7affc0' : sr.me < sr.rv ? '#ff8aa0' : '#ffd84a'; g.lineWidth = 2; g.strokeRect(330 - w / 2, 22, w, 36);
+      g.fillStyle = '#ffffff'; g.fillText(txt, 330, 41); g.restore();
+    }
+    if (this.rwant && !this.want) {   // the rival asked: big accept prompt
+      const k = Math.min(1, (this.t - (this.rwantT | 0)) / 12), pu = 1 + Math.sin(this.t / 6) * 0.04;
+      g.save(); g.translate(400, 525); g.scale(k * pu, k * pu);
+      g.font = `italic 900 30px ${FONT_T}`; g.textAlign = 'center'; g.textBaseline = 'middle';
+      const txt = 'RIVAL WANTS A REMATCH!  ▶', w = g.measureText(txt).width + 44;
+      g.fillStyle = '#ffd84a'; g.fillRect(-w / 2, -24, w, 48); g.strokeStyle = '#140a24'; g.lineWidth = 3; g.strokeRect(-w / 2, -24, w, 48);
+      g.fillStyle = '#140a24'; g.fillText(txt, 0, 2); g.restore();
+    }
     netStatusChip(g);
   }
 }
@@ -18326,6 +18345,84 @@ const Cloud = {
 };
 Cloud.load();
 
+// ---------------- RANKED SEASONS: tiers from the rating + season badges (cloud/supabase_ranked.sql) ----------------
+const TIERS = [
+  { id: 'bronze', name: 'BRONZE', jp: '銅', min: 0, c: '#e09a5a', c2: '#6a3814' },
+  { id: 'silver', name: 'SILVER', jp: '銀', min: 1050, c: '#eef2fa', c2: '#5a6a84' },
+  { id: 'gold', name: 'GOLD', jp: '金', min: 1125, c: '#ffe36a', c2: '#a86a00' },
+  { id: 'platinum', name: 'PLATINUM', jp: '白金', min: 1200, c: '#7ff6e2', c2: '#147a70' },
+  { id: 'diamond', name: 'DIAMOND', jp: '金剛', min: 1300, c: '#9ad0ff', c2: '#2a4ac8' },
+  { id: 'master', name: 'MASTER', jp: '達人', min: 1400, c: '#ff7ae6', c2: '#6a1a9a' },
+];
+const tierOf = r => { let t = TIERS[0]; for (const x of TIERS) if ((r | 0) >= x.min) t = x; return t; };
+const tierById = id => TIERS.find(t => t.id === id) || TIERS[0];
+const tierNext = t => TIERS[TIERS.indexOf(t) + 1] || null;
+// best badge of past seasons: highest tier, CHAMPION (place 1) wins ties
+const bestBadge = bs => (bs || []).reduce((b, x) => !b || TIERS.indexOf(tierById(x.t)) * 2 + (x.p === 1) > TIERS.indexOf(tierById(b.t)) * 2 + (b.p === 1) ? x : b, null);
+const seasonLeftTxt = s => { if (!s) return ''; const l = Math.max(0, (s.left | 0) - ((Date.now() - (s.got || Date.now())) / 1000 | 0)), d = Math.floor(l / 86400), h = Math.floor(l / 3600); return d >= 2 ? `${d} days` : h >= 1 ? `${h} h` : `${Math.max(1, Math.ceil(l / 60))} min`; };
+// shield badge, more spikes for higher tiers; champ = little crown on top
+function drawTierBadge(g, x, y, s, tier, champ) {
+  const t = typeof tier === 'string' ? tierById(tier) : tier || TIERS[0], i = TIERS.indexOf(t);
+  g.save(); g.translate(x, y);
+  if (i >= 4) { g.shadowColor = t.c; g.shadowBlur = s * 0.9; }
+  g.beginPath(); g.moveTo(0, -s); g.lineTo(s * 0.86, -s * 0.58); g.lineTo(s * 0.78, s * 0.22); g.lineTo(0, s); g.lineTo(-s * 0.78, s * 0.22); g.lineTo(-s * 0.86, -s * 0.58); g.closePath();
+  const gr = g.createLinearGradient(0, -s, 0, s); gr.addColorStop(0, t.c); gr.addColorStop(1, t.c2);
+  g.fillStyle = gr; g.fill(); g.shadowBlur = 0; g.lineWidth = Math.max(1.5, s * 0.13); g.strokeStyle = '#140a24'; g.stroke();
+  const n = 4 + Math.min(i, 4), r1 = s * 0.42, r2 = s * (i >= 3 ? 0.17 : 0.22);
+  g.beginPath(); for (let k = 0; k < n * 2; k++) { const a = -Math.PI / 2 + k * Math.PI / n, r = k % 2 ? r2 : r1; g.lineTo(Math.cos(a) * r, Math.sin(a) * r - s * 0.06); }
+  g.closePath(); g.fillStyle = i >= 5 ? '#fff6ff' : 'rgba(255,255,255,0.9)'; g.fill(); g.lineWidth = Math.max(1, s * 0.07); g.strokeStyle = t.c2; g.stroke();
+  if (champ) {
+    g.beginPath(); const cy = -s * 1.05, cw = s * 0.62; g.moveTo(-cw, cy); g.lineTo(-cw, cy - s * 0.5); g.lineTo(-cw / 2, cy - s * 0.22); g.lineTo(0, cy - s * 0.62); g.lineTo(cw / 2, cy - s * 0.22); g.lineTo(cw, cy - s * 0.5); g.lineTo(cw, cy); g.closePath();
+    g.fillStyle = '#ffd84a'; g.fill(); g.lineWidth = Math.max(1, s * 0.09); g.strokeStyle = '#140a24'; g.stroke();
+  }
+  g.restore();
+}
+// tier label: badge + "GOLD"
+function drawTierTag(g, x, y, s, rating, font = 16) {
+  const t = tierOf(rating); drawTierBadge(g, x + s, y, s, t);
+  g.save(); g.font = `900 ${font}px ${FONT_UI}`; g.textAlign = 'left'; g.textBaseline = 'middle'; g.fillStyle = t.c; g.fillText(t.name, x + s * 2 + 6, y + 1); g.restore();
+}
+Object.assign(Cloud, {
+  season: null, noSeason: false,
+  async seasonMe() {
+    if (!this.on || this.noSeason) return null;
+    try { const r = await this.rpc('sb_season_me', { p_token: this.tok }); if (r && r.season) r.season.got = Date.now(); this.season = r; this.seasonCheck(); return r; }
+    catch (e) { if (e.message === 'MISSING_FN') this.noSeason = true; return null; }
+  },
+  async seasonTop(n = 100) { const r = await this.rpc('sb_season_top', { p_limit: n }); if (r && r.season) r.season.got = Date.now(); return r; },
+  // season-end reward pop-up: the newest badge the player has not seen yet on this device
+  seenKey() { return 'sb_season_seen_' + (this.name || '').toLowerCase(); },
+  seasonCheck() {
+    const bs = this.season && this.season.badges; if (!bs || !bs.length) return;
+    let seen = 0; try { seen = +localStorage.getItem(this.seenKey()) || 0; } catch (e) { }
+    const nb = bs.reduce((a, b) => (b.s > (a ? a.s : 0) ? b : a), null);
+    if (nb && nb.s > seen) this.reward = nb;
+  },
+  rewardSeen() { if (!this.reward) return; try { localStorage.setItem(this.seenKey(), String(this.reward.s)); } catch (e) { } this.reward = null; },
+});
+{
+  const si = Cloud.signedIn, rf = Cloud.refresh, lo = Cloud.logout;
+  Cloud.signedIn = function (r) { const m = si.call(this, r); this.seasonMe(); return m; };
+  Cloud.refresh = async function () { const m = await rf.call(this); if (m) await this.seasonMe(); return m; };
+  Cloud.logout = function () { this.season = null; this.reward = null; return lo.call(this); };
+}
+// the reward pop-up (shown on the title screen once per season)
+function drawSeasonReward(g, t) {
+  const b = Cloud.reward; if (!b) return;
+  const tr = tierById(b.t), x = W / 2 - 300, y = 170;
+  g.save(); g.fillStyle = 'rgba(4,2,12,0.78)'; g.fillRect(0, 0, W, H);
+  panel(g, x, y, 600, 380);
+  g.textAlign = 'center'; g.textBaseline = 'middle';
+  drawTitleText(g, `SEASON ${b.s} ENDED`, W / 2, y + 52, 40, '#ffffff', '#8a3aff');
+  drawTierBadge(g, W / 2, y + 160, 58 + Math.sin(t / 14) * 3, tr, b.p === 1);
+  g.font = `italic 900 34px ${FONT_T}`; g.fillStyle = tr.c; g.fillText(b.p === 1 ? 'CHAMPION · ' + tr.name : tr.name + ' REACHED', W / 2, y + 262);
+  g.font = `700 17px ${FONT_UI}`; g.fillStyle = '#e8dcff';
+  g.fillText(`Final place #${b.p}  ·  your S${b.s} ${tr.name} badge now shows next to your name.`, W / 2, y + 302);
+  g.fillText('New season started: ratings moved halfway back to 1000.', W / 2, y + 328);
+  g.font = `700 14px ${FONT_UI}`; g.fillStyle = '#cfc4ee'; g.fillText('ENTER / tap: OK', W / 2, y + 360);
+  g.restore();
+}
+
 // Mastery hooks: upload after every change, and keep the real XP while the hidden cheat is active
 {
   const sv = Mastery.save, ua = Mastery.unlockAll, aw = Mastery.award;
@@ -18462,7 +18559,10 @@ class AccountScene {
     g.textAlign = 'left'; g.textBaseline = 'alphabetic';
     drawTitleText(g, me.name || '', tx, y + 64, 46, '#ffffff', '#8a3aff', 'left');
     if (me.admin) { g.font = `900 14px ${FONT_UI}`; g.fillStyle = '#ffd84a'; g.fillText('★ ADMIN', tx, y + 92); }
-    const rows = [['RATING', me.rating ?? '—'], ['RANK', me.rank ? '#' + me.rank : '—'], ['ONLINE W / L', me.wins != null ? `${me.wins} / ${me.losses}` : '—'], ['MAIN', ch ? ch.name : '—']];
+    const se = Cloud.season, sn = se && se.season;
+    if (me.rating != null) drawTierTag(g, tx + (me.admin ? 90 : 0), y + 88, 11, me.rating, 15);
+    const rows = [['RATING', me.rating ?? '—'], ['RANK', sn ? (se.place ? '#' + se.place : '—') : me.rank ? '#' + me.rank : '—'],
+      [sn ? `SEASON ${sn.id} W / L` : 'ONLINE W / L', sn ? `${se.sw} / ${se.sl}` : me.wins != null ? `${me.wins} / ${me.losses}` : '—'], ['MAIN', ch ? ch.name : '—']];
     rows.forEach(([k, v], i) => {
       const yy = y + 130 + i * 40;
       g.font = `700 16px ${FONT_UI}`; g.fillStyle = '#cfc4ee'; g.fillText(k, tx, yy);
@@ -18471,6 +18571,16 @@ class AccountScene {
     g.font = `600 15px ${FONT_UI}`; g.fillStyle = 'rgba(220,210,255,0.8)';
     const st = this.busy || Cloud.busy ? 'Syncing…' : Cloud.sync === 'offline' ? 'Offline: progress is kept on this device and synced later.' : 'Mastery + colors are saved to your account.';
     g.fillText(st, x + 30, y + 305);
+    if (sn) {   // season box: time left, next tier, past season badges
+      const bx = x, by = y + 346, tr = tierOf(me.rating), nx = tierNext(tr);
+      panel(g, bx, by, 520, 104);
+      g.textAlign = 'left'; g.font = `900 17px ${FONT_UI}`; g.fillStyle = '#ffd84a'; g.fillText(`SEASON ${sn.id}  ·  ends in ${seasonLeftTxt(sn)}`, bx + 24, by + 30);
+      g.font = `600 14px ${FONT_UI}`; g.fillStyle = '#e8dcff';
+      g.fillText(nx ? `${nx.min - me.rating} rating to ${nx.name}  ·  reward: a badge for the best tier you reach (3+ matches)` : 'Top tier! Reward: MASTER badge (3+ season matches)', bx + 24, by + 54);
+      const bs = (se.badges || []).slice(-8);
+      if (bs.length) bs.forEach((b, i) => { drawTierBadge(g, bx + 38 + i * 58, by + 82, 11, b.t, b.p === 1); g.font = `800 12px ${FONT_UI}`; g.fillStyle = tierById(b.t).c; g.fillText('S' + b.s, bx + 54 + i * 58, by + 84); });
+      else { g.font = `600 13px ${FONT_UI}`; g.fillStyle = '#9a90c0'; g.fillText('Season badges you earn will show here.', bx + 24, by + 84); }
+    }
     this.menu.draw(g, t);
   }
 }
@@ -18481,7 +18591,8 @@ class RankScene {
     this.t = 0; this.page = 0; this.rows = null; this.err = ''; this.back = o.back || (() => new TitleScene());
     Music.play('menu');
     if (!Cloud.enabled()) this.err = 'Accounts are not available in this version.';
-    else Cloud.top(100).then(r => { this.rows = r || []; }).catch(e => { this.err = cloudErr(e); });
+    else Cloud.seasonTop(100).then(r => { this.season = r.season; this.rows = r.rows || []; })
+      .catch(e => e.message === 'MISSING_FN' ? Cloud.top(100).then(r => { this.rows = r || []; }) : Promise.reject(e)).catch(e => { this.err = cloudErr(e); });
     if (Cloud.on) Cloud.refresh();
   }
   get pages() { return Math.max(1, Math.ceil((this.rows || []).length / 12)); }
@@ -18496,15 +18607,35 @@ class RankScene {
     const t = this.t;
     drawMenuBG(g, t, '#ffd84a');
     drawTitleText(g, 'RANKINGS', W / 2, 70, 70, '#ffd84a', '#ff8a1a');
-    g.font = `700 18px ${FONT_JP}`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = '#ffe9a8'; g.fillText('ランキング · ranked online 1 VS 1', W / 2, 120);
+    const sn = this.season;
+    g.font = `700 18px ${FONT_JP}`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = '#ffe9a8';
+    g.fillText(sn ? `ランキング · SEASON ${sn.id} · ends in ${seasonLeftTxt(sn)} · best tier = season badge` : 'ランキング · ranked online 1 VS 1', W / 2, 120);
     const x = 190, y = 150, w = W - 380;
     panel(g, x, y, w, 470);
     g.font = `800 14px ${FONT_UI}`; g.fillStyle = '#cfc4ee'; g.textAlign = 'left';
-    const cols = [[x + 30, '#'], [x + 100, 'PLAYER'], [x + 420, 'MAIN'], [x + 650, 'RATING'], [x + 790, 'W / L']];
+    const cols = sn ? [[x + 30, '#'], [x + 90, 'PLAYER'], [x + 370, 'MAIN'], [x + 545, 'TIER'], [x + 700, 'RATING'], [x + 800, 'SEASON W/L']]
+      : [[x + 30, '#'], [x + 100, 'PLAYER'], [x + 420, 'MAIN'], [x + 650, 'RATING'], [x + 790, 'W / L']];
     cols.forEach(([cx, s]) => g.fillText(s, cx, y + 26));
     if (this.err) cloudMsg(g, this.err, y + 220, true);
     else if (!this.rows) { g.textAlign = 'center'; g.font = `700 20px ${FONT_UI}`; g.fillStyle = '#fff'; g.fillText('Loading' + '.'.repeat(1 + (t >> 4) % 3), W / 2, y + 220); }
-    else if (!this.rows.length) { g.textAlign = 'center'; g.font = `700 20px ${FONT_UI}`; g.fillStyle = '#fff'; g.fillText('No ranked matches yet. Log in and win an ONLINE 1 VS 1 match!', W / 2, y + 220); }
+    else if (!this.rows.length) { g.textAlign = 'center'; g.font = `700 20px ${FONT_UI}`; g.fillStyle = '#fff'; g.fillText(sn ? `No ranked matches in season ${sn.id} yet. Log in and win an ONLINE 1 VS 1 match!` : 'No ranked matches yet. Log in and win an ONLINE 1 VS 1 match!', W / 2, y + 220); }
+    else if (sn) {
+      const me = (Cloud.name || '').toLowerCase();
+      this.rows.slice(this.page * 12, this.page * 12 + 12).forEach((r, i) => {
+        const n = this.page * 12 + i + 1, yy = y + 62 + i * 34, mine = r.name.toLowerCase() === me, ch = r.main && chById(r.main), tr = tierById(r.tier), bb = bestBadge(r.badges);
+        if (mine) { g.fillStyle = 'rgba(255,216,74,0.2)'; g.fillRect(x + 10, yy - 16, w - 20, 32); }
+        else if (i % 2) { g.fillStyle = 'rgba(255,255,255,0.04)'; g.fillRect(x + 10, yy - 16, w - 20, 32); }
+        g.textAlign = 'left';
+        g.font = `italic 900 22px ${FONT_T}`; g.fillStyle = n === 1 ? '#ffd84a' : n === 2 ? '#e0e6f0' : n === 3 ? '#ff9a5a' : '#ffffff'; g.fillText(String(n), cols[0][0], yy);
+        let nx = cols[1][0];
+        if (bb) { drawTierBadge(g, nx + 9, yy + 1, 10, bb.t, bb.p === 1); nx += 26; }
+        g.font = `800 19px ${FONT_UI}`; g.fillStyle = mine ? '#ffd84a' : '#ffffff'; g.fillText(r.name, nx, yy);
+        g.font = `600 16px ${FONT_UI}`; g.fillStyle = ch ? ch.colors.accent : '#9a90c0'; g.fillText(ch ? ch.name : '—', cols[2][0], yy);
+        drawTierBadge(g, cols[3][0] + 10, yy + 1, 11, tr); g.font = `900 16px ${FONT_UI}`; g.fillStyle = tr.c; g.textAlign = 'left'; g.fillText(tr.name, cols[3][0] + 28, yy + 1);
+        g.font = `900 20px ${FONT_UI}`; g.fillStyle = '#ffd84a'; g.fillText(String(r.rating), cols[4][0], yy);
+        g.font = `700 17px ${FONT_UI}`; g.fillStyle = '#e8dcff'; g.fillText(`${r.sw} / ${r.sl}`, cols[5][0], yy);
+      });
+    }
     else {
       const me = (Cloud.name || '').toLowerCase();
       this.rows.slice(this.page * 12, this.page * 12 + 12).forEach((r, i) => {
@@ -18521,7 +18652,9 @@ class RankScene {
     }
     const me = Cloud.on && Cloud.me;
     g.textAlign = 'center'; g.font = `700 17px ${FONT_UI}`; g.fillStyle = '#e8dcff';
-    g.fillText(me ? `You: ${me.name} · ${me.rank ? '#' + me.rank + ' · ' : ''}${me.rating} rating · ${me.wins} W / ${me.losses} L` : 'Log in (ACCOUNT on the title screen) to appear in the rankings.', W / 2, 646);
+    const se = me && sn && Cloud.season;
+    g.fillText(se ? `You: ${me.name} · ${tierOf(se.rating).name} · ${se.place ? '#' + se.place + ' · ' : ''}${se.rating} rating · season ${se.sw} W / ${se.sl} L`
+      : me ? `You: ${me.name} · ${me.rank ? '#' + me.rank + ' · ' : ''}${me.rating} rating · ${me.wins} W / ${me.losses} L` : 'Log in (ACCOUNT on the title screen) to appear in the rankings.', W / 2, 646);
     if (this.pages > 1) { cloudBtn(g, this.navRect(0), '◀ PREV', t, this.page > 0); cloudBtn(g, this.navRect(1), 'NEXT ▶', t, this.page < this.pages - 1); g.fillText(`${this.page + 1} / ${this.pages}`, W / 2, H - 65); }
     drawButton(g, cloudBackRect, 'BACK', null, inRect(cloudBackRect), t);
     drawFooter(g, '←/→ pages  ·  ESC / ENTER: back');
@@ -18600,6 +18733,7 @@ const ACCT_BTN = { x: 22, y: 22, w: 300, h: 46 };
 {
   const TP = TitleScene.prototype, up = TP.update, dr = TP.draw;
   TP.update = function () {
+    if (Cloud.reward) { this.t++; if (this.t > 20 && (UI.ok() || UI.back() || Mouse.clicked || Keys.pressed.has('Escape'))) { Mouse.clicked = false; Sound.play('menuOk'); Cloud.rewardSeen(); } return; }
     if (Cloud.enabled() && Mouse.clicked && inRect(ACCT_BTN)) { Sound.play('menuOk'); Mouse.clicked = false; go(new AccountScene()); return; }
     return up.call(this);
   };
@@ -18609,7 +18743,9 @@ const ACCT_BTN = { x: 22, y: 22, w: 300, h: 46 };
     const me = Cloud.on && Cloud.me;
     drawButton(g, ACCT_BTN, Cloud.on ? (Cloud.name || 'ACCOUNT') : 'LOGIN · RANKINGS', null, inRect(ACCT_BTN), this.t, me ? String(me.rating) : undefined);
     g.save(); g.font = `700 13px ${FONT_UI}`; g.textAlign = 'left'; g.fillStyle = '#e8dcff'; g.globalAlpha = 0.8;
-    g.fillText(Cloud.on ? (me && me.rank ? `rank #${me.rank} · account & rankings` : 'account & rankings') : 'cloud save + online rankings', ACCT_BTN.x + 16, ACCT_BTN.y + ACCT_BTN.h + 16); g.restore();
+    g.fillText(Cloud.on ? (me && me.rank ? `${tierOf(me.rating).name} · rank #${me.rank} · account & rankings` : 'account & rankings') : 'cloud save + online rankings', ACCT_BTN.x + 16, ACCT_BTN.y + ACCT_BTN.h + 16); g.restore();
+    if (me) drawTierBadge(g, ACCT_BTN.x + ACCT_BTN.w + 22, ACCT_BTN.y + ACCT_BTN.h / 2, 16, tierOf(me.rating), false);
+    drawSeasonReward(g, this.t);
   };
 }
 if (Cloud.on) setTimeout(() => Cloud.refresh(), 800);
@@ -18645,7 +18781,7 @@ if (Cloud.on) setTimeout(() => Cloud.refresh(), 800);
     const k = this.rk, s = k.s; if (s === 'off') return;
     const txt = {
       sending: 'RANKED · sending result…', pending: 'RANKED · waiting for your rival’s result…',
-      rated: `RANKED · ${k.delta >= 0 ? '+' : ''}${k.delta} → ${k.rating}`, mismatch: 'Not ranked: the two results did not match.',
+      rated: `RANKED · ${k.delta >= 0 ? '+' : ''}${k.delta} → ${k.rating} · ${tierOf(k.rating).name}`, mismatch: 'Not ranked: the two results did not match.',
       limit: 'Not ranked: max 5 ranked matches per day vs the same player.', unranked: 'Not ranked.', unknown: 'Not ranked.',
       error: k.err || 'Ranked result could not be sent.', guest: 'Log in (ACCOUNT on the title screen) to play ranked.', rivalguest: 'Unranked: your rival is not logged in.',
     }[s] || '';
@@ -18655,6 +18791,15 @@ if (Cloud.on) setTimeout(() => Cloud.refresh(), 800);
     g.strokeStyle = s === 'rated' ? (k.delta >= 0 ? '#5affb0' : '#ff7a9a') : 'rgba(255,255,255,0.3)'; g.lineWidth = 2; g.strokeRect(-w / 2, -22, w, 44);
     g.fillStyle = s === 'rated' ? (k.delta >= 0 ? '#7affc0' : '#ff9ab0') : '#e8dcff'; g.fillText(txt, 0, 1);
     if (Net.rival && s !== 'guest') { g.font = `700 14px ${FONT_UI}`; g.fillStyle = '#cfc4ee'; g.fillText('vs ' + Net.rival, 0, 38); }
+    if (s === 'rated') {   // tier change
+      const a = tierOf(k.rating - k.delta), b = tierOf(k.rating);
+      if (a !== b) {
+        const up = TIERS.indexOf(b) > TIERS.indexOf(a), p = Math.min(1, (this.t % 100000) / 20);
+        drawTierBadge(g, -150, 78, 20 * (up ? 1 + Math.max(0, 1 - p) * 0.6 : 1), b);
+        g.textAlign = 'left'; g.font = `italic 900 26px ${FONT_T}`; g.fillStyle = up ? b.c : '#ff9ab0';
+        g.fillText(up ? `PROMOTED: ${b.name}!` : `DOWN TO ${b.name}`, -120, 80);
+      }
+    }
     g.restore();
   };
 
@@ -18670,7 +18815,8 @@ if (Cloud.on) setTimeout(() => Cloud.refresh(), 800);
   NetSelectScene.prototype.draw = function (g) {
     SD.call(this, g);
     if (!Cloud.enabled()) return;
-    const txt = Net.ranked() ? `RANKED  ·  ${Cloud.name} vs ${Net.rival}${Net.rivalR ? ' (' + Net.rivalR + ')' : ''}` : Cloud.on ? 'UNRANKED  ·  rival not logged in' : 'UNRANKED  ·  log in for ranked';
+    const mr = Cloud.me && Cloud.me.rating;
+    const txt = Net.ranked() ? `RANKED  ·  ${Cloud.name}${mr ? ` (${tierOf(mr).name} ${mr})` : ''} vs ${Net.rival}${Net.rivalR ? ` (${tierOf(Net.rivalR).name} ${Net.rivalR})` : ''}` : Cloud.on ? 'UNRANKED  ·  rival not logged in' : 'UNRANKED  ·  log in for ranked';
     g.save(); g.font = `900 15px ${FONT_UI}`; g.textAlign = 'center'; g.textBaseline = 'middle';
     const w = g.measureText(txt).width + 28; g.fillStyle = 'rgba(8,4,20,0.85)'; g.fillRect(W / 2 - w / 2, H - 62, w, 24);
     g.fillStyle = Net.ranked() ? '#ffd84a' : '#cfc4ee'; g.fillText(txt, W / 2, H - 50); g.restore();
@@ -19477,7 +19623,8 @@ class FriendsScene {
       g.font = `600 15px ${FONT_UI}`; g.fillStyle = on ? (r.k === 'fr' && r.f.status === 'match' ? '#ffc08a' : '#9affc0') : '#cfc4ee'; g.fillText(r.sub, 370, cy);
       if (r.k === 'fr') {
         const ch = r.f.main && chById(r.f.main);
-        g.font = `900 17px ${FONT_UI}`; g.fillStyle = '#ffd84a'; g.fillText(String(r.f.rating), 590, cy);
+        drawTierBadge(g, 578, cy + 1, 10, tierOf(r.f.rating));
+        g.font = `900 17px ${FONT_UI}`; g.fillStyle = tierOf(r.f.rating).c; g.textAlign = 'left'; g.fillText(String(r.f.rating), 594, cy);
         if (ch) { g.font = `600 15px ${FONT_UI}`; g.fillStyle = ch.colors.accent; g.fillText(ch.name, 660, cy); }
       }
       r.acts.forEach(([a, s], j) => {

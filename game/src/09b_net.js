@@ -486,9 +486,13 @@ class NetResultsScene extends ResultsScene {
     super(bt);
     this.menu = new MenuList([{ id: 'rematch', label: 'REMATCH', jp: '再戦' }, { id: 'select', label: 'CHARACTER SELECT', jp: 'キャラ選択' }, { id: 'leave', label: 'LEAVE ROOM', jp: '退出' }], 960, 500, { w: 420, h: 50 });
     this.want = false; this.rwant = false; this.won = this.win.pid - 1 === bt.lp;
+    // series score for this room (rematches keep counting)
+    const sr = Net.series && Net.series.code === Net.code ? Net.series : (Net.series = { code: Net.code, me: 0, rv: 0, m: 0 });
+    if (sr.m !== Net.match) { sr.m = Net.match; this.won ? sr.me++ : sr.rv++; }
+    this.series = sr;
   }
   onNet(d) {
-    if (d.t === 'res') { if (d.w === 'rematch') this.rwant = true; if (d.w === 'select') { Sound.play('menuBack'); go(new NetSelectScene()); } }
+    if (d.t === 'res') { if (d.w === 'rematch') { this.rwant = true; this.rwantT = this.t; this.menu.items[0].label = this.want ? 'REMATCH' : 'ACCEPT REMATCH'; this.menu.sel = 0; Sound.play('menuOk'); } if (d.w === 'select') { Sound.play('menuBack'); go(new NetSelectScene()); } }
     if (d.t === 'start' && Net.role === 'guest') netStartMatch(d.cfg, d.m);
   }
   update() {
@@ -502,7 +506,7 @@ class NetResultsScene extends ResultsScene {
     if (this.t < 30) return;
     const it = this.menu.update(); if (!it) return;
     Sound.play('menuOk');
-    if (it.id === 'rematch' && !this.want) { this.want = true; Net.send({ t: 'res', w: 'rematch' }); }
+    if (it.id === 'rematch' && !this.want) { this.want = true; this.menu.items[0].label = this.rwant ? 'STARTING…' : 'WAITING…'; Net.send({ t: 'res', w: 'rematch' }); }
     if (it.id === 'select') { Net.send({ t: 'res', w: 'select' }); go(new NetSelectScene()); }
     if (it.id === 'leave') { Net.close(); go(new NetLobbyScene()); }
   }
@@ -511,6 +515,21 @@ class NetResultsScene extends ResultsScene {
     g.fillStyle = '#05030a'; g.fillRect(0, H - 34, W, 34);
     drawFooter(g, this.want ? (this.rwant ? 'Starting rematch…' : 'Waiting for your rival to accept the rematch…') : this.rwant ? 'Your rival wants a REMATCH!' : '↑/↓ + ENTER  ·  tap');
     g.save(); g.translate(330, 110); g.rotate(-0.08); drawTitleText(g, this.won ? 'YOU WIN!' : 'YOU LOSE', 0, 0, 64, this.won ? '#7affc0' : '#ff8aa0', this.won ? '#18a85a' : '#a8183a'); g.restore();
+    const sr = this.series;
+    if (sr && sr.me + sr.rv > 1) {   // series score once there was a rematch
+      g.save(); g.font = `italic 900 24px ${FONT_T}`; g.textAlign = 'center'; g.textBaseline = 'middle';
+      const txt = `SERIES  ${sr.me} – ${sr.rv}`, w = g.measureText(txt).width + 34;
+      g.fillStyle = 'rgba(8,4,20,0.85)'; g.fillRect(330 - w / 2, 22, w, 36); g.strokeStyle = sr.me > sr.rv ? '#7affc0' : sr.me < sr.rv ? '#ff8aa0' : '#ffd84a'; g.lineWidth = 2; g.strokeRect(330 - w / 2, 22, w, 36);
+      g.fillStyle = '#ffffff'; g.fillText(txt, 330, 41); g.restore();
+    }
+    if (this.rwant && !this.want) {   // the rival asked: big accept prompt
+      const k = Math.min(1, (this.t - (this.rwantT | 0)) / 12), pu = 1 + Math.sin(this.t / 6) * 0.04;
+      g.save(); g.translate(400, 525); g.scale(k * pu, k * pu);
+      g.font = `italic 900 30px ${FONT_T}`; g.textAlign = 'center'; g.textBaseline = 'middle';
+      const txt = 'RIVAL WANTS A REMATCH!  ▶', w = g.measureText(txt).width + 44;
+      g.fillStyle = '#ffd84a'; g.fillRect(-w / 2, -24, w, 48); g.strokeStyle = '#140a24'; g.lineWidth = 3; g.strokeRect(-w / 2, -24, w, 48);
+      g.fillStyle = '#140a24'; g.fillText(txt, 0, 2); g.restore();
+    }
     netStatusChip(g);
   }
 }
