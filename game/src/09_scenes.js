@@ -561,6 +561,7 @@ class SettingsScene {
       { id: 'master', label: 'MASTER VOLUME', type: 'slider' }, { id: 'music', label: 'MUSIC VOLUME', type: 'slider' }, { id: 'sfx', label: 'SFX VOLUME', type: 'slider' },
       { id: 'muted', label: 'MUTE  (M)', type: 'bool' }, { id: 'voice', label: 'ANNOUNCER VOICE', type: 'bool' }, { id: 'shake', label: 'SCREEN SHAKE', type: 'bool' },
       { id: 'pixel', label: 'PIXEL ART STYLE', type: 'bool' }, { id: 'fx', label: 'EFFECTS QUALITY', type: 'choice', opts: ['HIGH', 'LOW'] }, { id: 'roundTime', label: 'ROUND TIME', type: 'choice', opts: [99, 60, 0] },
+      { id: 'touchSize', label: 'TOUCH BUTTON SIZE', type: 'choice', opts: ['S', 'M', 'L', 'XL'] }, { id: 'touchAlpha', label: 'TOUCH BUTTON OPACITY', type: 'choice', opts: ['LOW', 'MID', 'HIGH'] },
       { id: 'fullscreen', label: 'TOGGLE FULLSCREEN', type: 'action' }, { id: 'binds', label: 'KEY BINDINGS  →', type: 'action' }, { id: 'back', label: 'BACK', type: 'action' },
     ];
     this.menu = new MenuList(this.items, W / 2, 108, { w: 640, h: 38, gap: 6 });
