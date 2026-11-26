@@ -475,6 +475,7 @@ class HowToScene {
       ['WALL & GROUND BOUNCE', 'Heavy hits that carry the opponent into the arena edge cause a WALL SPLAT (once per combo) — keep hitting them off the wall. Some moves cause a single ground BOUNCE.'],
       ['COUNTER & PUNISH', 'Hit someone during their startup: COUNTER HIT (+20%, extra hitstun, heavies STAGGER). Hit them during recovery: PUNISH (+10%).'],
       ['SCALING & DETERIORATION', 'Damage scales down every hit (to 35%); hitstun shrinks in long combos and after 5 s. No infinites. 30%+ HP in one combo = PERFECT COMBO.'],
+      ['THROWS', 'M + H up close grabs anyone standing or crouching on the ground, even while blocking. Throws lose to attacks and jumps. When grabbed, press M + H quickly to TECH (escape). Hold ← to throw backwards. A missed throw is easy to punish.'],
       ['SOUL BURST (combo breaker)', 'Once per round, press BLOCK + HEAVY while being comboed to blast the attacker away.'],
     ];
     items.forEach(([h, d], i) => {
@@ -519,7 +520,7 @@ class HowToScene {
     g.textAlign = 'left'; g.textBaseline = 'alphabetic';
     g.font = `500 16px ${FONT_UI}`; g.fillStyle = '#ece6ff';
     g.fillText('Directions are relative to where your fighter faces:  → = toward opponent,  ← = away.  Press the arrows in order, then the button.', 110, 160);
-    const rows = [['↓ → + SP1', 'Projectile / signature special (quarter-circle forward)'], ['↓ ← + SP1', 'Counter / defensive special'], ['SP1', 'Special A'], ['SP2', 'Special B'], ['↓ ↓ + SP2', 'Ground special (slam / quake / storm)'], ['→ → + H', 'Dash attack'], ['L + H', 'Launcher'], ['SP1 + SP2', 'ULTIMATE — needs a full Soul Gauge'], ['↓ + M / ↓ + H', 'Low attacks — must be crouch-blocked']];
+    const rows = [['↓ → + SP1', 'Projectile / signature special (quarter-circle forward)'], ['↓ ← + SP1', 'Counter / defensive special'], ['SP1', 'Special A'], ['SP2', 'Special B'], ['↓ ↓ + SP2', 'Ground special (slam / quake / storm)'], ['→ → + H', 'Dash attack'], ['L + H', 'Launcher'], ['M + H', 'THROW — beats block; press M + H right away to tech one (← = back throw)'], ['SP1 + SP2', 'ULTIMATE — needs a full Soul Gauge'], ['↓ + M / ↓ + H', 'Low attacks — must be crouch-blocked']];
     rows.forEach(([a, b], i) => {
       const y = 205 + i * 34;
       g.fillStyle = i % 2 ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.07)'; g.fillRect(100, y - 24, W - 200, 32);

@@ -439,6 +439,14 @@ Beni asked for two fighters from public-domain Japanese urban legends; the real 
 - Select screen: long names / title lines are now scaled to fit beside the grid.
 - Tests: `horror_look.js <id>` (lineup, faces, pose sheet, 6 skins), `horror_battle.js [out]` (battle + select previews); both pass trials, specials, fuzz, corner, ultdraw (incl. `SB_V=5`), cosmetics, mech_arcade, cpu, menus, mobile.
 
+## 7r. Universal throw / grab for every fighter (`04_zzzzd_throw.js`, 2026-11-26)
+- Input: **M + H** together (lenient: M or H started ≤3 frames earlier converts, from neutral only, not from a cancel). Touch: GRAB button (bottom right, presses M+H). Controller: LT by default (old saved maps with LT = Block are migrated). Hold ← for a back throw.
+- Rules: move `THROW` (st 5, act 3, rec 24, range ≈ shorter than a jab, `throw: 1, grab: 1, type: 'unblock'`) added to every fighter + Nue's beast forms. Beats blocking and counter stances; can't grab airborne foes, hitstun, blockstun, wall splat, getup/invuln. Whiff = 32 frames, punishable.
+- TECH: defender presses M + H within the first 10 cine frames (`THROW_TECH`), or both throw at once → "TECH!", both pushed apart, no damage. Stats: `F.stats.techs`.
+- Animation: `CINE.throwT` with 5 templates (toss / slam / knee / blast / spin), per-fighter name + accent colour + own heavy pose (`THROW_STYLE`). Damage 100 × fighter damage multiplier. Deterministic (no Math.random in sim).
+- CPU: throws when close and the foe stands/blocks (`throw` per level), guesses a tech (`tech`: 8 / 30 / 50 %).
+- Engine hooks: `Battle.endCine` takes `cine.landT`; `checkHits` skips throws vs block/wall/burst; Move lists, HOW TO PLAY (commands + advanced) mention it. Test: `tests/throw.js` (every fighter: idle, block, tech, whiff, jump, contact range, back throw, lenient press, clash, CPU), screenshots `tests/throwshots.js`.
+
 ## 8. History of requests (in order)
 
 1. Original anime fighting game (Kazuma, Yoru, Sera, Goro).
@@ -467,6 +475,7 @@ Beni asked for two fighters from public-domain Japanese urban legends; the real 
 24. Arcade skins for every fighter (2026-11-26): one costume per fighter unlocked by clearing Arcade with them, The Hollow's THE VEILED KING (veil, crown, long mantle) as Beni described (§7o).
 25. Friends list (2026-11-26): add friends by account name, see who is online, invite them to an ONLINE 1 VS 1 with one click (§7p).
 26. Two urban-legend fighters (2026-11-26): Hachishakusama (zoner, PRESENCE → FULL MANIFESTATION, 7-phase ult) and Kuchisake-onna (scissor rushdown, BEAUTY → TRUE SMILE, 6-phase ult) (§7q).
+27. Universal throw for all 21 fighters (2026-11-26): M + H, throw tech, back throw, GRAB touch button, LT on controllers, CPU throws/techs (§7r).
 
 ## 9. Open ideas / possible next steps
 

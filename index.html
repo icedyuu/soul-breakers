@@ -12933,6 +12933,109 @@ for (const ch of CHARS) {
 const JUMP_TUNE = { v: 1.1, x: 1.12 };
 for (const ch of CHARS) { ch.jumpV *= JUMP_TUNE.v; ch.jumpX *= JUMP_TUNE.x; }
 
+// Universal THROW (2026-11-26): every fighter grabs with MEDIUM + HEAVY pressed together (touch: GRAB button,
+// controller: LT by default). Standard fighting-game rules: very short range, beats blocking and counter stances,
+// loses to attacks (it has startup) and to jumps (only grounded, actionable foes can be grabbed; not in hitstun,
+// blockstun, wall splat or wake-up invulnerability). THROW TECH: the defender presses M + H within the first
+// THROW_TECH frames of the grab (or both throw at once) → both are pushed apart, nobody takes damage.
+// Hold ← while grabbing for a back throw. A whiffed throw has a long recovery (punishable).
+// Animation: one of five templates per fighter (toss / slam / knee / blast / spin) + a fighter name, colour and
+// the fighter's own heavy pose for the final blow. Deterministic (lockstep safe): no Math.random in the logic.
+const THROW_TECH = 10, THROW_DMG = 100;
+const THROW_STYLE = {
+  kazuma: ['toss', 'SHOULDER TOSS'], yoru: ['spin', 'SHADOW WHEEL'], sera: ['blast', 'ARCANE PUSH'], goro: ['slam', 'ONI SLAM'],
+  frogs: ['knee', 'FROG PILE'], conductor: ['spin', 'RAIL SWITCH'], cardmaster: ['blast', 'CARD BURST'], nue: ['slam', 'BEAST MAUL'],
+  saint: ['spin', 'CRIMSON WALTZ'], borgar: ['slam', 'ANVIL DROP'], buzzu: ['knee', 'CHAIN RIP'], reika: ['knee', 'ICE KNEE'],
+  yamika: ['blast', 'SEALED PALM'], lunaria: ['toss', 'MOON TOSS'], honored: ['blast', 'RED REPEL'], hollow: ['slam', 'HOLLOW CRUSH'],
+  kanae: ['knee', 'UGLY KNEE'], tokine: ['spin', 'CLOCK HAND'], aimi: ['toss', 'LOVE TOSS'], hachi: ['slam', 'TALL SHADOW'],
+  kuchi: ['knee', 'SNIP & KICK'],
+};
+function throwMove() {
+  return {
+    name: 'Throw', cat: 'throw', lvl: 2, throw: 1, grab: 1, type: 'unblock', poses: ['lunge_w', 'grab'], st: 5, act: 3, rec: 24, dmg: 1,
+    hb: { x: 0, y: -170, w: 62, h: 160 }, str: 2,
+    onHit(A, D) {
+      const clash = D.state === 'attack' && D.moveKey === 'THROW' && D.mf <= D.move.st + D.move.act;   // both threw: auto tech
+      BT.startCine(A, D, CINE.throwT, { zoom: 1.25 }); BT.cine.thr = 1; BT.cine.clash = clash;
+      return true;
+    },
+  };
+}
+for (const ch of [...CHARS, ...Object.values(typeof BEAST_FORMS !== 'undefined' ? BEAST_FORMS : {})]) {
+  if (!ch.moves || ch.moves.THROW) continue;
+  ch.moves.THROW = throwMove();
+}
+MOVELIST.splice(MOVELIST.findIndex(r => r[0] === 'LH') + 1, 0, ['THROW', 'Throw (beats block · tech: M + H)', 'M + H']);
+
+function throwTech(A, D, c) {
+  const dir = Math.sign(D.x - A.x) || A.facing;
+  A.forcePose = null; D.forcePose = null; FX.darkTarget = 0;
+  A.x = clamp(A.x - dir * 34, 50, STAGE_W - 50); D.x = clamp(D.x + dir * 34, 50, STAGE_W - 50);
+  A.vx = -dir * 8; D.vx = dir * 8; D.y = GROUND; D.onGround = true; D.setState('land'); D.landT = 14; D.facing = -dir;
+  c.landT = 14;
+  FX.wtext((A.x + D.x) / 2, GROUND - 230, 'TECH!', { size: 34, color: '#ffffff', stroke: '#2a7cff', life: 36 });
+  FX.blockSpark((A.x + D.x) / 2, GROUND - 120, true); Sound.play('perfect'); BT.hitstop = Math.max(BT.hitstop, 6);
+  if (D.stats) D.stats.techs = (D.stats.techs || 0) + 1;
+  return true;
+}
+CINE.throwT = function (A, D, f, c) {
+  const [style, nm] = THROW_STYLE[A.ch.id] || (A.ch.baseCh && THROW_STYLE[A.ch.baseCh.id]) || ['toss', 'THROW'];
+  const acc = A.colors.accent, hp = (A.ch.moves.H && A.ch.moves.H.poses && A.ch.moves.H.poses[1]) || 'hook';
+  if (f === 1) {
+    c.back = A.input.fwd < 0 || (A.input.pdir.heavy && A.input.pdir.heavy.fwd < 0);
+    c.d0 = A.facing; c.dir = c.back ? -A.facing : A.facing;
+    D.x = clamp(A.x + A.facing * 58 * A.s, 50, STAGE_W - 50); D.y = GROUND; D.forcePose = 'hit'; A.forcePose = 'grab';
+    Sound.play('grab'); FX.burst(D.x, D.y - 120, acc, 6, 4);
+    if (c.clash) return throwTech(A, D, c);
+  }
+  // --- tech window: nothing hurts yet ---
+  if (f <= THROW_TECH && f > 1 && D.input.p('medium') && D.input.p('heavy')) { D.input.use('medium'); D.input.use('heavy'); return throwTech(A, D, c); }
+  if (f === THROW_TECH + 1) FX.wtext(A.x, A.y - 236 * A.s, nm, { size: 20, color: '#ffffff', stroke: acc, life: 40 });
+  // back throw: swing the opponent around to the other side during the first frames
+  if (c.back && f <= 12) {
+    const k = easeInOut(f / 12), ang = k * Math.PI;
+    D.x = clamp(A.x + c.d0 * 58 * A.s * Math.cos(ang), 50, STAGE_W - 50); D.y = GROUND - Math.sin(ang) * 50;
+    if (f === 12) { A.facing = c.dir; D.y = GROUND; }
+  }
+  const dir = c.dir, front = (o = 58) => clamp(A.x + dir * o * A.s, 50, STAGE_W - 50);
+  const hit = (d, str = 2, sfx) => BT.scriptHit(A, D, d, { str, sfx });
+  switch (style) {
+    case 'toss':   // lift overhead and throw
+      if (f === 13) { A.forcePose = 'lift'; Sound.play('whoosh', 0.8); }
+      if (f >= 13 && f <= 24) { D.x = lerp(D.x, A.x + dir * 8, 0.3); D.y = lerp(D.y, A.y - 120 * A.s, 0.3); D.forcePose = 'airhit'; }
+      if (f === 28) { A.forcePose = 'throw'; hit(THROW_DMG, 3); FX.shakeIt(6); BT.release(D, dir * 14, -9); return true; }
+      break;
+    case 'slam':   // lift and slam into the ground
+      if (f === 13) { A.forcePose = 'slam_w'; Sound.play('whoosh', 0.7); }
+      if (f >= 13 && f <= 22) { D.x = lerp(D.x, A.x + dir * 20, 0.3); D.y = lerp(D.y, A.y - 110 * A.s, 0.35); D.forcePose = 'airhit'; }
+      if (f === 26) { A.forcePose = 'slam'; D.x = front(70); D.y = GROUND; hit(THROW_DMG, 4); FX.shakeIt(12); FX.dust(D.x, GROUND, 14); FX.ring(D.x, GROUND, acc, 10, 120, 14, 5); }
+      if (f >= 36) { BT.release(D, dir * 6, -5); return true; }
+      break;
+    case 'knee':   // two knees, then their own heavy
+      if (f === 13 || f === 21) { A.forcePose = 'kick'; hit(THROW_DMG * 0.3, 2); D.forcePose = f === 13 ? 'hit2' : 'hit'; }
+      if (f === 17 || f === 25) A.forcePose = 'grab';
+      if (f === 30) A.forcePose = 'hook_w';
+      if (f === 35) { A.forcePose = hp; hit(THROW_DMG * 0.4, 3); FX.shakeIt(8); BT.release(D, dir * 13, -7); return true; }
+      break;
+    case 'blast':   // charge energy point blank, then blast them away
+      if (f === 13) { A.forcePose = 'cast_w'; Sound.play('charge'); }
+      if (f >= 13 && f < 26 && f % 2 === 0) FX.burst(D.x - dir * 10, D.y - 110, acc, 2, 3);
+      if (f === 26) { A.forcePose = 'cast'; hit(THROW_DMG, 3); FX.ring(D.x, D.y - 110, acc, 10, 130, 14, 6); FX.flashScreen(acc, 4, 0.25); FX.shakeIt(8); BT.release(D, dir * 16, -8); return true; }
+      break;
+    case 'spin': {   // swing them around once, then let go
+      if (f >= 13 && f <= 30) {
+        const ang = (f - 13) / 17 * TAU;
+        D.x = clamp(A.x + dir * 58 * A.s * Math.cos(ang), 50, STAGE_W - 50); D.y = GROUND - 30 - Math.abs(Math.sin(ang)) * 30; D.forcePose = 'airhit';
+        A.facing = Math.cos(ang) >= 0 ? dir : -dir; A.forcePose = 'grab'; A.afterimage = 3;
+        if (f % 6 === 0) Sound.play('whoosh', 1.1);
+      }
+      if (f === 31) { A.facing = dir; A.forcePose = 'throw'; D.x = front(60); hit(THROW_DMG, 3); FX.shakeIt(7); BT.release(D, dir * 15, -8); return true; }
+      break;
+    }
+  }
+  return false;
+};
+
 // =============================== STAGES ===============================
 // Each stage: sky gradient, parallax layers pre-rendered to canvases
 // (layer canvas y = screen y + 100), a world-space floor texture, and ambient FX.
@@ -13612,6 +13715,7 @@ class Fighter {
     if (this.ch.tryCustom && this.ch.tryCustom(this, inp, air, minLvl)) return true;
     const go = (key, ...btns) => { this.goPressF = inp.pressF[btns[0]] ?? -99; btns.forEach(b => inp.use(b)); this.startMove(key); return true; };
     if (inp.p('sp1') && inp.p('sp2')) { if (this.canUse('ult', air, minLvl)) return go('ult', 'sp1', 'sp2'); }
+    if (!air && minLvl === 0 && inp.p('medium') && inp.p('heavy') && !inp.p('sp1') && !inp.p('sp2') && this.canUse('THROW', false, 0)) return go('THROW', 'medium', 'heavy');   // universal throw
     if (inp.p('sp1')) {
       k = inp.motion('qcf') ? 'sp1f' : inp.motion('qcb') ? 'counter' : 'sp1';
       if (this.canUse(k, air, minLvl)) { inp.clearMotion(); return go(k, 'sp1'); }
@@ -13675,6 +13779,7 @@ class Fighter {
     if (!this.move) { this.setState(this.onGround ? 'idle' : 'jump'); return; }   // move cleared externally (e.g. time over mid-attack)
     const m = this.move, f = ++this.mf, inp = this.input;
     // late conversions (lenient simultaneous presses)
+    if (f <= 3 && this.onGround && !this.lastFD?.cancelled && THROW_FROM.includes(this.moveKey) && inp.p(this.moveKey.includes('M') ? 'heavy' : 'medium') && this.canUse('THROW', false, 0)) { inp.use('medium'); inp.use('heavy'); this.startMove('THROW'); return; }   // lenient M+H
     if (f <= 3 && (this.moveKey === 'L' || this.moveKey === 'cL') && inp.p('heavy') && this.canUse('LH', false, 0)) { inp.use('heavy'); this.startMove('LH'); return; }
     if (f <= 3 && (m.special || m.cardMove) && !m.ult && (inp.p('sp1') || inp.p('sp2')) && this.meter >= 100 && this.ch.moves.ult && this.onGround) {
       const s1 = this.moveKey.startsWith('sp1') || m.cardMove, s2 = this.moveKey.startsWith('sp2');
@@ -13855,6 +13960,7 @@ class Fighter {
 }
 
 // ============================ PROJECTILES =============================
+const THROW_FROM = ['M', 'H', 'cM', 'cH', 'dM', 'dH'];
 const SEAL_SLOTS = ['sp1', 'sp1f', 'counter', 'sp2', 'sp2f', 'sp2d'];
 class Proj {
   constructor(o) {
@@ -14054,9 +14160,9 @@ class Battle {
     D.counterActive = false; A.counterActive = false;
   }
   endCine() {
-    const { A, D } = this.cine;
+    const { A, D } = this.cine, landT = this.cine.landT ?? 22;
     A.forcePose = null; A.hidden = false;
-    if (A.y < GROUND) { A.onGround = false; A.setState('jump'); A.sf = 12; } else { A.y = GROUND; A.onGround = true; A.setState('land'); A.landT = 22; }
+    if (A.y < GROUND) { A.onGround = false; A.setState('jump'); A.sf = 12; } else { A.y = GROUND; A.onGround = true; A.setState('land'); A.landT = landT; }
     A.move = null;
     if (D.state === 'grabbed') this.release(D, A.facing * 4, -8);
     D.forcePose = null; this.cine = null; FX.darkTarget = 0;
@@ -14094,7 +14200,7 @@ class Battle {
       return 'shield';
     }
     // --- counter stances ---
-    if (D.state === 'attack' && D.counterActive && hd.type !== 'unblock' && !hd.ult && !(hd.grab && D.move.counterNoGrab)) {   // counterNoGrab: grabs beat this counter (Kuon's Infinity)
+    if (D.state === 'attack' && D.counterActive && hd.type !== 'unblock' && !hd.ult && !(hd.grab && (D.move.counterNoGrab || hd.throw))) {   // counterNoGrab: grabs beat this counter (Kuon's Infinity)
       const m = D.move;
       FX.wtext(D.x, D.y - 230 * D.s, 'COUNTER!', { size: 40, color: '#ffffff', stroke: D.colors.accent, life: 40 });
       Sound.play('counter'); FX.flashScreen('#ffffff', 6, 0.35); FX.ring(D.x, D.y - 100, D.colors.accent, 20, 140, 16, 6); this.hitstop = Math.max(this.hitstop, 10);
@@ -14268,6 +14374,7 @@ class Battle {
       const hu = D.hurtbox(); if (!hu || D.invuln > 0) continue;
       const hb = A.hitbox(); if (!overlap(hb, hu)) continue;
       if (m.grab && !m.comboGrab && (!D.onGround || D.state === 'hit' || D.state === 'getup' || D.state === 'knockdown')) continue;
+      if (m.throw && (D.state === 'block' || D.state === 'wall' || D.state === 'burst')) continue;   // universal throw: not in blockstun / wall splat
       if (m.comboGrab && !(D.state === 'hit' || D.state === 'wall')) continue;
       if (this.juggleCapped(A, D)) { if (!D.comboFlags.capped) { D.comboFlags.capped = true; FX.wtext(D.x, D.y - 200, 'JUGGLE LIMIT', { size: 22, color: '#aab', life: 30 }); } continue; }
       const cx = (Math.max(hb.x, hu.x) + Math.min(hb.x + hb.w, hu.x + hu.w)) / 2, cy = (Math.max(hb.y, hu.y) + Math.min(hb.y + hb.h, hu.y + hu.h)) / 2;
@@ -14907,9 +15014,9 @@ function pxRunes(B, t, cam, st, li, pts, ph) {
 // Fairness: it sees the opponent (and projectiles) only through a delayed snapshot (reaction time per level)
 // and never reads the human's inputs. It may read its own fighter state (cooldowns, meter), like a player reads the HUD.
 const CPU_LEVELS = [
-  { name: 'EASY', jp: '易', color: '#7aff9a', react: 26, think: 22, block: 0.22, lowRead: 0.2, aggro: 0.35, depth: 1, special: 0.3, ult: 0.35, anti: 0.1, burst: 0, idle: 0.3, jumpIn: 0.12, mix: 0.1, counter: 0 },
-  { name: 'NORMAL', jp: '普通', color: '#ffd84a', react: 16, think: 13, block: 0.58, lowRead: 0.55, aggro: 0.55, depth: 2, special: 0.55, ult: 0.7, anti: 0.4, burst: 0.25, idle: 0.12, jumpIn: 0.1, mix: 0.3, counter: 0.08 },
-  { name: 'HARD', jp: '難', color: '#ff4a5a', react: 10, think: 7, block: 0.86, lowRead: 0.85, aggro: 0.7, depth: 4, special: 0.75, ult: 0.95, anti: 0.75, burst: 0.55, idle: 0.03, jumpIn: 0.08, mix: 0.55, counter: 0.2 },
+  { name: 'EASY', jp: '易', color: '#7aff9a', tech: 0.08, throw: 0.05, react: 26, think: 22, block: 0.22, lowRead: 0.2, aggro: 0.35, depth: 1, special: 0.3, ult: 0.35, anti: 0.1, burst: 0, idle: 0.3, jumpIn: 0.12, mix: 0.1, counter: 0 },
+  { name: 'NORMAL', jp: '普通', color: '#ffd84a', tech: 0.3, throw: 0.18, react: 16, think: 13, block: 0.58, lowRead: 0.55, aggro: 0.55, depth: 2, special: 0.55, ult: 0.7, anti: 0.4, burst: 0.25, idle: 0.12, jumpIn: 0.1, mix: 0.3, counter: 0.08 },
+  { name: 'HARD', jp: '難', color: '#ff4a5a', tech: 0.5, throw: 0.3, react: 10, think: 7, block: 0.86, lowRead: 0.85, aggro: 0.7, depth: 4, special: 0.75, ult: 0.95, anti: 0.75, burst: 0.55, idle: 0.03, jumpIn: 0.08, mix: 0.55, counter: 0.2 },
 ];
 const CPU_SPECIALS = ['sp1', 'sp1f', 'counter', 'sp2', 'sp2f', 'sp2d'];
 
@@ -14969,6 +15076,11 @@ class CpuBot {
     this.f++; this.v.btn.press.clear();
     const bt = this.bt, me = this.me;
     this.observe();
+    const C = bt.cine;
+    if (C && C.thr && C.D === me && C.f >= 1 && C.f <= THROW_TECH) {   // being thrown: guess a tech (like a human must)
+      if (C.f === 1) this.techAt = this.roll(this.L.tech) ? 2 + Math.floor(Math.random() * (THROW_TECH - 3)) : -1;
+      if (C.f === this.techAt) { this.apply({ d: 'n', p: ['medium', 'heavy'] }); return; }
+    }
     if (bt.phase !== 'fight' || bt.cine || bt.freeze || me.ko || me.opp.ko) { this.q = []; this.neutral(); return; }
     if (bt.hitstop > 0 && !this.q.length) { this.apply({ d: this.hold.d, block: this.hold.block }); this.comboLogic(); return; }
     if (this.q.length) { this.apply(this.q.shift()); return; }
@@ -14983,6 +15095,7 @@ class CpuBot {
       case 'cL': case 'cM': case 'cH': return [{ d: 'd', p: [btn[k]] }, { d: 'd' }];
       case 'jL': case 'jM': case 'jH': return [{ d: 'n', p: [btn[k]] }];
       case 'LH': return [{ d: 'n', p: ['light', 'heavy'] }];
+      case 'THROW': return [{ d: 'n', p: ['medium', 'heavy'] }];
       case 'FF': return [{ d: 'f' }, { d: 'n' }, { d: 'f', p: ['heavy'] }];
       case 'sp1': case 'sp2': return [...pad(23 - (this.f - this.lastDown)), { d: 'n', p: [k] }];   // let old ↓ inputs expire so no motion is read
       case 'sp1f': return [{ d: 'd' }, { d: 'df' }, { d: 'f', p: ['sp1'] }];
@@ -15107,6 +15220,7 @@ class CpuBot {
       if (!this.roll(L.aggro + 0.2)) { this.hold = { d: this.roll(0.5) ? 'b' : 'n', t: L.think, block: this.roll(L.block * 0.5) }; this.apply(this.hold); return; }
       this.steps = 0;
       if (this.roll(L.special * 0.35)) { const k = this.pickSpecial(dist, P => P.kind === 'melee' || P.kind === 'grab'); if (k) { this.doMove(k); return; } }
+      if (dist < 78 * me.s && o.onGround && (o.state === 'idle' || o.state === 'crouch' || o.state === 'walk') && this.roll(o.guard ? L.throw * 2.5 : L.throw) && this.can('THROW')) { this.doMove('THROW'); return; }
       const mixLow = o.guard && !o.crouch && this.roll(L.mix);
       const k = mixLow ? pick(['cM', 'cH', 'cL']) : pick(['L', 'L', 'M', 'cL', 'cM', 'H', 'LH', 'cH']);
       if (this.can(k)) { this.doMove(k); this.wait = this.level === 0 ? 10 : 0; return; }
@@ -15150,6 +15264,7 @@ const TOUCH_BTNS = [
   { a: 'sp2', label: 'SP2', sub: '+→  +↓', x: 1062, y: 470, r: 44, col: '#ff7ad8' },
   { a: 'block', label: 'BLOCK', x: 1214, y: 452, r: 42, col: '#9affb0' },
   { a: 'ult', label: 'ULT', x: 1186, y: 350, r: 38, col: '#ff8a1a' },
+  { a: 'grab', label: 'GRAB', sub: 'M+H', x: 1226, y: 572, r: 36, col: '#ffb070' },
 ];
 const TOUCH_PAUSE = { x: W / 2 - 34, y: 96, w: 68, h: 40 };
 const TOUCH_RESET = { x: W - 150, y: 140, w: 120, h: 40 };
@@ -15192,7 +15307,7 @@ const TouchPad = {
     if (t.kind === 'stick') this.stick = null;
     this.touches.delete(id);
   },
-  press(b) { if (b.a === 'ult') { this.pend.add('sp1'); this.pend.add('sp2'); this.pend.add('ult'); } else this.pend.add(b.a); this.flash[b.a] = 8; },
+  press(b) { if (b.a === 'ult') { this.pend.add('sp1'); this.pend.add('sp2'); this.pend.add('ult'); } else if (b.a === 'grab') { this.pend.add('medium'); this.pend.add('heavy'); } else this.pend.add(b.a); this.flash[b.a] = 8; },
   stickDir() {
     const s = this.stick; if (!s) return { l: false, r: false, u: false, d: false };
     const dx = s.x - s.ox, dy = s.y - s.oy, len = Math.hypot(dx, dy);
@@ -15228,7 +15343,7 @@ const TouchPad = {
     }
     Object.assign(v, dir);
     const held = new Set();
-    for (const t of this.touches.values()) if (t.kind === 'btn' && t.b) { if (t.b.a === 'ult') { held.add('sp1'); held.add('sp2'); } else held.add(t.b.a); }
+    for (const t of this.touches.values()) if (t.kind === 'btn' && t.b) { if (t.b.a === 'ult') { held.add('sp1'); held.add('sp2'); } else if (t.b.a === 'grab') { held.add('medium'); held.add('heavy'); } else held.add(t.b.a); }
     for (const a of ['light', 'medium', 'heavy', 'sp1', 'sp2', 'block']) {
       v.btn.held[a] = held.has(a) || K.has(kb[a]) || pend.has(a);
       if (pend.has(a)) v.btn.press.add(a);
@@ -15252,7 +15367,7 @@ const TouchPad = {
     // buttons
     const P1 = bt.p1, held = this.v.btn.held;
     for (const b of TOUCH_BTNS) {
-      const on = b.a === 'ult' ? held.sp1 && held.sp2 : held[b.a], fl = this.flash[b.a] > 0;
+      const on = b.a === 'ult' ? held.sp1 && held.sp2 : b.a === 'grab' ? held.medium && held.heavy : held[b.a], fl = this.flash[b.a] > 0;
       const ready = b.a !== 'ult' || P1.meter >= 100;
       g.globalAlpha = on || fl ? 0.85 : ready ? 0.45 : 0.22;
       g.fillStyle = on || fl ? b.col : 'rgba(20,10,40,0.75)'; g.strokeStyle = b.col; g.lineWidth = 4;
@@ -15573,7 +15688,7 @@ function drawMoveList(g, ch, x, y, w, label, page = 0) {
       g.font = `700 14px ${FONT_UI}`; g.fillStyle = ch.colors.accent; g.fillText(lab, x + 30, yy);
       g.textAlign = 'right'; g.fillStyle = '#ffffff'; g.fillText(inp, x + w - 26, yy); g.textAlign = 'left'; yy += 22;
     }
-    yy += 6; g.font = `600 13px ${FONT_UI}`; g.fillStyle = '#cfc4ee'; yy = wrapText(g, `Juggle limit: ${ch.juggleMax || 6} points  ·  Universal: L→M→H→Special→Ultimate, L+H launcher, BLOCK+H burst`, x + 30, yy, w - 60, 16) + 12;
+    yy += 6; g.font = `600 13px ${FONT_UI}`; g.fillStyle = '#cfc4ee'; yy = wrapText(g, `Juggle limit: ${ch.juggleMax || 6} points  ·  Universal: L→M→H→Special→Ultimate, L+H launcher, M+H throw (tech: M+H), BLOCK+H burst`, x + 30, yy, w - 60, 16) + 12;
     g.font = `italic 900 20px ${FONT_T}`; strokeText(g, 'EXAMPLE COMBOS', x + 26, yy, '#ffd84a', OUTLINE, 4); yy += 26;
     (ch.combos || []).forEach((c, i) => {
       g.font = `800 15px ${FONT_UI}`; g.fillStyle = '#ffffff'; g.fillText(`${i + 1}. ${c.name}`, x + 30, yy); yy += 19;
@@ -16185,6 +16300,7 @@ class HowToScene {
       ['WALL & GROUND BOUNCE', 'Heavy hits that carry the opponent into the arena edge cause a WALL SPLAT (once per combo) — keep hitting them off the wall. Some moves cause a single ground BOUNCE.'],
       ['COUNTER & PUNISH', 'Hit someone during their startup: COUNTER HIT (+20%, extra hitstun, heavies STAGGER). Hit them during recovery: PUNISH (+10%).'],
       ['SCALING & DETERIORATION', 'Damage scales down every hit (to 35%); hitstun shrinks in long combos and after 5 s. No infinites. 30%+ HP in one combo = PERFECT COMBO.'],
+      ['THROWS', 'M + H up close grabs anyone standing or crouching on the ground, even while blocking. Throws lose to attacks and jumps. When grabbed, press M + H quickly to TECH (escape). Hold ← to throw backwards. A missed throw is easy to punish.'],
       ['SOUL BURST (combo breaker)', 'Once per round, press BLOCK + HEAVY while being comboed to blast the attacker away.'],
     ];
     items.forEach(([h, d], i) => {
@@ -16229,7 +16345,7 @@ class HowToScene {
     g.textAlign = 'left'; g.textBaseline = 'alphabetic';
     g.font = `500 16px ${FONT_UI}`; g.fillStyle = '#ece6ff';
     g.fillText('Directions are relative to where your fighter faces:  → = toward opponent,  ← = away.  Press the arrows in order, then the button.', 110, 160);
-    const rows = [['↓ → + SP1', 'Projectile / signature special (quarter-circle forward)'], ['↓ ← + SP1', 'Counter / defensive special'], ['SP1', 'Special A'], ['SP2', 'Special B'], ['↓ ↓ + SP2', 'Ground special (slam / quake / storm)'], ['→ → + H', 'Dash attack'], ['L + H', 'Launcher'], ['SP1 + SP2', 'ULTIMATE — needs a full Soul Gauge'], ['↓ + M / ↓ + H', 'Low attacks — must be crouch-blocked']];
+    const rows = [['↓ → + SP1', 'Projectile / signature special (quarter-circle forward)'], ['↓ ← + SP1', 'Counter / defensive special'], ['SP1', 'Special A'], ['SP2', 'Special B'], ['↓ ↓ + SP2', 'Ground special (slam / quake / storm)'], ['→ → + H', 'Dash attack'], ['L + H', 'Launcher'], ['M + H', 'THROW — beats block; press M + H right away to tech one (← = back throw)'], ['SP1 + SP2', 'ULTIMATE — needs a full Soul Gauge'], ['↓ + M / ↓ + H', 'Low attacks — must be crouch-blocked']];
     rows.forEach(([a, b], i) => {
       const y = 205 + i * 34;
       g.fillStyle = i % 2 ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.07)'; g.fillRect(100, y - 24, W - 200, 32);
@@ -17882,16 +17998,16 @@ for (const ch of CHARS) {
 // (09b samples Keys) all work unchanged. Controller 1 = P1 keys, controller 2 = P2 keys.
 // Battle layout is remappable (SETTINGS → CONTROLLER), menus always use A = OK, B = back.
 // Hooks: Pad.poll() at the start of every tick (10_main), Pad.draw(ctx) after the scene.
-const PAD_ACTS = ['light', 'medium', 'heavy', 'sp1', 'sp2', 'block', 'ult'];
-const PAD_ACT_LABELS = { ...ACTION_LABELS, ult: 'Ultimate (SP1+SP2)' };
-const PAD_DEFAULT = { 0: 'sp1', 1: 'heavy', 2: 'light', 3: 'medium', 4: 'block', 5: 'sp2', 6: 'block', 7: 'ult' };
+const PAD_ACTS = ['light', 'medium', 'heavy', 'sp1', 'sp2', 'block', 'ult', 'grab'];
+const PAD_ACT_LABELS = { ...ACTION_LABELS, ult: 'Ultimate (SP1+SP2)', grab: 'Grab (M+H)' };
+const PAD_DEFAULT = { 0: 'sp1', 1: 'heavy', 2: 'light', 3: 'medium', 4: 'block', 5: 'sp2', 6: 'grab', 7: 'ult' };
 const PAD_NAMES = {
   xbox: ['A', 'B', 'X', 'Y', 'LB', 'RB', 'LT', 'RT', 'VIEW', 'MENU', 'L-STICK', 'R-STICK', 'D↑', 'D↓', 'D←', 'D→', 'HOME'],
   ps: ['CROSS ✕', 'CIRCLE ○', 'SQUARE □', 'TRIANGLE △', 'L1', 'R1', 'L2', 'R2', 'SHARE', 'OPTIONS', 'L3', 'R3', 'D↑', 'D↓', 'D←', 'D→', 'PS'],
 };
 Settings.padMap = { ...PAD_DEFAULT };
 Settings.KEYS.push('padMap');
-try { const s = JSON.parse(localStorage.getItem('soulbreakers_v1') || 'null'); if (s && s.padMap) Settings.padMap = s.padMap; } catch (e) { /* storage unavailable */ }
+try { const s = JSON.parse(localStorage.getItem('soulbreakers_v1') || 'null'); if (s && s.padMap) { Settings.padMap = s.padMap; if (s.padMap[6] === 'block' && s.padMap[4] === 'block') Settings.padMap[6] = 'grab'; } } catch (e) { /* storage unavailable */ }
 
 const Pad = {
   list: [], st: [], kb: new Set(), n: 0, lastUse: -1e9, toast: null, capture: null, ctx: '', nav: null,
@@ -17928,7 +18044,7 @@ const Pad = {
     if (ctx === 'battle') {
       for (const i of B_) {
         const a = Settings.padMap[i];
-        if (a === 'ult') { add(bd.sp1); add(bd.sp2); } else if (a) add(bd[a]);
+        if (a === 'ult') { add(bd.sp1); add(bd.sp2); } else if (a === 'grab') { add(bd.medium); add(bd.heavy); } else if (a) add(bd[a]);
       }
       if (B_.has(9)) add('Escape');
       if (B_.has(8)) add('Digit5');
@@ -18099,7 +18215,7 @@ class PadScene {
   HowToScene.prototype.drawControls = function (g) {
     dc.call(this, g);
     g.save(); g.font = `700 15px ${FONT_UI}`; g.textAlign = 'center'; g.fillStyle = '#7ad8ff';
-    const m = Settings.padMap, lab = { light: 'Light', medium: 'Med', heavy: 'Heavy', sp1: 'SP1', sp2: 'SP2', block: 'Block', ult: 'ULT' };
+    const m = Settings.padMap, lab = { light: 'Light', medium: 'Med', heavy: 'Heavy', sp1: 'SP1', sp2: 'SP2', block: 'Block', ult: 'ULT', grab: 'Grab' };
     const parts = PAD_ACTS.map(a => { const b = Object.keys(m).filter(i => m[i] === a).map(i => Pad.name(+i)); return b.length ? `${b.join('/')} ${lab[a]}` : null; }).filter(Boolean);
     g.fillText(`🎮 CONTROLLER: stick/d-pad move · ${parts.join(' · ')} · remap: SETTINGS → CONTROLLER`, W / 2, 646);
     g.restore();

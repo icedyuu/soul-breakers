@@ -68,9 +68,9 @@ class Battle {
     D.counterActive = false; A.counterActive = false;
   }
   endCine() {
-    const { A, D } = this.cine;
+    const { A, D } = this.cine, landT = this.cine.landT ?? 22;
     A.forcePose = null; A.hidden = false;
-    if (A.y < GROUND) { A.onGround = false; A.setState('jump'); A.sf = 12; } else { A.y = GROUND; A.onGround = true; A.setState('land'); A.landT = 22; }
+    if (A.y < GROUND) { A.onGround = false; A.setState('jump'); A.sf = 12; } else { A.y = GROUND; A.onGround = true; A.setState('land'); A.landT = landT; }
     A.move = null;
     if (D.state === 'grabbed') this.release(D, A.facing * 4, -8);
     D.forcePose = null; this.cine = null; FX.darkTarget = 0;
@@ -108,7 +108,7 @@ class Battle {
       return 'shield';
     }
     // --- counter stances ---
-    if (D.state === 'attack' && D.counterActive && hd.type !== 'unblock' && !hd.ult && !(hd.grab && D.move.counterNoGrab)) {   // counterNoGrab: grabs beat this counter (Kuon's Infinity)
+    if (D.state === 'attack' && D.counterActive && hd.type !== 'unblock' && !hd.ult && !(hd.grab && (D.move.counterNoGrab || hd.throw))) {   // counterNoGrab: grabs beat this counter (Kuon's Infinity)
       const m = D.move;
       FX.wtext(D.x, D.y - 230 * D.s, 'COUNTER!', { size: 40, color: '#ffffff', stroke: D.colors.accent, life: 40 });
       Sound.play('counter'); FX.flashScreen('#ffffff', 6, 0.35); FX.ring(D.x, D.y - 100, D.colors.accent, 20, 140, 16, 6); this.hitstop = Math.max(this.hitstop, 10);
@@ -282,6 +282,7 @@ class Battle {
       const hu = D.hurtbox(); if (!hu || D.invuln > 0) continue;
       const hb = A.hitbox(); if (!overlap(hb, hu)) continue;
       if (m.grab && !m.comboGrab && (!D.onGround || D.state === 'hit' || D.state === 'getup' || D.state === 'knockdown')) continue;
+      if (m.throw && (D.state === 'block' || D.state === 'wall' || D.state === 'burst')) continue;   // universal throw: not in blockstun / wall splat
       if (m.comboGrab && !(D.state === 'hit' || D.state === 'wall')) continue;
       if (this.juggleCapped(A, D)) { if (!D.comboFlags.capped) { D.comboFlags.capped = true; FX.wtext(D.x, D.y - 200, 'JUGGLE LIMIT', { size: 22, color: '#aab', life: 30 }); } continue; }
       const cx = (Math.max(hb.x, hu.x) + Math.min(hb.x + hb.w, hu.x + hu.w)) / 2, cy = (Math.max(hb.y, hu.y) + Math.min(hb.y + hb.h, hu.y + hu.h)) / 2;
