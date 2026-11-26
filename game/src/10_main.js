@@ -1,6 +1,6 @@
 // ================================ MAIN ================================
 let scene = null, muteToast = 0;
-function go(s) { scene = s; Keys.pressed.clear(); Mouse.clicked = false; }
+function go(s) { if (scene && scene !== s && scene.dispose) scene.dispose(); scene = s; Keys.pressed.clear(); Mouse.clicked = false; }
 let VIEW_K = 1;
 function resize() {
   const s = Math.min(window.innerWidth / W, window.innerHeight / H), dpr = window.devicePixelRatio || 1;
