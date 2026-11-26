@@ -38,9 +38,9 @@ const DEFAULT_BINDS = {
   2: { left: 'ArrowLeft', right: 'ArrowRight', up: 'ArrowUp', down: 'ArrowDown', light: 'KeyK', medium: 'KeyJ', heavy: 'KeyL', sp1: 'KeyO', sp2: 'KeyP', block: 'KeyI' },
 };
 const Settings = {
-  cpuLevel: 1, master: 0.8, music: 0.5, sfx: 0.85, muted: false, voice: true, shake: true, fx: 'HIGH', roundTime: 99, pixel: true, mobile: null,
+  cpuLevel: 1, master: 0.8, music: 0.5, sfx: 0.85, muted: false, voice: true, shake: true, fx: 'HIGH', roundTime: 99, pixel: true, mobile: null, touchSize: 'M', touchAlpha: 'MID',
   binds: JSON.parse(JSON.stringify(DEFAULT_BINDS)),
-  KEYS: ['cpuLevel', 'master', 'music', 'sfx', 'muted', 'voice', 'shake', 'fx', 'roundTime', 'pixel', 'mobile'],
+  KEYS: ['cpuLevel', 'master', 'music', 'sfx', 'muted', 'voice', 'shake', 'fx', 'roundTime', 'pixel', 'mobile', 'touchSize', 'touchAlpha'],
   load() {
     try {
       const s = JSON.parse(localStorage.getItem('soulbreakers_v1') || 'null');
