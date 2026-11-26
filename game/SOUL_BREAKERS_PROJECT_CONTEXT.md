@@ -525,3 +525,9 @@ The test scripts are in `tests/` inside the source zip. Run each with node and P
 - Unlocks (`09g_unlock.js`, `Roster`): only YOUR fighter in ARCADE / 1P VS CPU is locked (CPU opponent, local versus, online, practice, training = everyone). Free: the 9 originals (`FREE_FIGHTERS`). Each Arcade clear unlocks one random locked fighter (results toast). When any fighter reaches mastery `FREE_PICK_LV` (3) the player gets ONE free pick: confirm a locked fighter → "USE YOUR FREE PICK?" dialog.
 - Saved in the mastery profile: `fu {id:1}`, `fuAll`, `fuFree` (picks used), `fuV` (new-format flag). Migration: a profile/account save without `fuV` that already has XP/wins gets `fuAll` (old players keep everyone). Account sync only adds. Cheat (`data.clean`) opens all on this device only. Admin: GIVE LEVEL (fighter or ALL) also unlocks; grant keys `f_<id>`/`f_all` work too.
 - Test: `tests/unlock.js`.
+
+### Combo list + training options + Buzzu hurtbox (2026-11-26, src/09h_combobook.js)
+- Pause menu → COMBO LIST: verified combos for all 21 fighters (COMBO_BOOK, generated from COMBOS.md + player guide; Nue per form, Fudagami per hand), EASY/MEDIUM/HARD/SOUL, damage % and hits, pages with ←/→. Also in the online pause menu.
+- Pause menu (practice/training) → TRAINING OPTIONS: dummy stance/guard/action, new DUMMY THROW TECH, meter refill, hitboxes, reset (works with touch/controller; number keys 1–7 still work). Practice panel shows live/last combo with % of HP and best combo damage.
+- Buzzu hurtbox now normal size (h 170, crouch 112, air 136/160): standard combos hit him (46/54 bot combos vs 11/54 before; launcher air combos still miss him). Balance re-tuned: buzzu dmg 0.98, hp 960 (bot win rate ~55%, was 25% with the new box at the old values).
+- Tests: tests/combobook.js (menu flow, all pages draw, dummy tech, Buzzu hit, last combo).
