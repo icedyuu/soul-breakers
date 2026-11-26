@@ -13,6 +13,7 @@ const TITLE_TOP = {
   saint: ['BLOOD QUEEN', '血の女王'], borgar: ['MOUNTAIN KING', '山の王'], buzzu: ['GOODEST BOY', '最高の子'], reika: ['ABSOLUTE RULER', '絶対支配者'],
   yamika: ['DARK FLAME MASTER', '黒炎の支配者'], lunaria: ['ETERNAL NIGHT', '永遠の夜'], honored: ['THE STRONGEST', '最強'], hollow: ['THE LAST REMNANT', '最後の残滓'],
   kanae: ['THORN QUEEN', '棘の女王'], tokine: ['NIGHTMARE OF TIME', '時の悪夢'], aimi: ['FOREVER YOURS', '永遠にあなたのもの'],
+  hachi: ['EIGHT FEET OF DREAD', '八尺の恐怖'], kuchi: ['AM I PRETTY?', '私、きれい？'],
 };
 function masteryTitle(ch, lv) { lv = clamp(lv | 0, 1, 10); return lv >= 10 ? (TITLE_TOP[ch.id] || ['SOUL BREAKER', '魂砕き']) : TITLE_GEN[lv - 1]; }
 
@@ -246,6 +247,18 @@ cosAdd('aimi', { c: '#ff4f8b', c2: '#ffc0d6', pt: 'spark', snd: 'heart' }, P => 
     mk('SAFETY OFF', '安全装置', TPL.poses(P, ['draw', ['aim', F => { CFX.ring(F, P.c, 140, 120, 18, 4); CFX.snd('cock'); }], 'hairfix'], 'intro', { step: 30 }), { line: 'Just you and me. Nobody else.' })],
   w: [mk('ALL MINE', 'ぜんぶ私の', TPL.poses(P, ['victory', ['claim', F => CFX.ring(F, P.c, 120, 160, 26, 5)], 'stare'], null, { step: 36 }), { line: 'Now you\'re all mine~' }),
     mk('LOVE LETTER', '恋文', TPL.poses(P, ['aim_up', ['aim_up', F => { CFX.burst(F, P.c2, 14, 9, 230); CFX.snd('pistol'); }], 'victory'], null, { step: 24 }), { loop: [ambient('spark', P.c, 12, 60, 220, 3)] })],
+}));
+cosAdd('hachi', { c: '#dfe6ff', c2: '#ffffff', pt: 'spark', snd: 'po' }, P => ({
+  i: [mk('DISTANT FIGURE', '遠くの人影', TPL.warp(P, 'tilt', 'intro', { snd: 'hachiDistort', mid2: 'tilt' }), { line: '…po… po… po…' }),
+    mk('THE WATCHER', '見つめる者', TPL.poses(P, ['look_down', ['look_up', F => { CFX.ring(F, P.c, 150, 160, 30, 3); CFX.snd('po'); }], 'tilt'], 'intro', { step: 40 }))],
+  w: [mk('PO… PO…', 'ぽ…ぽ…', TPL.poses(P, ['victory', ['tilt', F => CFX.snd('po')], 'victory'], null, { step: 44 }), { line: '…po… po…' }),
+    mk('NOWHERE TO HIDE', '逃げ場はない', TPL.poses(P, ['raise', ['reach', F => { CFX.ring(F, P.c, 140, 200, 30, 4); CFX.snd('hachiReach'); }], 'tilt'], null, { step: 36 }), { loop: [ambient('spark', P.c, 16, 60, 220, 2)] })],
+}));
+cosAdd('kuchi', { c: '#e0203a', c2: '#ffb4c0', pt: 'spark', snd: 'snip' }, P => ({
+  i: [mk('EXCUSE ME', 'すみません', TPL.walk(P, null, 'touch', {}), { line: 'Excuse me… may I ask you something?' }),
+    mk('SUDDEN STEP', '突然の一歩', TPL.warp(P, 'dash_low', 'intro', { snd: 'kuchiVanish', mid2: 'tilt' }))],
+  w: [mk('NOW WE MATCH', 'おそろい', TPL.poses(P, ['touch', 'unmask', ['smile', F => CFX.snd('fear')]], null, { step: 36 }), { line: 'Now we match~' }),
+    mk('SNIP SNIP', 'ちょきちょき', TPL.poses(P, ['snip_w', ['snip', F => { CFX.burst(F, P.c2, 10, 7, 170); CFX.snd('snip'); }], 'victory'], null, { step: 24 }), { loop: [ambient('spark', P.c, 14, 60, 220, 2)] })],
 }));
 // any fighter added later without its own set gets a generic one in its colours
 function cosFallback(ch) {
