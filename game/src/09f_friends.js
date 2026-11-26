@@ -194,7 +194,8 @@ class FriendsScene {
       g.font = `600 15px ${FONT_UI}`; g.fillStyle = on ? (r.k === 'fr' && r.f.status === 'match' ? '#ffc08a' : '#9affc0') : '#cfc4ee'; g.fillText(r.sub, 370, cy);
       if (r.k === 'fr') {
         const ch = r.f.main && chById(r.f.main);
-        g.font = `900 17px ${FONT_UI}`; g.fillStyle = '#ffd84a'; g.fillText(String(r.f.rating), 590, cy);
+        drawTierBadge(g, 578, cy + 1, 10, tierOf(r.f.rating));
+        g.font = `900 17px ${FONT_UI}`; g.fillStyle = tierOf(r.f.rating).c; g.textAlign = 'left'; g.fillText(String(r.f.rating), 594, cy);
         if (ch) { g.font = `600 15px ${FONT_UI}`; g.fillStyle = ch.colors.accent; g.fillText(ch.name, 660, cy); }
       }
       r.acts.forEach(([a, s], j) => {
