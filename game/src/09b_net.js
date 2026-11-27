@@ -40,15 +40,17 @@ function netBuildId() { return netHashStr(NET_PROTO + ':' + CHARS.map(c => c.id 
 
 // ---------------- input encoding (one int per frame) ----------------
 const NET_BTNS = ['light', 'medium', 'heavy', 'sp1', 'sp2', 'block'];
-const NET_OK = 1 << 16;
+const NET_OK = 1 << 16, NET_TAG_H = 1 << 17, NET_TAG_P = 1 << 18;
 function netDecode(v, o) {
   o.l = !!(v & 1); o.r = !!(v & 2); o.u = !!(v & 4); o.d = !!(v & 8);
   o.btn.press.clear();
   NET_BTNS.forEach((a, i) => { o.btn.held[a] = !!(v & (1 << (4 + i))); if (v & (1 << (10 + i))) o.btn.press.add(a); });
+  o.btn.held.tag = !!(v & NET_TAG_H); if (v & NET_TAG_P) o.btn.press.add('tag');   // 2v2 TAG button (same bits as replays)
 }
 function netEncode(l, r, u, d, held, press, ok) {
   let v = (l ? 1 : 0) | (r ? 2 : 0) | (u ? 4 : 0) | (d ? 8 : 0);
   NET_BTNS.forEach((a, i) => { if (held(a)) v |= 1 << (4 + i); if (press(a)) v |= 1 << (10 + i); });
+  if (held('tag')) v |= NET_TAG_H; if (press('tag')) v |= NET_TAG_P;
   return ok ? v | NET_OK : v;
 }
 
@@ -93,7 +95,7 @@ const Net = {
   },
   bind(c) {
     this.conn = c; this.lastRx = performance.now();
-    c.on('open', () => { if (this.conn === c) this.send({ t: 'hello', v: NET_PROTO, b: netBuildId() }); });
+    c.on('open', () => { if (this.conn === c) this.send({ t: 'hello', v: NET_PROTO, b: netBuildId(), tag: 1 }); });
     c.on('data', d => { if (this.conn === c) this.rx(d); });
     c.on('close', () => { if (this.conn === c) this.lost('Your opponent left.'); });
     c.on('error', () => { if (this.conn === c) this.lost('Connection lost.'); });
@@ -104,6 +106,7 @@ const Net = {
     switch (d.t) {
       case 'hello':
         if (d.v !== NET_PROTO || d.b !== netBuildId()) { this.send({ t: 'bad' }); return this.fail('Both players need the same game version. Reload the game on both devices.'); }
+        this.remoteTag = !!d.tag;   // the other build knows online 2v2 TAG (09i_tag.js)
         if (this.status !== 'connected') { this.status = 'connected'; clearTimeout(this.joinT); }
         return;
       case 'bad': return this.fail('Both players need the same game version. Reload the game on both devices.');
@@ -376,7 +379,7 @@ class NetBattle extends Battle {
     let v;
     if (this.paused) v = 0;
     else if (TouchPad.bt === this) {
-      for (const a of NET_BTNS) if (kp.has(b1[a]) || kp.has(b2[a])) TouchPad.pend.add(a);
+      for (const a of [...NET_BTNS, 'tag']) if (kp.has(b1[a]) || kp.has(b2[a])) TouchPad.pend.add(a);
       this.padBt.p1 = this.me; TouchPad.tick(this.padBt);
       const t = TouchPad.v, any = c => K.has(c);
       v = netEncode(t.l || any(b2.left), t.r || any(b2.right), t.u || any(b2.up), t.d || any(b2.down), a => t.btn.held[a] || any(b2[a]), a => t.btn.press.has(a));

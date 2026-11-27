@@ -30,7 +30,7 @@ function rpUnpack(s) {
   return { A, B };
 }
 // one input's resolved state this frame → netplay int (dirs, 6 held, 6 pressed)
-const RP_TAG_H = 1 << 17, RP_TAG_P = 1 << 18;   // 2v2 TAG button (not part of the online encoding)
+const RP_TAG_H = NET_TAG_H, RP_TAG_P = NET_TAG_P;   // 2v2 TAG button (same bits as the online encoding)
 function rpEnc(inp) { return netEncode(inp.h < 0, inp.h > 0, inp.u, inp.d, a => !!inp.held[a], a => inp.pressF[a] === inp.f) | (inp.held.tag ? RP_TAG_H : 0) | (inp.pressF.tag === inp.f ? RP_TAG_P : 0); }
 function rpDecode(v, o) { netDecode(v, o); o.btn.held.tag = !!(v & RP_TAG_H); if (v & RP_TAG_P) o.btn.press.add('tag'); }
 function rpModeLabel(cfg) {

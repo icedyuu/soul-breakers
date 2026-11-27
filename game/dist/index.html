@@ -15741,7 +15741,7 @@ const TouchPad = {
   pos(t) { const r = canvas.getBoundingClientRect(); return { x: (t.clientX - r.left) * W / r.width, y: (t.clientY - r.top) * H / r.height }; },
   hit(p) {
     let best = null, bd = 1e9;
-    for (const b of TOUCH_BTNS) { if (b.tagOnly && !(this.bt && this.bt.team)) continue; const d = Math.hypot(p.x - b.x, p.y - b.y); if (d < b.r * 1.3 && d < bd) { bd = d; best = b; } }
+    for (const b of TOUCH_BTNS) { if (b.tagOnly && !touchTagBt(this.bt)) continue; const d = Math.hypot(p.x - b.x, p.y - b.y); if (d < b.r * 1.3 && d < bd) { bd = d; best = b; } }
     return best;
   },
   inR: (p, r) => p.x >= r.x - 10 && p.x <= r.x + r.w + 10 && p.y >= r.y - 10 && p.y <= r.y + r.h + 10,
@@ -15848,9 +15848,9 @@ const TouchPad = {
     const P1 = bt.p1, held = this.v.btn.held;
     const aimOn = a => [...this.touches.values()].some(t => t.kind === 'aim' && t.b.a === a);
     for (const b of TOUCH_BTNS) {
-      if (b.tagOnly && !bt.team) continue;
+      if (b.tagOnly && !touchTagBt(bt)) continue;
       const on = b.a === 'ult' ? held.sp1 && held.sp2 : b.a === 'grab' ? held.medium && held.heavy : b.a === 'dash' ? false : held[b.a] || aimOn(b.a), fl = this.flash[b.a] > 0;
-      const ready = b.a === 'tag' ? tagReady(bt, 0) : b.a !== 'ult' || P1.meter >= 100;
+      const ready = b.a === 'tag' ? touchTagReady(bt) : b.a !== 'ult' || P1.meter >= 100;
       g.globalAlpha = A(on || fl ? 0.85 : ready ? 0.45 : 0.22);
       g.fillStyle = on || fl ? b.col : 'rgba(20,10,40,0.75)'; g.strokeStyle = b.col; g.lineWidth = 4;
       g.beginPath(); g.arc(b.x, b.y, b.r, 0, TAU); g.fill(); g.stroke();
@@ -17058,15 +17058,17 @@ function netBuildId() { return netHashStr(NET_PROTO + ':' + CHARS.map(c => c.id 
 
 // ---------------- input encoding (one int per frame) ----------------
 const NET_BTNS = ['light', 'medium', 'heavy', 'sp1', 'sp2', 'block'];
-const NET_OK = 1 << 16;
+const NET_OK = 1 << 16, NET_TAG_H = 1 << 17, NET_TAG_P = 1 << 18;
 function netDecode(v, o) {
   o.l = !!(v & 1); o.r = !!(v & 2); o.u = !!(v & 4); o.d = !!(v & 8);
   o.btn.press.clear();
   NET_BTNS.forEach((a, i) => { o.btn.held[a] = !!(v & (1 << (4 + i))); if (v & (1 << (10 + i))) o.btn.press.add(a); });
+  o.btn.held.tag = !!(v & NET_TAG_H); if (v & NET_TAG_P) o.btn.press.add('tag');   // 2v2 TAG button (same bits as replays)
 }
 function netEncode(l, r, u, d, held, press, ok) {
   let v = (l ? 1 : 0) | (r ? 2 : 0) | (u ? 4 : 0) | (d ? 8 : 0);
   NET_BTNS.forEach((a, i) => { if (held(a)) v |= 1 << (4 + i); if (press(a)) v |= 1 << (10 + i); });
+  if (held('tag')) v |= NET_TAG_H; if (press('tag')) v |= NET_TAG_P;
   return ok ? v | NET_OK : v;
 }
 
@@ -17111,7 +17113,7 @@ const Net = {
   },
   bind(c) {
     this.conn = c; this.lastRx = performance.now();
-    c.on('open', () => { if (this.conn === c) this.send({ t: 'hello', v: NET_PROTO, b: netBuildId() }); });
+    c.on('open', () => { if (this.conn === c) this.send({ t: 'hello', v: NET_PROTO, b: netBuildId(), tag: 1 }); });
     c.on('data', d => { if (this.conn === c) this.rx(d); });
     c.on('close', () => { if (this.conn === c) this.lost('Your opponent left.'); });
     c.on('error', () => { if (this.conn === c) this.lost('Connection lost.'); });
@@ -17122,6 +17124,7 @@ const Net = {
     switch (d.t) {
       case 'hello':
         if (d.v !== NET_PROTO || d.b !== netBuildId()) { this.send({ t: 'bad' }); return this.fail('Both players need the same game version. Reload the game on both devices.'); }
+        this.remoteTag = !!d.tag;   // the other build knows online 2v2 TAG (09i_tag.js)
         if (this.status !== 'connected') { this.status = 'connected'; clearTimeout(this.joinT); }
         return;
       case 'bad': return this.fail('Both players need the same game version. Reload the game on both devices.');
@@ -17394,7 +17397,7 @@ class NetBattle extends Battle {
     let v;
     if (this.paused) v = 0;
     else if (TouchPad.bt === this) {
-      for (const a of NET_BTNS) if (kp.has(b1[a]) || kp.has(b2[a])) TouchPad.pend.add(a);
+      for (const a of [...NET_BTNS, 'tag']) if (kp.has(b1[a]) || kp.has(b2[a])) TouchPad.pend.add(a);
       this.padBt.p1 = this.me; TouchPad.tick(this.padBt);
       const t = TouchPad.v, any = c => K.has(c);
       v = netEncode(t.l || any(b2.left), t.r || any(b2.right), t.u || any(b2.up), t.d || any(b2.down), a => t.btn.held[a] || any(b2[a]), a => t.btn.press.has(a));
@@ -19289,13 +19292,13 @@ if (Cloud.on) setTimeout(() => Cloud.refresh(), 800);
     return r;
   };
   Net.sendAcct = function () { this.acctSent = true; this.send({ t: 'acct', u: Cloud.on ? Cloud.name : null, r: Cloud.on && Cloud.me ? Cloud.me.rating : 0 }); };
-  Net.ranked = () => !!(Cloud.on && Net.rival);
+  Net.ranked = () => !!(Cloud.on && Net.rival) && !Net.tagMode;   // 2v2 TAG matches are never ranked (09i_tag.js)
   const nsm = netStartMatch;
-  netStartMatch = function (cfg, m) { Net.rankKey = `${Net.code}-${cfg.seed}-${m}`; Net.rankedNow = Net.ranked(); return nsm(cfg, m); };
+  netStartMatch = function (cfg, m) { Net.rankKey = `${Net.code}-${cfg.seed}-${m}`; Net.tagNow = !!cfg.tag; Net.rankedNow = Net.ranked() && !cfg.tag; return nsm(cfg, m); };
 
   const NR = NetResultsScene.prototype, nu = NR.update, nd = NR.draw;
   NR.rankInit = function () {
-    if (this.rk) return; this.rk = { s: Net.rankedNow ? 'sending' : Cloud.on ? 'rivalguest' : Cloud.enabled() ? 'guest' : 'off' };
+    if (this.rk) return; this.rk = { s: Net.rankedNow ? 'sending' : Net.tagNow ? 'tag' : Cloud.on ? 'rivalguest' : Cloud.enabled() ? 'guest' : 'off' };
     if (!Net.rankedNow) return;
     const key = Net.rankKey, me = this.bt.lp ? this.bt.p2 : this.bt.p1, rk = this.rk;
     const done = r => { Object.assign(rk, r, { s: r.status }); if (r.status === 'rated') { Sound.play('menuOk'); Cloud.refresh(); } };
@@ -19311,7 +19314,7 @@ if (Cloud.on) setTimeout(() => Cloud.refresh(), 800);
       sending: 'RANKED · sending result…', pending: 'RANKED · waiting for your rival’s result…',
       rated: `RANKED · ${k.delta >= 0 ? '+' : ''}${k.delta} → ${k.rating} · ${tierOf(k.rating).name}`, mismatch: 'Not ranked: the two results did not match.',
       limit: 'Not ranked: max 5 ranked matches per day vs the same player.', unranked: 'Not ranked.', unknown: 'Not ranked.',
-      error: k.err || 'Ranked result could not be sent.', guest: 'Log in (ACCOUNT on the title screen) to play ranked.', rivalguest: 'Unranked: your rival is not logged in.',
+      error: k.err || 'Ranked result could not be sent.', guest: 'Log in (ACCOUNT on the title screen) to play ranked.', rivalguest: 'Unranked: your rival is not logged in.', tag: 'Unranked: 2 VS 2 TAG matches don’t count for the rankings.',
     }[s] || '';
     g.save(); g.translate(330, 178); g.rotate(-0.08);
     g.font = `italic 900 ${s === 'rated' ? 30 : 18}px ${s === 'rated' ? FONT_T : FONT_UI}`; g.textAlign = 'center'; g.textBaseline = 'middle';
@@ -19344,7 +19347,7 @@ if (Cloud.on) setTimeout(() => Cloud.refresh(), 800);
     SD.call(this, g);
     if (!Cloud.enabled()) return;
     const mr = Cloud.me && Cloud.me.rating;
-    const txt = Net.ranked() ? `RANKED  ·  ${Cloud.name}${mr ? ` (${tierOf(mr).name} ${mr})` : ''} vs ${Net.rival}${Net.rivalR ? ` (${tierOf(Net.rivalR).name} ${Net.rivalR})` : ''}` : Cloud.on ? 'UNRANKED  ·  rival not logged in' : 'UNRANKED  ·  log in for ranked';
+    const txt = Net.ranked() ? `RANKED  ·  ${Cloud.name}${mr ? ` (${tierOf(mr).name} ${mr})` : ''} vs ${Net.rival}${Net.rivalR ? ` (${tierOf(Net.rivalR).name} ${Net.rivalR})` : ''}` : Net.tagMode ? 'UNRANKED  ·  2 VS 2 TAG' : Cloud.on ? 'UNRANKED  ·  rival not logged in' : 'UNRANKED  ·  log in for ranked';
     g.save(); g.font = `900 15px ${FONT_UI}`; g.textAlign = 'center'; g.textBaseline = 'middle';
     const w = g.measureText(txt).width + 28; g.fillStyle = 'rgba(8,4,20,0.85)'; g.fillRect(W / 2 - w / 2, H - 62, w, 24);
     g.fillStyle = Net.ranked() ? '#ffd84a' : '#cfc4ee'; g.fillText(txt, W / 2, H - 50); g.restore();
@@ -20847,7 +20850,7 @@ function rpUnpack(s) {
   return { A, B };
 }
 // one input's resolved state this frame → netplay int (dirs, 6 held, 6 pressed)
-const RP_TAG_H = 1 << 17, RP_TAG_P = 1 << 18;   // 2v2 TAG button (not part of the online encoding)
+const RP_TAG_H = NET_TAG_H, RP_TAG_P = NET_TAG_P;   // 2v2 TAG button (same bits as the online encoding)
 function rpEnc(inp) { return netEncode(inp.h < 0, inp.h > 0, inp.u, inp.d, a => !!inp.held[a], a => inp.pressF[a] === inp.f) | (inp.held.tag ? RP_TAG_H : 0) | (inp.pressF.tag === inp.f ? RP_TAG_P : 0); }
 function rpDecode(v, o) { netDecode(v, o); o.btn.held.tag = !!(v & RP_TAG_H); if (v & RP_TAG_P) o.btn.press.add('tag'); }
 function rpModeLabel(cfg) {
@@ -21375,7 +21378,7 @@ class SpectateScene {
 // Two fighters per side, one on the field. TAG (P1 E / P2 U, controller stick click, touch TAG)
 // swaps in the partner, who jumps in with an air heavy (tag-in attack). The benched fighter
 // slowly recovers part of the damage taken. A KO'd point fighter is replaced by the partner;
-// the round ends when a whole team is down. Local VERSUS and VS CPU (single match); not online.
+// the round ends when a whole team is down. Local VERSUS, VS CPU (single match) and ONLINE (host picks the mode).
 // Battle cfg: cfg.tag = { t: [[p1a, p1b], [p2a, p2b]], v: [[v, v], [v, v]] } (CHARS indices / variants).
 // The fighter on the field is a fresh Fighter every time it tags in, so forms, buffs, summons and
 // cooldowns of the fighter who left are dropped; their projectiles and marks on the opponent are cleared.
@@ -21408,7 +21411,7 @@ function tagTeamRatio(bt, i) {
   const BP = Battle.prototype;
   const nr = BP.newRound;
   BP.newRound = function (first) {
-    const c = this.cfg, on = c.tag && !c.online && c.mode === 'versus';
+    const c = this.cfg, on = !!c.tag && c.mode === 'versus';
     if (on) { c.p1 = c.tag.t[0][0]; c.p2 = c.tag.t[1][0]; c.v1 = c.tag.v[0][0]; c.v2 = c.tag.v[1][0]; }
     const r = nr.call(this, first);
     this.team = on ? [0, 1].map(i => ({ ids: c.tag.t[i], vs: c.tag.v[i], cur: 0, cd: 60, pending: null, s: [{ hp: null, rec: 0, dead: false, burst: true }, { hp: null, rec: 0, dead: false, burst: true }] })) : null;
@@ -21535,7 +21538,7 @@ function drawTagHUD(g, bt) {
     g.textAlign = 'center'; g.font = `900 11px ${FONT_UI}`;
     if (s.dead) strokeText(g, '—', ix, y + 17, '#777', OUTLINE, 3);
     else {
-      const key = keyLabel(Settings.binds[i + 1].tag);
+      const key = keyLabel(Settings.binds[bt.online ? 1 : i + 1].tag);
       g.globalAlpha = rdy ? 0.75 + 0.25 * Math.sin(bt.pf * 0.2) : 0.5;
       strokeText(g, 'TAG', ix, y + 11, rdy ? '#7dfcff' : '#9a9ab0', OUTLINE, 3);
       g.font = `800 10px ${FONT_UI}`; strokeText(g, rdy ? key : Math.ceil(Math.max(0, T.cd) / 60) + 's', ix, y + 25, rdy ? '#ffffff' : '#9a9ab0', OUTLINE, 3);
@@ -21594,7 +21597,7 @@ function drawTagHUD(g, bt) {
   go = function (s) {
     if (s instanceof CharSelectScene && !(typeof NetSelectScene !== 'undefined' && s instanceof NetSelectScene) && scene) {
       const c = scene.cfg || (scene.bt && scene.bt.cfg);
-      if (c && c.tag && !c.online) s.tag = true;
+      if (c && c.tag) s.tag = true;
     }
     return _go(s);
   };
@@ -21619,7 +21622,7 @@ function drawTagHUD(g, bt) {
     if (!this.tag) return up.call(this);
     const tm = this.tagTeam();
     if (this.dupT) this.dupT--;
-    for (let s = 0; s < 2; s++) if (!this.ready[s] && tm[s].length > 1) tm[s].length = 1;
+    for (let s = 0; s < 2; s++) if (!this.ready[s] && tm[s].length > 1 && !(s === 1 && this instanceof NetSelectScene)) tm[s].length = 1;   // online: slot 1 = the rival's team (from 'tsel')
     if (!this.ask) {
       if (this.single) { const s = this.activeSlot(); if (s !== null && !this.ready[s] && tm[s].length === 1 && UI.back()) { tm[s].length = 0; Sound.play('menuBack'); return; } }
       else for (const pid of [1, 2]) if (!this.ready[pid - 1] && tm[pid - 1].length === 1 && UI.pBack(pid)) { tm[pid - 1].length = 0; Sound.play('menuBack'); return; }
@@ -21672,6 +21675,100 @@ function drawTagHUD(g, bt) {
     g.textAlign = 'right'; strokeText(g, '& ' + CHARS[c.t[1][1]].name, W - 40, 640, '#ffffff', CHARS[c.t[1][1]].colors.accent, 6);
     g.textAlign = 'center'; g.font = `italic 900 22px ${FONT_T}`; strokeText(g, '2 VS 2 TAG', W / 2, 640, '#7dfcff', OUTLINE, 5);
     g.restore();
+  };
+}
+
+// touch pad: which battle the TAG button belongs to (online the pad gets a stand-in object)
+function touchTagBt(bt) { return bt && bt.team ? bt : TouchPad.bt && TouchPad.bt.team ? TouchPad.bt : null; }
+function touchTagReady(bt) { const b = touchTagBt(bt); return !!b && tagReady(b, b.lp || 0); }
+
+// ---------------- ONLINE: mode choice in the room's character select, team sync, lockstep state ----------------
+// The host picks 1 VS 1 / 2 VS 2 TAG (button at the top or the TAG key). Teams travel as 'tsel' messages,
+// the host puts cfg.tag into the 'start' message. The TAG button is part of the per-frame input int (09b).
+function netTagPossible() { return Net.remoteTag !== false; }
+{
+  const NP = NetSelectScene.prototype, nu = NP.update, no = NP.onNet, nd = NP.draw;
+  NP.tagBtn = function () { return { x: W / 2 - 170, y: 104, w: 340, h: 34 }; };
+  NP.setTagMode = function (on, send) {
+    on = !!on && netTagPossible();
+    const changed = !!this.tag !== on; Net.tagMode = on; this.tag = on;
+    if (changed) { this.teamSel = [[], []]; this.ready[0] = false; this.ready[1] = false; this.tselSent = null; Sound.play('menuMove'); }
+    if (send) Net.send({ t: 'tmode', on });
+  };
+  NP.onNet = function (d) {
+    if (d.t === 'tmode' && Net.role === 'guest') { this.setTagMode(d.on, false); return; }
+    if (d.t === 'tsel') { const tm = this.tagTeam(); tm[1] = (Array.isArray(d.team) ? d.team : []).slice(0, 2).map(o => ({ i: clamp(o.i | 0, 0, CHARS.length - 1), v: clamp(o.v | 0, 0, VAR_N - 1) })); return; }
+    return no.call(this, d);
+  };
+  NP.update = function () {
+    if (this.tag === undefined) {
+      this.tag = !!Net.tagMode && netTagPossible();
+      if (Net.role === 'host') Net.send({ t: 'tmode', on: this.tag });
+      if (this.tag && Array.isArray(Net.remoteTeam)) this.onNet({ t: 'tsel', team: Net.remoteTeam });
+    }
+    if (Net.role === 'host' && netTagPossible()) {
+      const kb = [Settings.binds[1].tag, Settings.binds[2].tag];
+      if (kb.some(k => Keys.pressed.has(k)) || (Mouse.clicked && inRect(this.tagBtn()))) { Mouse.clicked = false; this.setTagMode(!this.tag, true); }
+    }
+    const tm = this.tagTeam();
+    if (this.tag && Net.role === 'host' && !(tm[0].length === 2 && tm[1].length === 2)) this.startT = 0;   // wait for both teams
+    const r = nu.call(this);
+    if (scene === this && this.tag) {
+      const key = JSON.stringify(tm[0]);
+      if (key !== this.tselSent) { this.tselSent = key; Net.send({ t: 'tsel', team: tm[0] }); }
+    }
+    return r;
+  };
+  NP.draw = function (g) {
+    nd.call(this, g);
+    if (!netTagPossible()) return;
+    const r = this.tagBtn(), host = Net.role === 'host';
+    drawButton(g, r, this.tag ? '2 VS 2 TAG' : '1 VS 1', null, host && inRect(r), this.t, host ? '⇄ ' + keyLabel(Settings.binds[1].tag) : 'HOST');
+  };
+  // messages that can arrive before the room's select screen exists
+  const rx = Net.rx.bind(Net);
+  Net.rx = function (d) {
+    if (d && d.t === 'tmode') Net.tagMode = !!d.on;
+    if (d && d.t === 'tsel') Net.remoteTeam = d.team;
+    if (d && d.t === 'start') Net.remoteTeam = null;
+    return rx(d);
+  };
+  // host: the teams go into the match cfg
+  const ns = Net.send.bind(Net);
+  Net.send = function (o) {
+    const sc = scene;
+    if (o && o.t === 'start' && o.cfg && sc instanceof NetSelectScene) {
+      const tm = sc.tagTeam();
+      if (sc.tag && tm[0].length === 2 && tm[1].length === 2) {
+        const t = [tm[0].map(x => x.i), tm[1].map(x => x.i)], v = [tm[0].map(x => x.v), tm[1].map(x => x.v)];
+        for (let a = 0; a < 2; a++) for (let b = 0; b < 2; b++) if (t[0][a] === t[1][b] && v[0][a] === v[1][b]) v[1][b] = v[1][b] + 1 >= VAR_N - 1 ? 0 : v[1][b] + 1;
+        o.cfg.tag = { t, v }; o.cfg.p1 = t[0][0]; o.cfg.p2 = t[1][0]; o.cfg.v1 = v[0][0]; o.cfg.v2 = v[1][0];
+      } else delete o.cfg.tag;
+      Net.remoteTeam = null;
+    }
+    return ns(o);
+  };
+  // lockstep: team state joins the hash and the soft-resync snapshot
+  const BP = NetBattle.prototype, sh = BP.stateHash, sn = BP.snapshot, rs = BP.restoreSnap;
+  BP.stateHash = function () {
+    const h = sh.call(this); if (!this.team) return h;
+    return netHashStr(h + '|' + this.team.map(T => [T.cur, T.cd, T.pending ? T.pending.t : -1, T.s.map(x => (x.dead ? 'd' : '') + Math.round((x.hp ?? -1) * 10)).join('/')].join(':')).join('|') + '|' + this.p1.ch.id + this.p2.ch.id);
+  };
+  BP.snapshot = function () { const s = sn.call(this); if (this.team) s.tm = JSON.parse(JSON.stringify(this.team)); return s; };
+  BP.restoreSnap = function (s) {
+    if (s && s.tm && this.team) {
+      this.team = s.tm;
+      [0, 1].forEach(i => {
+        const F = i ? this.p2 : this.p1, id = s.f[i].ch;
+        if (F.ch.id === id) return;   // the other side tagged in the meantime: rebuild the right fighter, then adopt its state
+        const T = this.team[i], ch = CHARS.find(c => c.id === id) || F.ch, N = new Fighter(ch, i + 1, F.x, F.facing, this.inputs[i]);
+        N.variant = T.vs[T.cur]; if (this.mstats[i]) N.stats = this.mstats[i];
+        N.opp = F.opp; F.opp.opp = N; if (i) this.p2 = N; else this.p1 = N;
+        for (const p of this.projs) if (p.owner === F) p.dead = true;
+        this.projs = this.projs.filter(p => !p.dead);
+      });
+    }
+    return rs.call(this, s);
   };
 }
 
