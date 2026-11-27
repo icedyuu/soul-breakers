@@ -111,6 +111,8 @@ function storyOf(id) { return STORY[id] || STORY_FALLBACK; }
 // the VS screen of an arcade fight, preceded by its story scene (fight 1 and the final fight)
 function arcadeVS(cfg) {
   const a = cfg.arcade, st = storyOf(CHARS[cfg.p1].id);
+  // the final (rival) fight always takes place in the boss arena; the other fights rotate through the normal stages
+  if (a && BOSS_STAGE >= 0) cfg = { ...cfg, stage: a.i === a.order.length - 1 ? BOSS_STAGE : cfg.stage === BOSS_STAGE ? (BOSS_STAGE + 1) % STAGES.length : cfg.stage };
   const L = !a ? null : a.i === 0 ? st.pre : a.i === a.order.length - 1 ? st.vs : null;
   if (!L || !L.length || Settings.story === false) return new VSScene(cfg);
   return new StoryScene(cfg, L, a.i === 0 ? 'PROLOGUE' : 'FINAL BATTLE', () => go(new VSScene(cfg)));
