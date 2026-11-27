@@ -5,7 +5,7 @@ const { open } = require('./harness');
   const ok = (c, m) => { console.log((c ? 'ok   ' : 'FAIL ') + m); if (!c) bad++; };
   const r = await page.evaluate(() => {
     const o = {}, enter = () => { Keys.pressed.add('Enter'); scene.update(); Keys.pressed.clear(); T.frame(); T.frame(); T.frame(); };
-    o.fresh = Roster.lockedIds().length;
+    o.fresh = Roster.lockedIds().length; o.total = CHARS.length;
     go(new CharSelectScene('versus', { level: 1 })); T.run(5); scene.cur = [T.idx('borgar'), 0]; T.frame();
     o.lockedShown = scene.locked(T.idx('borgar')) && !scene.locked(T.idx('kazuma'));
     enter(); o.refused = !scene.ready[0] && !scene.ask;
@@ -15,16 +15,16 @@ const { open } = require('./harness');
     for (const m of ['versus', 'training', 'practice']) { go(new CharSelectScene(m)); T.run(3); o['open_' + m] = !CHARS.some((_, i) => scene.locked(i)); }
     localStorage.setItem(Mastery.KEY, JSON.stringify({ v: 1, chars: { goro: { xp: 50, w: 1, l: 0 } }, pick: {} })); Mastery.d = null; o.migrated = Roster.lockedIds().length === 0;
     localStorage.clear(); Mastery.d = null; Mastery.import({ v: 1, chars: { goro: { xp: 10 } }, pick: {} }); o.importOld = Roster.lockedIds().length === 0;
-    localStorage.clear(); Mastery.d = null; Mastery.import({ v: 1, fuV: 1, fu: { kuchi: 1 }, chars: { goro: { xp: 10 } }, pick: {} }); o.importNew = Roster.open('kuchi') && Roster.lockedIds().length === 11;
-    localStorage.clear(); Mastery.d = null; Cloud.applyGrants({ f_buzzu: 1, lunaria: 3 }); o.grants = Roster.open('buzzu') && Roster.open('lunaria') && Roster.lockedIds().length === 10;
+    localStorage.clear(); Mastery.d = null; Mastery.import({ v: 1, fuV: 1, fu: { kuchi: 1 }, chars: { goro: { xp: 10 } }, pick: {} }); o.importNew = Roster.open('kuchi') && Roster.lockedIds().length === CHARS.length - 10;
+    localStorage.clear(); Mastery.d = null; Cloud.applyGrants({ f_buzzu: 1, lunaria: 3 }); o.grants = Roster.open('buzzu') && Roster.open('lunaria') && Roster.lockedIds().length === CHARS.length - 11;
     localStorage.clear(); Mastery.d = null; Mastery.unlockAll(); o.cheat = Roster.lockedIds().length === 0 && !Cloud.exportSave().fuAll;
     localStorage.clear(); Mastery.d = null;
     const cfg = arcadeCfg(0, 1); cfg.arcade.i = cfg.arcade.order.length - 1; cfg.p2 = cfg.arcade.order[cfg.arcade.i];
     go(new Battle(cfg)); const bt = BT; bt.wins = [1, 0]; for (let i = 0; i < 900 && scene === bt; i++) { if (bt.phase === 'fight') bt.p2.hp = 0; Keys.down = new Set(); scene.update(); }
-    T.run(10); o.arcade = !!(scene.mx && scene.mx.fighter) && Roster.lockedIds().length === 11;
+    T.run(10); o.arcade = !!(scene.mx && scene.mx.fighter) && Roster.lockedIds().length === CHARS.length - 10;
     return o;
   });
-  ok(r.fresh === 12, 'new player: 12 fighters locked'); ok(r.lockedShown, 'lock shown in VS CPU select'); ok(r.refused, 'locked fighter cannot be confirmed');
+  ok(r.fresh === r.total - 9, 'new player: all non-originals locked'); ok(r.lockedShown, 'lock shown in VS CPU select'); ok(r.refused, 'locked fighter cannot be confirmed');
   ok(r.randOpen, 'RANDOM only picks open fighters'); ok(r.ask && r.unlocked, `free pick at LV ${3}: ask + unlock`); ok(r.cpuAnyOpp, 'CPU opponent can be any fighter');
   ok(r.open_versus && r.open_training && r.open_practice, 'versus / training / practice: all open');
   ok(r.migrated, 'old played profile keeps everyone'); ok(r.importOld, 'old account save keeps everyone'); ok(r.importNew, 'account sync merges unlocks');

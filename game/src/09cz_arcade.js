@@ -342,6 +342,20 @@ const ARC = {
     },
     front(g, sk, p, c, R) { cosDrape(g, sk, c, R, c.kc, c.kt, c.kr); },
   },
+  jackpot: { n: 'HIGH ROLLER', jp: 'ハイローラー', pal: { top: '#eeeae0', uarm: '#eeeae0', farm: '#eeeae0', lapel: '#c8a040', vest: '#16141a', vest2: '#0a0a0e', tie: '#16141a', lining: '#ffcf3a', leg: '#eeeae0', warm: '#eeeae0',
+    kc: '#16141a', kl: '#c8102e', kt: '#ffcf3a', kh: '#eeeae0', kr: '#16141a' },
+    back(g, sk, p, c, R, o) { cosCape(g, sk, c, R, o, { len: 0.86, flare: 12, col: c.kc, lin: c.kl, trim: c.kt }); },
+    head(g, r, c, R) {   // a tall white top hat with a black band and a gold chip (replaces the fedora)
+      g.save(); g.translate(0.04 * r, -0.68 * r); g.rotate(-0.08);
+      g.beginPath(); g.ellipse(0.04 * r, 0, 1.2 * r, 0.2 * r, 0, 0, TAU); if (!R.mono) { g.strokeStyle = OUTLINE; g.lineWidth = R.ol * 2; g.stroke(); } g.fillStyle = R.mono || c.kh; g.fill(); g.restore();
+      polyR(g, r, [[-0.76, -0.76], [-0.84, -2.0], [0.84, -2.04], [0.8, -0.8]], c.kh, R);
+      if (R.mono) return;
+      g.fillStyle = c.kr; g.fillRect(-0.8 * r, -1.1 * r, 1.62 * r, 0.26 * r);
+      jpChip(g, -0.5 * r, -0.97 * r, 0.2 * r, 1, '#ffcf3a', R);
+      g.strokeStyle = 'rgba(0,0,0,0.12)'; g.lineWidth = 0.1 * r; g.beginPath(); g.moveTo(0.5 * r, -1.9 * r); g.lineTo(0.48 * r, -1.2 * r); g.stroke();
+    },
+    front(g, sk, p, c, R) { cosDrape(g, sk, c, R, c.kc, c.kt, '#ffcf3a'); },
+  },
 };
 
 // ---------------- registration: slot 5 for every fighter ----------------

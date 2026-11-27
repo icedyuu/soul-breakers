@@ -88,6 +88,10 @@ const STORY = {
     pre: [{ s: null, t: 'A woman in a surgical mask waits at the end of a foggy street.' }, { s: 'p', t: 'Excuse me... may I ask every fighter here something?' }],
     vs: [{ s: 'r', t: '...po... po... po...' }, { s: 'p', t: 'Oh my. So tall. Do you think I\'m pretty?' }, { s: 'r', t: '...po...' }],
     end: [{ s: null, t: 'Each defeated fighter got the same question. None knew the right answer.' }, { s: 'p', t: 'Do you think I\'m pretty...? Hehe. You\'ll tell me next time.' }, { s: null, t: 'Children still walk home in pairs. Just in case.' }] },
+  jackpot: { riv: 'cardmaster',
+    pre: [{ s: 'p', t: 'A tournament where the strongest fighters bet their souls? Now that is my kind of table.' }, { s: 'p', t: 'Place your bets, everyone. The house is open.' }],
+    vs: [{ s: 'r', t: 'You again. You use cards like toys, gambler.' }, { s: 'p', t: 'And you treat them like scripture. Cards are only paper. Luck is what you make of it.' }, { s: 'r', t: 'Then let\'s see whose hand holds up.' }, { s: 'p', t: 'Fold now and I\'ll let you keep your deck.' }],
+    end: [{ s: null, t: 'Every challenger sat at his table. Every one of them lost.' }, { s: 'p', t: 'Luck had nothing to do with it. I just knew the odds better than you.' }, { s: null, t: 'He flipped a golden coin into the night. It never came down on the wrong side.' }] },
 };
 const STORY_FALLBACK = {   // fighters added later without their own story
   pre: [{ s: 'p', t: 'The strongest fighters are gathering. I will face every one of them.' }],
