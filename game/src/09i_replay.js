@@ -141,7 +141,7 @@ const Replay = {
   // online soft resync: remember the adopted state so the replay adopts it at the same frame
   const rs = NetBattle.prototype.restoreSnap;
   NetBattle.prototype.restoreSnap = function (s) {
-    if (this.rec && !this.recDone) { const enc = netEnc(s); this.rec.snaps[this.rec.a.length] = enc; if (typeof SpecHost !== 'undefined') SpecHost.snap(this, this.rec.a.length, enc); }
+    if (this.rec && !this.recDone) { const enc = netEnc(s), K = this.rec.a.length; this.rec.snaps[K] = enc; for (const k in this.rec.h) if (+k > K - 3 * RP_HASH_EVERY) delete this.rec.h[k];   /* hashes of the diverged stretch */ if (typeof SpecHost !== 'undefined') SpecHost.snap(this, K, enc); }
     return rs.call(this, s);
   };
 }
@@ -357,7 +357,7 @@ class ReplaysScene {
     if (this.rpAdded) return; this.rpAdded = true;
     const m = this.menu, items = m.items;
     if (!items.some(i => i.id === 'replays')) { const at = items.findIndex(i => i.id === 'howto'); items.splice(at < 0 ? items.length - 1 : at, 0, { id: 'replays', label: 'REPLAYS', jp: 'リプレイ' }); }
-    const n = items.length; m.h = Math.min(m.h, n > 8 ? 37 : 40); m.gap = n > 8 ? 5 : m.gap; m.y = Math.min(m.y, H - 60 - n * (m.h + m.gap));
+    const n = items.length; if (n > 8) { m.h = Math.min(m.h, n > 9 ? 34 : 37); m.gap = n > 9 ? 4 : 5; } m.y = Math.min(m.y, H - 48 - n * (m.h + m.gap));
     const mu = m.update.bind(m);
     m.update = () => { const it = mu(); if (it && it.id === 'replays') { Sound.play('menuOk'); go(new ReplaysScene()); return null; } return it; };
   };
