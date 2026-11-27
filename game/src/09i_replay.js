@@ -30,9 +30,12 @@ function rpUnpack(s) {
   return { A, B };
 }
 // one input's resolved state this frame → netplay int (dirs, 6 held, 6 pressed)
-function rpEnc(inp) { return netEncode(inp.h < 0, inp.h > 0, inp.u, inp.d, a => !!inp.held[a], a => inp.pressF[a] === inp.f); }
+const RP_TAG_H = 1 << 17, RP_TAG_P = 1 << 18;   // 2v2 TAG button (not part of the online encoding)
+function rpEnc(inp) { return netEncode(inp.h < 0, inp.h > 0, inp.u, inp.d, a => !!inp.held[a], a => inp.pressF[a] === inp.f) | (inp.held.tag ? RP_TAG_H : 0) | (inp.pressF.tag === inp.f ? RP_TAG_P : 0); }
+function rpDecode(v, o) { netDecode(v, o); o.btn.held.tag = !!(v & RP_TAG_H); if (v & RP_TAG_P) o.btn.press.add('tag'); }
 function rpModeLabel(cfg) {
   if (cfg.online) return 'ONLINE';
+  if (cfg.tag) return '2V2 TAG' + (cfg.cpu ? ' · VS CPU' : '');
   if (cfg.cpu) return (cfg.cpu.arcade ? 'ARCADE' : 'VS CPU') + ' · ' + (CPU_LEVELS[cfg.cpu.level] ? CPU_LEVELS[cfg.cpu.level].name : '');
   return '1P VS 2P';
 }
@@ -172,7 +175,7 @@ class ReplayBattle extends Battle {
     const R = this.R, k = this.k;
     if (R.snaps && R.snaps[k]) NetBattle.prototype.restoreSnap.call(this, netDec(R.snaps[k]));
     const a = R.A[k], b = R.B[k];
-    netDecode(a, this.vin[0]); netDecode(b, this.vin[1]); RP_OK = !!(a & NET_OK);
+    rpDecode(a, this.vin[0]); rpDecode(b, this.vin[1]); RP_OK = !!(a & NET_OK);
     const restore = rpEnter(R.env);
     try { Battle.prototype.update.call(this); } finally { restore(); RP_OK = false; }
     this.k++;

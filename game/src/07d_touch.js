@@ -26,6 +26,7 @@ const TOUCH_BTNS_BASE = [
   { a: 'ult', label: 'ULT', x: 1186, y: 348, r: 40, col: '#ff8a1a' },
   { a: 'grab', label: 'GRAB', sub: 'M+H', x: 1226, y: 586, r: 35, col: '#ffb070' },
   { a: 'dash', label: 'DASH', sub: '« hold ◀', x: 820, y: 508, r: 39, col: '#6affea' },
+  { a: 'tag', label: 'TAG', sub: '2v2', x: 1080, y: 364, r: 35, col: '#ffffff', tagOnly: 1 },   // only in 2v2 TAG battles (09i_tag.js)
 ];
 const TOUCH_SIZES = { S: 0.85, M: 1, L: 1.14, XL: 1.28 }, TOUCH_ALPHA = { LOW: 0.55, MID: 1, HIGH: 1.5 };
 let TOUCH_BTNS = TOUCH_BTNS_BASE;
@@ -54,7 +55,7 @@ const TouchPad = {
   pos(t) { const r = canvas.getBoundingClientRect(); return { x: (t.clientX - r.left) * W / r.width, y: (t.clientY - r.top) * H / r.height }; },
   hit(p) {
     let best = null, bd = 1e9;
-    for (const b of TOUCH_BTNS) { const d = Math.hypot(p.x - b.x, p.y - b.y); if (d < b.r * 1.3 && d < bd) { bd = d; best = b; } }
+    for (const b of TOUCH_BTNS) { if (b.tagOnly && !(this.bt && this.bt.team)) continue; const d = Math.hypot(p.x - b.x, p.y - b.y); if (d < b.r * 1.3 && d < bd) { bd = d; best = b; } }
     return best;
   },
   inR: (p, r) => p.x >= r.x - 10 && p.x <= r.x + r.w + 10 && p.y >= r.y - 10 && p.y <= r.y + r.h + 10,
@@ -120,7 +121,7 @@ const TouchPad = {
     const st = this.live() ? this.stickDir() : { l: false, r: false, u: false, d: false };
     let dir = { l: st.l || K.has(kb.left), r: st.r || K.has(kb.right), u: st.u || K.has(kb.up), d: st.d || K.has(kb.down) };
     const pend = this.pend, fac = bt.p1.facing;
-    for (const a of ['light', 'medium', 'heavy', 'sp1', 'sp2', 'block']) if (KP.has(kb[a])) pend.add(a);
+    for (const a of ['light', 'medium', 'heavy', 'sp1', 'sp2', 'block', 'tag']) if (KP.has(kb[a])) pend.add(a);
     if (!this.q.length && this.req.length) this.q = this.motionFor(this.req.shift(), fac);
     if (this.q.length) {
       const fr = this.q.shift(), f = fr.d.includes('f'), b = fr.d.includes('b');
@@ -134,7 +135,7 @@ const TouchPad = {
       if (t.kind === 'aim' && t.fired) held.add(t.b.a);
       if (t.kind === 'btn' && t.b) { if (t.b.a === 'ult') { held.add('sp1'); held.add('sp2'); } else if (t.b.a === 'grab') { held.add('medium'); held.add('heavy'); } else held.add(t.b.a); }
     }
-    for (const a of ['light', 'medium', 'heavy', 'sp1', 'sp2', 'block']) {
+    for (const a of ['light', 'medium', 'heavy', 'sp1', 'sp2', 'block', 'tag']) {
       v.btn.held[a] = held.has(a) || K.has(kb[a]) || pend.has(a);
       if (pend.has(a)) v.btn.press.add(a);
     }
@@ -161,8 +162,9 @@ const TouchPad = {
     const P1 = bt.p1, held = this.v.btn.held;
     const aimOn = a => [...this.touches.values()].some(t => t.kind === 'aim' && t.b.a === a);
     for (const b of TOUCH_BTNS) {
+      if (b.tagOnly && !bt.team) continue;
       const on = b.a === 'ult' ? held.sp1 && held.sp2 : b.a === 'grab' ? held.medium && held.heavy : b.a === 'dash' ? false : held[b.a] || aimOn(b.a), fl = this.flash[b.a] > 0;
-      const ready = b.a !== 'ult' || P1.meter >= 100;
+      const ready = b.a === 'tag' ? tagReady(bt, 0) : b.a !== 'ult' || P1.meter >= 100;
       g.globalAlpha = A(on || fl ? 0.85 : ready ? 0.45 : 0.22);
       g.fillStyle = on || fl ? b.col : 'rgba(20,10,40,0.75)'; g.strokeStyle = b.col; g.lineWidth = 4;
       g.beginPath(); g.arc(b.x, b.y, b.r, 0, TAU); g.fill(); g.stroke();

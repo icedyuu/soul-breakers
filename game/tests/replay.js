@@ -7,16 +7,20 @@ const { open } = require('./harness');
   const { browser, page, errors } = await open();
   const ids = await page.evaluate(() => CHARS.map(c => c.id));
   let bad = 0;
-  for (let i = 0; i < N; i++) {
-    const p1 = ids[i % ids.length], p2 = ids[(i * 5 + 3) % ids.length];
-    const r = await page.evaluate(([p1, p2, i]) => {
+  const NT = +(process.env.SB_TAG ?? 4);   // + 2v2 TAG matches (P1 bot presses TAG now and then)
+  for (let i = 0; i < N + NT; i++) {
+    const p1 = ids[i % ids.length], p2 = ids[(i * 5 + 3) % ids.length], tag = i >= N ? [ids[(i * 3 + 7) % ids.length], ids[(i * 11 + 2) % ids.length]] : null;
+    const r = await page.evaluate(([p1, p2, i, tag]) => {
       Settings.roundTime = i % 3 === 0 ? 30 : 60; Settings.pixel = i % 2 === 0; Settings.fx = i % 4 === 1 ? 'LOW' : 'HIGH';
       const cfg = { mode: 'versus', stage: i % STAGES.length, p1: T.idx(p1), p2: T.idx(p2) };
-      if (i % 2 === 0) cfg.cpu = { level: i % 3, arcade: i % 4 === 2 };
+      if (i % 2 === 0) cfg.cpu = { level: i % 3, arcade: !tag && i % 4 === 2 };
+      if (tag) cfg.tag = { t: [[cfg.p1, T.idx(tag[0])], [cfg.p2, T.idx(tag[1])]], v: [[0, 0], [0, 0]] };
       go(new Battle(cfg));
       const bt = BT, bot1 = new CpuBot(bt, 2, 0), bot2 = cfg.cpu ? null : new CpuBot(bt, 1, 1);
-      if (bt.cpu) { const o = bt.cpu.tick.bind(bt.cpu); bt.cpu.tick = () => { bot1.tick(); o(); }; }
-      else { bt.cpu = { level: 0, tick() { bot1.tick(); bot2.tick(); } }; }
+      // test bots only make inputs: keep them off the seeded sim RNG (like the real CpuBot / touch pad)
+      const tagP = () => { if (tag && NetRng.orig() < 0.01) { bot1.v.btn.press.add('tag'); bot1.v.btn.held.tag = true; } else bot1.v.btn.held.tag = false; };
+      if (bt.cpu) { const o = bt.cpu.tick.bind(bt.cpu); bt.cpu.tick = () => { bot1.tick(); tagP(); o(); }; }
+      else bt.stepSim = function () { bot1.tick(); tagP(); bot2.tick(); return Battle.prototype.stepSim.call(this); };
       let f = 0;
       while (scene === bt && f < 30000) { Keys.down = new Set(); if (f % 97 === 5) Keys.pressed.add('Enter'); scene.update(); Keys.pressed.clear(); f++; if (f % 700 === 0) T.draw(); }
       const R = Replay.load()[0];
@@ -28,11 +32,12 @@ const { open } = require('./harness');
       const rb = new ReplayBattle(R2); go(rb); rb.spd = 4;
       let g = 0; while (!rb.ended && rb.k < rb.total && g < 40000) { scene.update(); g++; if (g % 500 === 0) T.draw(); }
       res.bad = rb.bad; res.k = rb.k; res.ended = rb.ended; res.rwins = rb.wins.join('-'); res.rhp = [rb.p1.hp, rb.p2.hp].map(Math.round).join('/');
+      res.tags = tag ? ' · P1 tag presses ' + R2.A.filter(v => v & (1 << 18)).length : '';
       return res;
-    }, [p1, p2, i]);
+    }, [p1, p2, i, tag]);
     const ok = !r.err && r.ended && r.bad === 0 && r.wins === r.rwins && r.hp === r.rhp && !errors.length;
     if (!ok) bad++;
-    console.log(`${ok ? 'ok ' : 'BAD'} ${p1} vs ${p2}: ${r.err || `${r.wins} hp ${r.hp} | replay ${r.rwins} hp ${r.rhp} · ${r.n} frames · ${(r.size / 1024).toFixed(1)} KB · hash fails ${r.bad}`}`);
+    console.log(`${ok ? 'ok ' : 'BAD'} ${p1}${tag ? '+' + tag[0] : ''} vs ${p2}${tag ? '+' + tag[1] : ''}: ${r.err || `${r.wins} hp ${r.hp} | replay ${r.rwins} hp ${r.rhp} · ${r.n} frames · ${(r.size / 1024).toFixed(1)} KB · hash fails ${r.bad}${r.tags || ''}`}`);
     if (errors.length) { console.log('ERR', errors.slice(0, 3)); errors.length = 0; }
   }
   // storage: max RP_MAX non-favourites, favourites kept
