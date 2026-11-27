@@ -14630,7 +14630,7 @@ class Battle {
     }
     if (this.hitstop > 0) { this.hitstop--; return; }
     if (this.slow > 0) { this.slow--; if (this.slow % 3 !== 0) { this.p1.animOnly(); this.p2.animOnly(); this.p1.T--; this.p2.T--; return; } }
-    if (FX.darkTarget > 0 && !this.cine && !this.freeze && !(this.p1.state === 'attack' && this.p1.move.ult) && !(this.p2.state === 'attack' && this.p2.move.ult)) FX.darkTarget = 0;
+    if (FX.darkTarget > 0 && !this.cine && !this.freeze && !(this.p1.state === 'attack' && this.p1.move && this.p1.move.ult) && !(this.p2.state === 'attack' && this.p2.move && this.p2.move.ult)) FX.darkTarget = 0;
     if (this.stage.update) this.stage.update(this);
     if (this.cine) {
       const c = this.cine; c.f++;

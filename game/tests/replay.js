@@ -10,7 +10,7 @@ const { open } = require('./harness');
   const NT = +(process.env.SB_TAG ?? 4);   // + 2v2 TAG matches (P1 bot presses TAG now and then)
   for (let i = 0; i < N + NT; i++) {
     const p1 = ids[i % ids.length], p2 = ids[(i * 5 + 3) % ids.length], tag = i >= N ? [ids[(i * 3 + 7) % ids.length], ids[(i * 11 + 2) % ids.length]] : null;
-    const r = await page.evaluate(([p1, p2, i, tag]) => {
+    const r = await page.evaluate(([p1, p2, i, tag]) => { try { return (() => {
       Settings.roundTime = i % 3 === 0 ? 30 : 60; Settings.pixel = i % 2 === 0; Settings.fx = i % 4 === 1 ? 'LOW' : 'HIGH';
       const cfg = { mode: 'versus', stage: i % STAGES.length, p1: T.idx(p1), p2: T.idx(p2) };
       if (i % 2 === 0) cfg.cpu = { level: i % 3, arcade: !tag && i % 4 === 2 };
@@ -34,7 +34,7 @@ const { open } = require('./harness');
       res.bad = rb.bad; res.k = rb.k; res.ended = rb.ended; res.rwins = rb.wins.join('-'); res.rhp = [rb.p1.hp, rb.p2.hp].map(Math.round).join('/');
       res.tags = tag ? ' · P1 tag presses ' + R2.A.filter(v => v & (1 << 18)).length : '';
       return res;
-    }, [p1, p2, i, tag]);
+    })(); } catch (e) { return { err: 'EXCEPTION ' + (e.stack || e).split('\n').slice(0, 4).join(' | ') + (BT ? ` · ${BT.p1.ch.id} ${BT.p1.state}/${BT.p1.moveKey} vs ${BT.p2.ch.id} ${BT.p2.state}/${BT.p2.moveKey}` : '') }; } }, [p1, p2, i, tag]);
     const ok = !r.err && r.ended && r.bad === 0 && r.wins === r.rwins && r.hp === r.rhp && !errors.length;
     if (!ok) bad++;
     console.log(`${ok ? 'ok ' : 'BAD'} ${p1}${tag ? '+' + tag[0] : ''} vs ${p2}${tag ? '+' + tag[1] : ''}: ${r.err || `${r.wins} hp ${r.hp} | replay ${r.rwins} hp ${r.rhp} · ${r.n} frames · ${(r.size / 1024).toFixed(1)} KB · hash fails ${r.bad}${r.tags || ''}`}`);
