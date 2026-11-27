@@ -199,10 +199,10 @@ class CharSelectScene {
     }
     if (!this.single) for (const pid of [1, 2]) if (this.ready[pid - 1] && UI.pBack(pid) && !(this.ready[0] && this.ready[1] && this.readyT > 30)) { this.ready[pid - 1] = false; Sound.play('menuBack'); }
     if (this.single && UI.back()) {
-      if (this.ready[1] && !this.cpu?.arcade) this.ready[1] = false; else if (this.ready[0]) this.ready[0] = this.ready[1] = false; else { go(this.cpu ? new CpuSetupScene() : new TitleScene()); return; }
+      if (this.ready[1] && !this.cpu?.arcade) this.ready[1] = false; else if (this.ready[0]) this.ready[0] = this.ready[1] = false; else { go(this.cpu?.surv ? new SurvivalMenuScene() : this.cpu ? new CpuSetupScene() : new TitleScene()); return; }
       Sound.play('menuBack');
     } else if (!this.single && Keys.pressed.has('Escape') && !this.ready[0] && !this.ready[1]) { Sound.play('menuBack'); go(new TitleScene()); return; }
-    if (this.ready[0] && this.ready[1]) { if (++this.readyT > 50) go(this.cpu?.arcade ? arcadeVS(arcadeCfg(this.cur[0], this.cpu.level)) : new StageSelectScene({ mode: this.mode, p1: this.cur[0], p2: this.cur[1], cpu: this.cpu })); } else this.readyT = 0;
+    if (this.ready[0] && this.ready[1]) { if (++this.readyT > 50) go(this.cpu?.surv ? survStart(this.cpu.surv, this.cur[0]) : this.cpu?.arcade ? arcadeVS(arcadeCfg(this.cur[0], this.cpu.level)) : new StageSelectScene({ mode: this.mode, p1: this.cur[0], p2: this.cur[1], cpu: this.cpu })); } else this.readyT = 0;
   }
   randRect() { const r = this.cardRect(CHARS.length - 1); return { x: W / 2 - 90, y: r.y + r.h + 22, w: 180, h: 36 }; }
   randomPick(s) {   // RANDOM: pick an open fighter (not the current one) and confirm it straight away
@@ -219,7 +219,7 @@ class CharSelectScene {
     gr = g.createLinearGradient(W, 0, W - 460, 0); gr.addColorStop(0, '#1a8aff'); gr.addColorStop(1, 'rgba(26,138,255,0)'); g.fillStyle = gr; g.fillRect(W - 460, 0, 460, H);
     g.restore();
     drawTitleText(g, 'SELECT YOUR FIGHTER', W / 2, 56, 42, '#ffd84a', '#ff2a3a');
-    g.font = `700 17px ${FONT_JP}`; g.textAlign = 'center'; g.textBaseline = 'alphabetic'; g.fillStyle = '#ffb3c6'; g.fillText(`キャラクター選択 — ${this.cpu ? (this.cpu.arcade ? 'ARCADE' : 'VS CPU') + ' · ' + CPU_LEVELS[this.cpu.level].name : this.mode.toUpperCase()}`, W / 2, 96);
+    g.font = `700 17px ${FONT_JP}`; g.textAlign = 'center'; g.textBaseline = 'alphabetic'; g.fillStyle = '#ffb3c6'; g.fillText(`キャラクター選択 — ${this.cpu ? (this.cpu.label || ((this.cpu.arcade ? 'ARCADE' : 'VS CPU') + ' · ' + CPU_LEVELS[this.cpu.level].name)) : this.mode.toUpperCase()}`, W / 2, 96);
     for (let s = 0; s < 2; s++) this.drawSide(g, s, t);
     this.drawGrid(g, t);
     for (let s = 0; s < 2; s++) {
@@ -267,9 +267,9 @@ class CharSelectScene {
       });
     }
     const x = left ? 34 : W - 34; g.textAlign = left ? 'left' : 'right';
-    const label = this.cpu ? (s ? 'CPU · ' + CPU_LEVELS[this.cpu.level].name : 'PLAYER') : this.single ? (s ? 'DUMMY' : 'PLAYER') : s ? 'PLAYER 2' : 'PLAYER 1';
+    const label = this.cpu ? (s ? (this.cpu.surv ? 'CPU' : 'CPU · ' + CPU_LEVELS[this.cpu.level].name) : 'PLAYER') : this.single ? (s ? 'DUMMY' : 'PLAYER') : s ? 'PLAYER 2' : 'PLAYER 1';
     g.font = `900 15px ${FONT_UI}`; g.textBaseline = 'alphabetic'; g.fillStyle = s ? P_COL[2] : P_COL[1]; g.fillText(label, x, 140);
-    if (hidden) { g.font = `italic 900 30px ${FONT_T}`; g.fillStyle = 'rgba(255,255,255,0.3)'; g.fillText(this.cpu?.arcade ? `${ARCADE_LEN} OPPONENTS` : 'WAITING…', x, 190); return; }
+    if (hidden) { g.font = `italic 900 30px ${FONT_T}`; g.fillStyle = 'rgba(255,255,255,0.3)'; g.fillText(this.cpu?.arcade ? (this.cpu.sideText || `${ARCADE_LEN} OPPONENTS`) : 'WAITING…', x, 190); return; }
     g.font = `italic 900 60px ${FONT_T}`; const nmW = g.measureText(ch.name).width;
     drawTitleText(g, ch.name, x, 184, Math.min(60, Math.floor(60 * 270 / nmW)), '#ffffff', ch.colors.accent, left ? 'left' : 'right');
     g.font = `700 19px ${FONT_JP}`; g.textBaseline = 'alphabetic'; strokeText(g, `${ch.jp} · ${ch.titleJp}`, x, 238, '#ffffff', OUTLINE, 4);
