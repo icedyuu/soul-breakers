@@ -543,3 +543,10 @@ The test scripts are in `tests/` inside the source zip. Run each with node and P
 - Pause menu (practice/training) → TRAINING OPTIONS: dummy stance/guard/action, new DUMMY THROW TECH, meter refill, hitboxes, reset (works with touch/controller; number keys 1–7 still work). Practice panel shows live/last combo with % of HP and best combo damage.
 - Buzzu hurtbox now normal size (h 170, crouch 112, air 136/160): standard combos hit him (46/54 bot combos vs 11/54 before; launcher air combos still miss him). Balance re-tuned: buzzu dmg 0.98, hp 960 (bot win rate ~55%, was 25% with the new box at the old values).
 - Tests: tests/combobook.js (menu flow, all pages draw, dummy tech, Buzzu hit, last combo).
+
+### Tutorial for new players (2026-11-27, `src/09i_tutorial.js`)
+- `TutorialBattle extends Battle` (mode 'practice', Kazuma vs Yoru dummy, stage 0): 10 lessons in `TUT_LESSONS` (move, jump, dash, L/M/H + sweep, block high/low with an attacking dummy, throw vs a blocking dummy, throw tech vs a throwing dummy, 5 specials, ultimate, first combo L→M→H→SP1). Steps tick off from real events (startMove keys, state changes, blocks in `resolveHit`, throw cine, `stats.techs`, `comboHits`).
+- Prompts follow the device in use (`tutNames`): keyboard keys from the binds, controller buttons from `Settings.padMap`, touch names (DASH, SP swipes, GRAB, ULT) + pulsing rings on the touch buttons. Tech window is 24 frames inside the tutorial (normal 10).
+- SKIP pill (click/tap) and pause menu SKIP LESSON / EXIT TUTORIAL. End screen: PRACTICE / 1P VS CPU / TUTORIAL AGAIN / MAIN MENU. Practice panel hidden while `bt.tutorial`.
+- Title: TUTORIAL item (NEW / ✔) and a one-time "NEW HERE?" offer on a fresh save (no mastery data, not logged in, no invite link; skipped under `navigator.webdriver` unless `window.SB_TUT_OFFER`). Saved flags `Settings.tutSeen`, `Settings.tutDone`.
+- Test: `tests/tutorial.js` (plays all lessons with keyboard, offer, skip, pause, controller + touch prompts; shots to `../shots_tut/`).
