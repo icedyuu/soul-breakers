@@ -149,7 +149,7 @@ function drawHUD(g, bt) {
   strokeText(g, secs, W / 2, 52, lowT && t % 30 < 15 ? '#ff4a4a' : '#ffffff', OUTLINE, 6);
   g.font = `700 12px ${FONT_JP}`; g.fillStyle = '#ffd84a'; g.fillText(bt.practice ? (bt.mode === 'training' ? '修行' : '練習') : `第${KANJI_NUM[Math.min(9, bt.round)]}戦`, W / 2, 86);
   drawComboHUD(g, bt);
-  if (bt.practice && !bt.cine) drawPracticePanel(g, bt);
+  if (bt.practice && !bt.cine && !bt.tutorial) drawPracticePanel(g, bt);
 }
 
 function drawPracticePanel(g, bt) {
