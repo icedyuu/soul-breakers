@@ -14,6 +14,7 @@ const BALANCE = {
   hachi:   { dmg: 1.2, hp: 1050 },
   kuchi:   { dmg: 1.0 },
   jackpot: { dmg: 1.08, hp: 1020 },
+  haze:    { dmg: 1.25, hp: 1050 },
   yoru:    { dmg: 1.08 },
   yamika:  { dmg: 1.12 },
   kanae:   { dmg: 1.12 },

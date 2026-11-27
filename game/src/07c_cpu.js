@@ -48,7 +48,7 @@ class CpuBot {
     });
     if (this.obs.length > 40) this.obs.shift();
   }
-  seen() { return this.obs[Math.max(0, this.obs.length - 1 - this.L.react)]; }
+  seen() { const o = this.me.opp, ex = o && o.ch.cpuBlind ? o.ch.cpuBlind(o, this.me) : 0; return this.obs[Math.max(0, this.obs.length - 1 - this.L.react - ex)]; }   // cpuBlind: extra reaction frames (Haze's smoke)
   // --- output ---
   apply(fr) {
     const me = this.me, f = me.facing, v = this.v;

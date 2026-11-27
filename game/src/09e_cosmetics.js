@@ -14,6 +14,7 @@ const TITLE_TOP = {
   yamika: ['DARK FLAME MASTER', '黒炎の支配者'], lunaria: ['ETERNAL NIGHT', '永遠の夜'], honored: ['THE STRONGEST', '最強'], hollow: ['THE LAST REMNANT', '最後の残滓'],
   kanae: ['THORN QUEEN', '棘の女王'], tokine: ['NIGHTMARE OF TIME', '時の悪夢'], aimi: ['FOREVER YOURS', '永遠にあなたのもの'],
   hachi: ['EIGHT FEET OF DREAD', '八尺の恐怖'], kuchi: ['AM I PRETTY?', '私、きれい？'], jackpot: ['THE HOUSE ALWAYS WINS', '胴元は必ず勝つ'],
+  haze: ['ZERO VISIBILITY', '視界ゼロ'],
 };
 function masteryTitle(ch, lv) { lv = clamp(lv | 0, 1, 10); return lv >= 10 ? (TITLE_TOP[ch.id] || ['SOUL BREAKER', '魂砕き']) : TITLE_GEN[lv - 1]; }
 
@@ -259,6 +260,12 @@ cosAdd('jackpot', { c: '#ffcf3a', c2: '#c8102e', pt: 'spark', snd: 'coin' }, P =
     mk('SHUFFLE UP', 'シャッフル', TPL.poses(P, ['fan_w', ['fan', F => { CFX.burst(F, P.c, 14, 8, 150); CFX.snd('cardFlick'); }], 'tip_hat'], 'intro', { step: 30 }), { line: 'Cut the deck. Let\'s play.' })],
   w: [mk('HOUSE WINS', '胴元の勝ち', TPL.poses(P, ['coin_flip', ['coin_catch', F => { CFX.ring(F, P.c, 120, 160, 26, 5); CFX.snd('coin'); }], 'tip_hat'], null, { step: 34 }), { line: 'The house always wins.' }),
     mk('LUCKY SEVEN', 'ラッキーセブン', TPL.poses(P, ['snap_w', ['celebrate', F => { CFX.burst(F, P.c, 18, 10, 200); CFX.snd('jackpot'); }], 'tip_hat'], null, { step: 28 }), { loop: [ambient('spark', P.c, 14, 60, 220, 2)] })],
+}));
+cosAdd('haze', { c: '#4ff0e0', c2: '#8a5cc8', pt: 'smoke', snd: 'exhale' }, P => ({
+  i: [mk('LIGHT UP', '一服', TPL.poses(P, ['light', ['drag', F => CFX.snd('flick')], ['exhale', F => { hzExhale(F, 10, null, 1, 10); CFX.snd('exhale'); }], 'stance'], null, { step: 30 }), { line: 'Ugh. Fine. Let\'s get this over with.' }),
+    mk('OUT OF THE FOG', '霧の中から', TPL.warp(P, 'glide', 'stance', { snd: 'poof', mid2: 'pocket' }), { line: '...you were waiting for me? Weird.' })],
+  w: [mk('SMOKE RINGS', '煙の輪', TPL.poses(P, ['drag', ['exhale', F => { CFX.ring(F, '#c8c4d8', 190, 70, 30, 4); CFX.ring(F, '#c8c4d8', 205, 50, 36, 3); CFX.snd('exhale'); }], 'lean'], null, { step: 34 }), { line: 'Anyway...' }),
+    mk('NAP TIME', '昼寝', TPL.poses(P, ['pocket', ['sitdown', F => { CFX.dust(F, 10); CFX.snd('poof'); }], 'sitdown'], null, { step: 30 }), { loop: [[40, 220, 14, F => hzExhale(F, 2, null, 0.5, 8)]] })],
 }));
 cosAdd('kuchi', { c: '#e0203a', c2: '#ffb4c0', pt: 'spark', snd: 'snip' }, P => ({
   i: [mk('EXCUSE ME', 'すみません', TPL.walk(P, null, 'touch', {}), { line: 'Excuse me… may I ask you something?' }),
