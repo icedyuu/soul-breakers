@@ -13,7 +13,7 @@ const TITLE_TOP = {
   saint: ['BLOOD QUEEN', '血の女王'], borgar: ['MOUNTAIN KING', '山の王'], buzzu: ['GOODEST BOY', '最高の子'], reika: ['ABSOLUTE RULER', '絶対支配者'],
   yamika: ['DARK FLAME MASTER', '黒炎の支配者'], lunaria: ['ETERNAL NIGHT', '永遠の夜'], honored: ['THE STRONGEST', '最強'], hollow: ['THE LAST REMNANT', '最後の残滓'],
   kanae: ['THORN QUEEN', '棘の女王'], tokine: ['NIGHTMARE OF TIME', '時の悪夢'], aimi: ['FOREVER YOURS', '永遠にあなたのもの'],
-  hachi: ['EIGHT FEET OF DREAD', '八尺の恐怖'], kuchi: ['AM I PRETTY?', '私、きれい？'],
+  hachi: ['EIGHT FEET OF DREAD', '八尺の恐怖'], kuchi: ['AM I PRETTY?', '私、きれい？'], jackpot: ['THE HOUSE ALWAYS WINS', '胴元は必ず勝つ'],
 };
 function masteryTitle(ch, lv) { lv = clamp(lv | 0, 1, 10); return lv >= 10 ? (TITLE_TOP[ch.id] || ['SOUL BREAKER', '魂砕き']) : TITLE_GEN[lv - 1]; }
 
@@ -253,6 +253,12 @@ cosAdd('hachi', { c: '#dfe6ff', c2: '#ffffff', pt: 'spark', snd: 'po' }, P => ({
     mk('THE WATCHER', '見つめる者', TPL.poses(P, ['look_down', ['look_up', F => { CFX.ring(F, P.c, 150, 160, 30, 3); CFX.snd('po'); }], 'tilt'], 'intro', { step: 40 }))],
   w: [mk('PO… PO…', 'ぽ…ぽ…', TPL.poses(P, ['victory', ['tilt', F => CFX.snd('po')], 'victory'], null, { step: 44 }), { line: '…po… po…' }),
     mk('NOWHERE TO HIDE', '逃げ場はない', TPL.poses(P, ['raise', ['reach', F => { CFX.ring(F, P.c, 140, 200, 30, 4); CFX.snd('hachiReach'); }], 'tilt'], null, { step: 36 }), { loop: [ambient('spark', P.c, 16, 60, 220, 2)] })],
+}));
+cosAdd('jackpot', { c: '#ffcf3a', c2: '#c8102e', pt: 'spark', snd: 'coin' }, P => ({
+  i: [mk('HIGH STAKES', '大勝負', TPL.walk(P, null, 'tip_hat', {}), { line: 'Place your bets. The house is open.' }),
+    mk('SHUFFLE UP', 'シャッフル', TPL.poses(P, ['fan_w', ['fan', F => { CFX.burst(F, P.c, 14, 8, 150); CFX.snd('cardFlick'); }], 'tip_hat'], 'intro', { step: 30 }), { line: 'Cut the deck. Let\'s play.' })],
+  w: [mk('HOUSE WINS', '胴元の勝ち', TPL.poses(P, ['coin_flip', ['coin_catch', F => { CFX.ring(F, P.c, 120, 160, 26, 5); CFX.snd('coin'); }], 'tip_hat'], null, { step: 34 }), { line: 'The house always wins.' }),
+    mk('LUCKY SEVEN', 'ラッキーセブン', TPL.poses(P, ['snap_w', ['celebrate', F => { CFX.burst(F, P.c, 18, 10, 200); CFX.snd('jackpot'); }], 'tip_hat'], null, { step: 28 }), { loop: [ambient('spark', P.c, 14, 60, 220, 2)] })],
 }));
 cosAdd('kuchi', { c: '#e0203a', c2: '#ffb4c0', pt: 'spark', snd: 'snip' }, P => ({
   i: [mk('EXCUSE ME', 'すみません', TPL.walk(P, null, 'touch', {}), { line: 'Excuse me… may I ask you something?' }),

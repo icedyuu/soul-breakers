@@ -259,7 +259,7 @@ class Battle {
       const c = this.cine; c.f++;
       const done = c.fn(c.A, c.D, c.f, c);
       c.A.animOnly(); c.D.animOnly();
-      if (done || c.f > 400) this.endCine();
+      if (done || c.f > (c.maxF || 400)) this.endCine();   // maxF: longer cinematics (Jackpot's MAX ending)
     } else {
       this.p1.update(); this.p2.update();
       this.checkHits();

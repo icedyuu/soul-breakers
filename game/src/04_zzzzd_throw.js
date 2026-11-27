@@ -13,7 +13,7 @@ const THROW_STYLE = {
   saint: ['spin', 'CRIMSON WALTZ'], borgar: ['slam', 'ANVIL DROP'], buzzu: ['knee', 'CHAIN RIP'], reika: ['knee', 'ICE KNEE'],
   yamika: ['blast', 'SEALED PALM'], lunaria: ['toss', 'MOON TOSS'], honored: ['blast', 'RED REPEL'], hollow: ['slam', 'HOLLOW CRUSH'],
   kanae: ['knee', 'UGLY KNEE'], tokine: ['spin', 'CLOCK HAND'], aimi: ['toss', 'LOVE TOSS'], hachi: ['slam', 'TALL SHADOW'],
-  kuchi: ['knee', 'SNIP & KICK'],
+  kuchi: ['knee', 'SNIP & KICK'], jackpot: ['spin', 'HOUSE SPIN'],
 };
 function throwMove() {
   return {

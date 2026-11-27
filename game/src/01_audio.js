@@ -197,6 +197,17 @@ const Sound = (() => {
   };
   // extra synth layers that can sit under a sample (AUDIO_FILES.sfx[name].syn)
   const L = {
+    // JACKPOT (gambler): chips, dice, cards, coin, roulette, revolver click, jackpot fanfare, bad luck
+    coin(v = 1) { osc('sine', 2637, 2600, 0.35, 0.09 * v); osc('sine', 3951, 3900, 0.25, 0.05 * v, 0.01); osc('triangle', 1760, 1760, 0.12, 0.05 * v, 0.02); },
+    chips() { for (let i = 0; i < 4; i++) { osc('square', 2400 + i * 180, 2100, 0.015, 0.07, i * 0.035); noise(0.025, 0.25, 'bandpass', 4200, 3000, 3, i * 0.035); } },
+    dice() { for (let i = 0; i < 3; i++) { osc('square', 900 - i * 120, 700, 0.02, 0.1, i * 0.06); noise(0.03, 0.3, 'bandpass', 1800, 1200, 2, i * 0.06); } },
+    cardFlick() { noise(0.06, 0.45, 'highpass', 3000, 7000, 1.5); osc('triangle', 1900, 900, 0.05, 0.06); },
+    rTick() { osc('square', 3000, 2800, 0.012, 0.06); noise(0.015, 0.2, 'highpass', 5000, 6000, 3); },
+    click() { osc('square', 1500, 1200, 0.02, 0.16); noise(0.03, 0.3, 'bandpass', 2600, 1800, 3); osc('sine', 300, 250, 0.4, 0.04, 0.1); },
+    snap() { noise(0.035, 0.7, 'bandpass', 2600, 2200, 2); osc('sine', 1800, 900, 0.03, 0.12); },
+    slot() { for (let i = 0; i < 8; i++) osc('square', 660 + (i % 4) * 220, 660 + (i % 4) * 220, 0.05, 0.05, i * 0.06); },
+    jackpot(v = 1) { [523, 659, 784, 1047, 1319, 1568].forEach((f, i) => { osc('square', f, f, 0.12, 0.06 * v, i * 0.07); osc('sine', f * 2, f * 2, 0.3, 0.04 * v, i * 0.07); }); [2093, 2637, 3136].forEach((f, i) => osc('sine', f, f, 0.8, 0.05 * v, 0.45 + i * 0.05)); },
+    badLuck() { [392, 370, 349, 262].forEach((f, i) => osc('triangle', f, f * 0.97, i === 3 ? 0.5 : 0.16, 0.12, i * 0.17)); },
     sub(str = 1) { osc('sine', 120 + 25 * str, 36, 0.08 + 0.05 * str, 0.35 + 0.12 * str); },
     boom() { osc('sine', 70, 22, 0.9, 0.7, 0, 0.4); noise(0.6, 0.35, 'lowpass', 900, 60, 0.7, 0, 0.5); },
     tail(v = 0.25) { noise(0.5, v, 'lowpass', 2500, 120, 0.6, 0, 0.9); },
@@ -204,7 +215,7 @@ const Sound = (() => {
   };
   // ultimate start: one shared riser + an element "colour" per fighter
   const ULT_FLAVOR = { kazuma: 'fire', saint: 'holy', sera: 'storm', goro: 'earth', yoru: 'void', frogs: 'water', conductor: 'steel', cardmaster: 'rune', nue: 'beast',
-    borgar: 'earth', buzzu: 'steel', reika: 'blood', yamika: 'void', lunaria: 'holy', honored: 'void', hollow: 'blood', remnant: 'blood', fragment: 'void', kanae: 'steel', tokine: 'time', aimi: 'love', hachi: 'po', kuchi: 'cut' };
+    borgar: 'earth', buzzu: 'steel', reika: 'blood', yamika: 'void', lunaria: 'holy', honored: 'void', hollow: 'blood', remnant: 'blood', fragment: 'void', kanae: 'steel', tokine: 'time', aimi: 'love', hachi: 'po', kuchi: 'cut', jackpot: 'gold' };
   S.ultStart = (id) => {
     riser(0.85, 90, 520, 0.12);
     osc('sine', 45, 90, 0.9, 0.35, 0, 0.3);
@@ -224,6 +235,7 @@ const Sound = (() => {
     else if (fl === 'love') { osc('sine', 62, 38, 0.18, 0.6, 0.2); osc('sine', 58, 34, 0.2, 0.5, 0.45); osc('sine', 1760, 440, 1.0, 0.06, 0.5, 0.9); noise(0.7, 0.2, 'bandpass', 500, 3000, 3, 0.6, 0.7); }
     else if (fl === 'po') { noise(1.6, 0.14, 'bandpass', 380, 900, 0.8, 0.1, 0.8); S.po(2, 0.8); }
     else if (fl === 'cut') { for (let i = 0; i < 3; i++) { osc('square', 3400, 2700, 0.018, 0.08, 0.5 + i * 0.12); noise(0.04, 0.3, 'highpass', 5200, 8000, 2, 0.5 + i * 0.12); } osc('sine', 62, 38, 0.18, 0.5, 0.2); }
+    else if (fl === 'gold') { S.coin(1.2); [523, 784, 1047, 1568].forEach((f, i) => osc('square', f, f, 0.14, 0.05, 0.5 + i * 0.08)); }
     else if (fl === 'time') { for (let i = 0; i < 6; i++) osc('square', 2100 - i * 120, 1900 - i * 120, 0.02, 0.1, i * 0.12, 0.6); osc('sine', 196, 194, 1.4, 0.18, 0.7, 0.9); }
   };
   function play(name, ...a) {

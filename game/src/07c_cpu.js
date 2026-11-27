@@ -99,6 +99,7 @@ class CpuBot {
   can(k) {
     const me = this.me, m = me.ch.moves[k]; if (!m) return false;
     if (m.virtual) return !(me.cd[k] > 0);
+    if (m.cpuOk && !m.cpuOk(me)) return false;   // optional per-move bot condition (e.g. Jackpot only bets with LUCK)
     return me.canUse(k, !me.onGround, 0);
   }
   doMove(k) { this.push(...this.macro(k)); }

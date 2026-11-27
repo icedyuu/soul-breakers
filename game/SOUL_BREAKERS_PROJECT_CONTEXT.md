@@ -111,7 +111,7 @@ Combo trials: `{ name, notation, seq:[moveKeys], pre?:[...] }` — checked by th
 ### Cinematics
 `BT.startCine(A, D, CINE.x, {zoom})`; `CINE.x(A, D, f, c)` runs per frame, uses `BT.scriptHit`, `forcePose`, `hidden`, `FX.darkTarget`, and returns `true` when finished (`BT.release(D, vx, vy)`).
 
-## 5. Roster (21 fighters)
+## 5. Roster (22 fighters)
 
 | # | Name | Title | Archetype | HP | Style |
 |---|---|---|---|---|---|
@@ -136,6 +136,7 @@ Combo trials: `{ name, notation, seq:[moveKeys], pre?:[...] }` — checked by th
 | 19 | AIMI アイミ | The Devoted Gaze 執愛の瞳 | Rushdown / Guns | 960 | **chibi** |
 | 20 | HACHISHAKUSAMA 八尺様 | The Eight-Foot Tall Woman 八尺の女 | Zoner / Space Control | 1050 | **chibi** (tall) |
 | 21 | KUCHISAKE-ONNA 口裂け女 | The Slit-Mouth Woman 口裂けの女 | Rushdown / Mix-up | 1000 | **chibi** |
+| 22 | JACKPOT ジャックポット | The Gambler 賭博師 | Technical / Trickster | 960 | **chibi** |
 
 ### Signature specials & ultimates
 - **Kazuma:** Blazing Knuckle → Second Blaze, Burst Shot, Iron Wall (counter), Rising Flame, Flame Cyclone (↓→SP2), Earth Breaker, Burning Hammer · Ult **Hundred Inferno Fists**.
@@ -154,6 +155,7 @@ Combo trials: `{ name, notation, seq:[moveKeys], pre?:[...] }` — checked by th
 - **Kanae / Tokine:** see §7j.
 - **Aimi:** see §7n.
 - **Hachishakusama / Kuchisake-onna:** see §7q.
+- **Jackpot:** see §7s.
 
 All characters have 3–7 combo trials (74 total).
 
@@ -447,6 +449,19 @@ Beni asked for two fighters from public-domain Japanese urban legends; the real 
 - Animation: `CINE.throwT` with 5 templates (toss / slam / knee / blast / spin), per-fighter name + accent colour + own heavy pose (`THROW_STYLE`). Damage 100 × fighter damage multiplier. Deterministic (no Math.random in sim).
 - CPU: throws when close and the foe stands/blocks (`throw` per level), guesses a tech (`tech`: 8 / 30 / 50 %).
 - Engine hooks: `Battle.endCine` takes `cine.landT`; `checkHits` skips throws vs block/wall/burst; Move lists, HOW TO PLAY (commands + advanced) mention it. Test: `tests/throw.js` (every fighter: idle, block, tech, whiff, jump, contact range, back throw, lenient press, clash, CPU), screenshots `tests/throwshots.js`.
+
+## 7s. Jackpot — The Gambler (`04_zzzz9e_jackpot.js`, `04_zzzz9f_jackpot_cine.js`, 2026-11-27)
+
+Original fighter #22 (Beni's spec): arrogant supernatural casino gambler. Chibi, dark suit with open jacket (red waistcoat, white shirt, red tie, gold-edged lapels), fedora with an ace of spades in the red band, wine-dark slicked hair with a gold lock, black gloves with a gold diamond, red-soled platform shoes. Props in hand come from the palette key `prop` (chip / card / fan / dice / coin / gun / stack), set in `tick` from state (draw-only); expressions `ex` smug / grin / shock / cold.
+- **LUCK** `F.luck` 0–100, all numbers in **`JP_CFG`** (gains per hit, decay, odds per ability, costs, dice/card/house damage, Double or Nothing buffs, All In thresholds). Gains: normals +2/3/4, specials +5, projectiles +3, +1 from the 3rd combo hit. Drains 0.03/f after 8 s without a gain. Starts at 20 each round.
+- **Gambles** `jpGamble(F, key)` → bad / normal / good / jackpot. `jpOdds`: base odds per ability, −bad / +good / +jackpot per LUCK point, hidden **pity** (`F.pity`, +1 per bad roll, reset by a jackpot), **HOT** pips (`F.hot` 0–3 from dice 6, DoN WIN, Royal Flush: +5% jackpot each). **100 LUCK = guaranteed jackpot** on the next gamble (spends it). Rolls use `Math.random()` inside the sim (= seeded NetRng online / in replays). Tests force a tier with `F.jpForce`.
+- SP1 **Loaded Dice** (die projectile, face rolled at the throw, shown on contact: 1–2 / 3–4 / 5 / 6 crit KD / golden 6 launch) · ↓→SP1 **Royal Flush** (5 homing cards; face cards hit harder; Royal Flush = giant card `jpRoyal` after 3 card hits, launches; jackpot = 7 golden cards) · ↓←SP1 **Double or Nothing** (coin flip: WIN +15% dmg + haste 6 s, LOSE −15% dmg, takes +15% (`defMul`) + slump `donLose`, JACKPOT ALL ACES +30% + more haste 7 s) · SP2 **Russian Roulette** (36 f aim with red laser + reticle, interruptible; BANG = unblockable chest-high bullet (crouch/jump it), *click* `rrClick` = 46 f open, jackpot `rrExec` = 3 golden shots; −15 LUCK) · ↓→SP2 **House Always Wins** (`jpWheel` trap under the foe, 50 f spin then RED launch / BLACK 5 hits / GREEN narrow KD / cold BLACK / golden JACKPOT 440 px; −10 LUCK) · ↓↓SP2 **All In** (spends all LUCK: <30 `allInLow`, <70 `allInMid`, <100 `allInHigh`, 100 `allInMax` → `CINE.jpAllIn` 7-7-7 slot).
+- Ult **THE FINAL BET** `CINE.jackpot`: coin flip close-up → casino dimension (`jpCineBg`: pillars, chandeliers, slot rows, felt) → both seated at a poker table (`JP_SIT` object pose for any opponent) → cards + dice hit → giant roulette wheel behind him, camera follows the ball into the JACKPOT pocket → snap, golden explosion → gloves. **MAX** (100 LUCK on hit, spends it): letterbox, double wheel, 7-7-7 reels, giant coin, coin rain, special victory pose (`F.jpWinMax`). 420 / 500 frames — engine: `cine.maxF` overrides the 400-frame cine cap (07_battle.js).
+- HUD: `xpPanel` LUCK meter with % label, band COLD / WARM / HOT / JACKPOT READY, live odds text, HOT pips, buff timer, golden shimmer at max, die icon.
+- Engine hooks added: `move.cpuOk(F)` (07c_cpu.js `can`: the bot only bets with LUCK), `cine.maxF`. Sounds (01_audio.js): coin, chips, dice, cardFlick, rTick, click, snap, slot, jackpot, badLuck; ult flavour `gold`.
+- Skins: WHITE TUXEDO, EMERALD TABLE, ROYAL FLUSH, GOLDEN JACKPOT (LV10 glow), arcade **HIGH ROLLER** (white suit, top hat instead of the fedora, black mantle). Cosmetics: intros HIGH STAKES / SHUFFLE UP, wins HOUSE WINS / LUCKY SEVEN, LV10 title THE HOUSE ALWAYS WINS. Story rival: Fudagami. Locked for new players like every non-original.
+- Tests: `mech_jackpot.js` (luck, odds, every tier of every gamble, max-LUCK jackpot, DoN, roulette interrupt/crouch/click, house dodge, All In tiers, both ult endings, skins, seeded determinism), `jackpot_look.js`, `jackpot_battle.js` (screenshots).
+- Known: Hachishakusama's ult script runs to f452 but the old 400-frame cap ends it early (pre-existing; can now be fixed with `c.maxF`).
 
 ## 8. History of requests (in order)
 
