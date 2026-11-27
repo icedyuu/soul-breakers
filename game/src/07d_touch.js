@@ -55,7 +55,7 @@ const TouchPad = {
   pos(t) { const r = canvas.getBoundingClientRect(); return { x: (t.clientX - r.left) * W / r.width, y: (t.clientY - r.top) * H / r.height }; },
   hit(p) {
     let best = null, bd = 1e9;
-    for (const b of TOUCH_BTNS) { if (b.tagOnly && !(this.bt && this.bt.team)) continue; const d = Math.hypot(p.x - b.x, p.y - b.y); if (d < b.r * 1.3 && d < bd) { bd = d; best = b; } }
+    for (const b of TOUCH_BTNS) { if (b.tagOnly && !touchTagBt(this.bt)) continue; const d = Math.hypot(p.x - b.x, p.y - b.y); if (d < b.r * 1.3 && d < bd) { bd = d; best = b; } }
     return best;
   },
   inR: (p, r) => p.x >= r.x - 10 && p.x <= r.x + r.w + 10 && p.y >= r.y - 10 && p.y <= r.y + r.h + 10,
@@ -162,9 +162,9 @@ const TouchPad = {
     const P1 = bt.p1, held = this.v.btn.held;
     const aimOn = a => [...this.touches.values()].some(t => t.kind === 'aim' && t.b.a === a);
     for (const b of TOUCH_BTNS) {
-      if (b.tagOnly && !bt.team) continue;
+      if (b.tagOnly && !touchTagBt(bt)) continue;
       const on = b.a === 'ult' ? held.sp1 && held.sp2 : b.a === 'grab' ? held.medium && held.heavy : b.a === 'dash' ? false : held[b.a] || aimOn(b.a), fl = this.flash[b.a] > 0;
-      const ready = b.a === 'tag' ? tagReady(bt, 0) : b.a !== 'ult' || P1.meter >= 100;
+      const ready = b.a === 'tag' ? touchTagReady(bt) : b.a !== 'ult' || P1.meter >= 100;
       g.globalAlpha = A(on || fl ? 0.85 : ready ? 0.45 : 0.22);
       g.fillStyle = on || fl ? b.col : 'rgba(20,10,40,0.75)'; g.strokeStyle = b.col; g.lineWidth = 4;
       g.beginPath(); g.arc(b.x, b.y, b.r, 0, TAU); g.fill(); g.stroke();

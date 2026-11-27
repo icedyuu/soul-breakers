@@ -509,13 +509,13 @@ if (Cloud.on) setTimeout(() => Cloud.refresh(), 800);
     return r;
   };
   Net.sendAcct = function () { this.acctSent = true; this.send({ t: 'acct', u: Cloud.on ? Cloud.name : null, r: Cloud.on && Cloud.me ? Cloud.me.rating : 0 }); };
-  Net.ranked = () => !!(Cloud.on && Net.rival);
+  Net.ranked = () => !!(Cloud.on && Net.rival) && !Net.tagMode;   // 2v2 TAG matches are never ranked (09i_tag.js)
   const nsm = netStartMatch;
-  netStartMatch = function (cfg, m) { Net.rankKey = `${Net.code}-${cfg.seed}-${m}`; Net.rankedNow = Net.ranked(); return nsm(cfg, m); };
+  netStartMatch = function (cfg, m) { Net.rankKey = `${Net.code}-${cfg.seed}-${m}`; Net.tagNow = !!cfg.tag; Net.rankedNow = Net.ranked() && !cfg.tag; return nsm(cfg, m); };
 
   const NR = NetResultsScene.prototype, nu = NR.update, nd = NR.draw;
   NR.rankInit = function () {
-    if (this.rk) return; this.rk = { s: Net.rankedNow ? 'sending' : Cloud.on ? 'rivalguest' : Cloud.enabled() ? 'guest' : 'off' };
+    if (this.rk) return; this.rk = { s: Net.rankedNow ? 'sending' : Net.tagNow ? 'tag' : Cloud.on ? 'rivalguest' : Cloud.enabled() ? 'guest' : 'off' };
     if (!Net.rankedNow) return;
     const key = Net.rankKey, me = this.bt.lp ? this.bt.p2 : this.bt.p1, rk = this.rk;
     const done = r => { Object.assign(rk, r, { s: r.status }); if (r.status === 'rated') { Sound.play('menuOk'); Cloud.refresh(); } };
@@ -531,7 +531,7 @@ if (Cloud.on) setTimeout(() => Cloud.refresh(), 800);
       sending: 'RANKED · sending result…', pending: 'RANKED · waiting for your rival’s result…',
       rated: `RANKED · ${k.delta >= 0 ? '+' : ''}${k.delta} → ${k.rating} · ${tierOf(k.rating).name}`, mismatch: 'Not ranked: the two results did not match.',
       limit: 'Not ranked: max 5 ranked matches per day vs the same player.', unranked: 'Not ranked.', unknown: 'Not ranked.',
-      error: k.err || 'Ranked result could not be sent.', guest: 'Log in (ACCOUNT on the title screen) to play ranked.', rivalguest: 'Unranked: your rival is not logged in.',
+      error: k.err || 'Ranked result could not be sent.', guest: 'Log in (ACCOUNT on the title screen) to play ranked.', rivalguest: 'Unranked: your rival is not logged in.', tag: 'Unranked: 2 VS 2 TAG matches don’t count for the rankings.',
     }[s] || '';
     g.save(); g.translate(330, 178); g.rotate(-0.08);
     g.font = `italic 900 ${s === 'rated' ? 30 : 18}px ${s === 'rated' ? FONT_T : FONT_UI}`; g.textAlign = 'center'; g.textBaseline = 'middle';
@@ -564,7 +564,7 @@ if (Cloud.on) setTimeout(() => Cloud.refresh(), 800);
     SD.call(this, g);
     if (!Cloud.enabled()) return;
     const mr = Cloud.me && Cloud.me.rating;
-    const txt = Net.ranked() ? `RANKED  ·  ${Cloud.name}${mr ? ` (${tierOf(mr).name} ${mr})` : ''} vs ${Net.rival}${Net.rivalR ? ` (${tierOf(Net.rivalR).name} ${Net.rivalR})` : ''}` : Cloud.on ? 'UNRANKED  ·  rival not logged in' : 'UNRANKED  ·  log in for ranked';
+    const txt = Net.ranked() ? `RANKED  ·  ${Cloud.name}${mr ? ` (${tierOf(mr).name} ${mr})` : ''} vs ${Net.rival}${Net.rivalR ? ` (${tierOf(Net.rivalR).name} ${Net.rivalR})` : ''}` : Net.tagMode ? 'UNRANKED  ·  2 VS 2 TAG' : Cloud.on ? 'UNRANKED  ·  rival not logged in' : 'UNRANKED  ·  log in for ranked';
     g.save(); g.font = `900 15px ${FONT_UI}`; g.textAlign = 'center'; g.textBaseline = 'middle';
     const w = g.measureText(txt).width + 28; g.fillStyle = 'rgba(8,4,20,0.85)'; g.fillRect(W / 2 - w / 2, H - 62, w, 24);
     g.fillStyle = Net.ranked() ? '#ffd84a' : '#cfc4ee'; g.fillText(txt, W / 2, H - 50); g.restore();

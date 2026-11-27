@@ -2,7 +2,7 @@
 // Two fighters per side, one on the field. TAG (P1 E / P2 U, controller stick click, touch TAG)
 // swaps in the partner, who jumps in with an air heavy (tag-in attack). The benched fighter
 // slowly recovers part of the damage taken. A KO'd point fighter is replaced by the partner;
-// the round ends when a whole team is down. Local VERSUS and VS CPU (single match); not online.
+// the round ends when a whole team is down. Local VERSUS, VS CPU (single match) and ONLINE (host picks the mode).
 // Battle cfg: cfg.tag = { t: [[p1a, p1b], [p2a, p2b]], v: [[v, v], [v, v]] } (CHARS indices / variants).
 // The fighter on the field is a fresh Fighter every time it tags in, so forms, buffs, summons and
 // cooldowns of the fighter who left are dropped; their projectiles and marks on the opponent are cleared.
@@ -35,7 +35,7 @@ function tagTeamRatio(bt, i) {
   const BP = Battle.prototype;
   const nr = BP.newRound;
   BP.newRound = function (first) {
-    const c = this.cfg, on = c.tag && !c.online && c.mode === 'versus';
+    const c = this.cfg, on = !!c.tag && c.mode === 'versus';
     if (on) { c.p1 = c.tag.t[0][0]; c.p2 = c.tag.t[1][0]; c.v1 = c.tag.v[0][0]; c.v2 = c.tag.v[1][0]; }
     const r = nr.call(this, first);
     this.team = on ? [0, 1].map(i => ({ ids: c.tag.t[i], vs: c.tag.v[i], cur: 0, cd: 60, pending: null, s: [{ hp: null, rec: 0, dead: false, burst: true }, { hp: null, rec: 0, dead: false, burst: true }] })) : null;
@@ -162,7 +162,7 @@ function drawTagHUD(g, bt) {
     g.textAlign = 'center'; g.font = `900 11px ${FONT_UI}`;
     if (s.dead) strokeText(g, '—', ix, y + 17, '#777', OUTLINE, 3);
     else {
-      const key = keyLabel(Settings.binds[i + 1].tag);
+      const key = keyLabel(Settings.binds[bt.online ? 1 : i + 1].tag);
       g.globalAlpha = rdy ? 0.75 + 0.25 * Math.sin(bt.pf * 0.2) : 0.5;
       strokeText(g, 'TAG', ix, y + 11, rdy ? '#7dfcff' : '#9a9ab0', OUTLINE, 3);
       g.font = `800 10px ${FONT_UI}`; strokeText(g, rdy ? key : Math.ceil(Math.max(0, T.cd) / 60) + 's', ix, y + 25, rdy ? '#ffffff' : '#9a9ab0', OUTLINE, 3);
@@ -221,7 +221,7 @@ function drawTagHUD(g, bt) {
   go = function (s) {
     if (s instanceof CharSelectScene && !(typeof NetSelectScene !== 'undefined' && s instanceof NetSelectScene) && scene) {
       const c = scene.cfg || (scene.bt && scene.bt.cfg);
-      if (c && c.tag && !c.online) s.tag = true;
+      if (c && c.tag) s.tag = true;
     }
     return _go(s);
   };
@@ -246,7 +246,7 @@ function drawTagHUD(g, bt) {
     if (!this.tag) return up.call(this);
     const tm = this.tagTeam();
     if (this.dupT) this.dupT--;
-    for (let s = 0; s < 2; s++) if (!this.ready[s] && tm[s].length > 1) tm[s].length = 1;
+    for (let s = 0; s < 2; s++) if (!this.ready[s] && tm[s].length > 1 && !(s === 1 && this instanceof NetSelectScene)) tm[s].length = 1;   // online: slot 1 = the rival's team (from 'tsel')
     if (!this.ask) {
       if (this.single) { const s = this.activeSlot(); if (s !== null && !this.ready[s] && tm[s].length === 1 && UI.back()) { tm[s].length = 0; Sound.play('menuBack'); return; } }
       else for (const pid of [1, 2]) if (!this.ready[pid - 1] && tm[pid - 1].length === 1 && UI.pBack(pid)) { tm[pid - 1].length = 0; Sound.play('menuBack'); return; }
@@ -299,5 +299,99 @@ function drawTagHUD(g, bt) {
     g.textAlign = 'right'; strokeText(g, '& ' + CHARS[c.t[1][1]].name, W - 40, 640, '#ffffff', CHARS[c.t[1][1]].colors.accent, 6);
     g.textAlign = 'center'; g.font = `italic 900 22px ${FONT_T}`; strokeText(g, '2 VS 2 TAG', W / 2, 640, '#7dfcff', OUTLINE, 5);
     g.restore();
+  };
+}
+
+// touch pad: which battle the TAG button belongs to (online the pad gets a stand-in object)
+function touchTagBt(bt) { return bt && bt.team ? bt : TouchPad.bt && TouchPad.bt.team ? TouchPad.bt : null; }
+function touchTagReady(bt) { const b = touchTagBt(bt); return !!b && tagReady(b, b.lp || 0); }
+
+// ---------------- ONLINE: mode choice in the room's character select, team sync, lockstep state ----------------
+// The host picks 1 VS 1 / 2 VS 2 TAG (button at the top or the TAG key). Teams travel as 'tsel' messages,
+// the host puts cfg.tag into the 'start' message. The TAG button is part of the per-frame input int (09b).
+function netTagPossible() { return Net.remoteTag !== false; }
+{
+  const NP = NetSelectScene.prototype, nu = NP.update, no = NP.onNet, nd = NP.draw;
+  NP.tagBtn = function () { return { x: W / 2 - 170, y: 104, w: 340, h: 34 }; };
+  NP.setTagMode = function (on, send) {
+    on = !!on && netTagPossible();
+    const changed = !!this.tag !== on; Net.tagMode = on; this.tag = on;
+    if (changed) { this.teamSel = [[], []]; this.ready[0] = false; this.ready[1] = false; this.tselSent = null; Sound.play('menuMove'); }
+    if (send) Net.send({ t: 'tmode', on });
+  };
+  NP.onNet = function (d) {
+    if (d.t === 'tmode' && Net.role === 'guest') { this.setTagMode(d.on, false); return; }
+    if (d.t === 'tsel') { const tm = this.tagTeam(); tm[1] = (Array.isArray(d.team) ? d.team : []).slice(0, 2).map(o => ({ i: clamp(o.i | 0, 0, CHARS.length - 1), v: clamp(o.v | 0, 0, VAR_N - 1) })); return; }
+    return no.call(this, d);
+  };
+  NP.update = function () {
+    if (this.tag === undefined) {
+      this.tag = !!Net.tagMode && netTagPossible();
+      if (Net.role === 'host') Net.send({ t: 'tmode', on: this.tag });
+      if (this.tag && Array.isArray(Net.remoteTeam)) this.onNet({ t: 'tsel', team: Net.remoteTeam });
+    }
+    if (Net.role === 'host' && netTagPossible()) {
+      const kb = [Settings.binds[1].tag, Settings.binds[2].tag];
+      if (kb.some(k => Keys.pressed.has(k)) || (Mouse.clicked && inRect(this.tagBtn()))) { Mouse.clicked = false; this.setTagMode(!this.tag, true); }
+    }
+    const tm = this.tagTeam();
+    if (this.tag && Net.role === 'host' && !(tm[0].length === 2 && tm[1].length === 2)) this.startT = 0;   // wait for both teams
+    const r = nu.call(this);
+    if (scene === this && this.tag) {
+      const key = JSON.stringify(tm[0]);
+      if (key !== this.tselSent) { this.tselSent = key; Net.send({ t: 'tsel', team: tm[0] }); }
+    }
+    return r;
+  };
+  NP.draw = function (g) {
+    nd.call(this, g);
+    if (!netTagPossible()) return;
+    const r = this.tagBtn(), host = Net.role === 'host';
+    drawButton(g, r, this.tag ? '2 VS 2 TAG' : '1 VS 1', null, host && inRect(r), this.t, host ? '⇄ ' + keyLabel(Settings.binds[1].tag) : 'HOST');
+  };
+  // messages that can arrive before the room's select screen exists
+  const rx = Net.rx.bind(Net);
+  Net.rx = function (d) {
+    if (d && d.t === 'tmode') Net.tagMode = !!d.on;
+    if (d && d.t === 'tsel') Net.remoteTeam = d.team;
+    if (d && d.t === 'start') Net.remoteTeam = null;
+    return rx(d);
+  };
+  // host: the teams go into the match cfg
+  const ns = Net.send.bind(Net);
+  Net.send = function (o) {
+    const sc = scene;
+    if (o && o.t === 'start' && o.cfg && sc instanceof NetSelectScene) {
+      const tm = sc.tagTeam();
+      if (sc.tag && tm[0].length === 2 && tm[1].length === 2) {
+        const t = [tm[0].map(x => x.i), tm[1].map(x => x.i)], v = [tm[0].map(x => x.v), tm[1].map(x => x.v)];
+        for (let a = 0; a < 2; a++) for (let b = 0; b < 2; b++) if (t[0][a] === t[1][b] && v[0][a] === v[1][b]) v[1][b] = v[1][b] + 1 >= VAR_N - 1 ? 0 : v[1][b] + 1;
+        o.cfg.tag = { t, v }; o.cfg.p1 = t[0][0]; o.cfg.p2 = t[1][0]; o.cfg.v1 = v[0][0]; o.cfg.v2 = v[1][0];
+      } else delete o.cfg.tag;
+      Net.remoteTeam = null;
+    }
+    return ns(o);
+  };
+  // lockstep: team state joins the hash and the soft-resync snapshot
+  const BP = NetBattle.prototype, sh = BP.stateHash, sn = BP.snapshot, rs = BP.restoreSnap;
+  BP.stateHash = function () {
+    const h = sh.call(this); if (!this.team) return h;
+    return netHashStr(h + '|' + this.team.map(T => [T.cur, T.cd, T.pending ? T.pending.t : -1, T.s.map(x => (x.dead ? 'd' : '') + Math.round((x.hp ?? -1) * 10)).join('/')].join(':')).join('|') + '|' + this.p1.ch.id + this.p2.ch.id);
+  };
+  BP.snapshot = function () { const s = sn.call(this); if (this.team) s.tm = JSON.parse(JSON.stringify(this.team)); return s; };
+  BP.restoreSnap = function (s) {
+    if (s && s.tm && this.team) {
+      this.team = s.tm;
+      [0, 1].forEach(i => {
+        const F = i ? this.p2 : this.p1, id = s.f[i].ch;
+        if (F.ch.id === id) return;   // the other side tagged in the meantime: rebuild the right fighter, then adopt its state
+        const T = this.team[i], ch = CHARS.find(c => c.id === id) || F.ch, N = new Fighter(ch, i + 1, F.x, F.facing, this.inputs[i]);
+        N.variant = T.vs[T.cur]; if (this.mstats[i]) N.stats = this.mstats[i];
+        N.opp = F.opp; F.opp.opp = N; if (i) this.p2 = N; else this.p1 = N;
+        for (const p of this.projs) if (p.owner === F) p.dead = true;
+        this.projs = this.projs.filter(p => !p.dead);
+      });
+    }
+    return rs.call(this, s);
   };
 }
