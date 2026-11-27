@@ -11,7 +11,7 @@ const SURV_CFG = {
   survival: { name: 'SURVIVAL', jp: 'サバイバル', heal: 0.15, perfect: 0.10, bossEvery: 10, desc: 'Endless one-round fights. Your HP carries over, each win heals a little. How far can you go?' },
   boss: { name: 'BOSS RUSH', jp: 'ボスラッシュ', heal: 0.30, perfect: 0.10, n: 7, hpMul: 1.5, dmgMul: 1.2, desc: 'Seven powered-up bosses in a row on HARD. Beat them all as fast as you can.' },
 };
-const SURV_BOSS_POOL = ['saint', 'lunaria', 'kuchi', 'hachi', 'tokine', 'yamika', 'reika', 'buzzu', 'jackpot', 'haze'];
+const SURV_BOSS_POOL = ['saint', 'lunaria', 'kuchi', 'hachi', 'tokine', 'yamika', 'reika', 'buzzu', 'jackpot', 'haze', 'teke'];
 const SURV_BOSS_FINAL = ['honored', 'hollow'];
 Object.assign(CLOUD_ERR, { BAD_SCORE: 'Score rejected by the server.', BAD_MODE: 'Score rejected by the server.' });
 const survFmt = f => { const s = Math.floor(f / 60); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };

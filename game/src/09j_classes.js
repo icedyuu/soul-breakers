@@ -14,7 +14,7 @@ const FIGHTER_CLASS = {
   yoru: 'rushdown', buzzu: 'rushdown', saint: 'rushdown', aimi: 'rushdown', kuchi: 'rushdown',
   sera: 'zoner', cardmaster: 'zoner', lunaria: 'zoner', hachi: 'zoner',
   goro: 'grappler', borgar: 'grappler',
-  frogs: 'trickster', nue: 'trickster', yamika: 'trickster', kanae: 'trickster', jackpot: 'trickster', haze: 'trickster',
+  frogs: 'trickster', nue: 'trickster', yamika: 'trickster', kanae: 'trickster', jackpot: 'trickster', haze: 'trickster', teke: 'rushdown',
   conductor: 'control', reika: 'control', hollow: 'control', tokine: 'control',
 };
 function fighterClass(ch) { return (ch && (ch.fclass || FIGHTER_CLASS[ch.id])) || 'allround'; }

@@ -236,6 +236,12 @@ const VARIANTS = {
     { n: 'WHITE SMOKE', rules: [{ grey: 'only', l: [0.03, 0.3], inv: 1, lm: 0.92 }] },
     { n: 'GHOST HAZE', glow: '#7dfcff', rules: [{ grey: 'only', l: [0.03, 0.3], hue: 200, ss: 0.35, lm: 1.45 }, { h: [245, 295], hue: 186, s: 1.2, la: 0.08 }] },
   ],
+  teke: [
+    { n: 'MIDNIGHT NAVY', rules: [{ h: [220, 245], hue: 272, s: 1.3, lm: 1.3 }] },
+    { n: 'BLOOD MOON', rules: [{ h: [220, 245], hue: 352, s: 1.2, lm: 1.2 }, { h: [340, 15], hue: 28, s: 1.2 }] },
+    { n: 'GREEN SIGNAL', rules: [{ h: [220, 245], hue: 158, s: 1.1, lm: 1.2 }, { h: [340, 15], hue: 130, s: 1.2 }] },
+    { n: 'PHANTOM RAIL', glow: '#ff2a3a', rules: [{ grey: 'only', l: [0.03, 0.3], hue: 352, ss: 0.4, lm: 1.6 }, { h: [220, 245], hue: 0, s: 1.3, la: 0.05 }] },
+  ],
   hollow: [
     { n: 'CRIMSON SEAL', rules: [{ h: [240, 300], hue: 355 }] },
     { n: 'MIDNIGHT BLUE', rules: [{ h: [240, 300], hue: 195 }, { grey: 'also', l: [0.12, 0.45], hue: 225, ss: 0.35 }] },

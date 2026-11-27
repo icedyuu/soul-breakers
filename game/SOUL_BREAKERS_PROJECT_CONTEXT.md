@@ -138,6 +138,7 @@ Combo trials: `{ name, notation, seq:[moveKeys], pre?:[...] }` — checked by th
 | 21 | KUCHISAKE-ONNA 口裂け女 | The Slit-Mouth Woman 口裂けの女 | Rushdown / Mix-up | 1000 | **chibi** |
 | 22 | JACKPOT ジャックポット | The Gambler 賭博師 | Technical / Trickster | 960 | **chibi** |
 | 23 | HAZE ヘイズ | The Smoke Dealer 煙の売人 | Trickster / Area Control | 980 | **chibi** |
+| 24 | TEKE TEKE テケテケ | The Crawling Horror 這い寄る恐怖 | Assassin / Rushdown (high difficulty) | 900 | **chibi** |
 
 ### Signature specials & ultimates
 - **Kazuma:** Blazing Knuckle → Second Blaze, Burst Shot, Iron Wall (counter), Rising Flame, Flame Cyclone (↓→SP2), Earth Breaker, Burning Hammer · Ult **Hundred Inferno Fists**.
@@ -158,6 +159,7 @@ Combo trials: `{ name, notation, seq:[moveKeys], pre?:[...] }` — checked by th
 - **Hachishakusama / Kuchisake-onna:** see §7q.
 - **Jackpot:** see §7s.
 - **Haze:** see §7t.
+- **Teke Teke:** see §7u.
 
 All characters have 3–7 combo trials (74 total).
 
@@ -467,6 +469,12 @@ Original fighter #22 (Beni's spec): arrogant supernatural casino gambler. Chibi,
 
 ## 7t. Haze — The Smoke Dealer (`04_zzzz9g_haze.js`, `04_zzzz9h_haze_cine.js`, 2026-11-27)
 Relaxed, bored trickster in an oversized hoodie (round purple shades, neon cyan accents). Each device has one job: cigarette = fast interrupt (SP1 NICOTINE RUSH stream) and counter (↓↓SP2 SECONDHAND: vanish, reappear behind the attacker, 2 hits + launch; whiff = long open recovery, throws beat it, far projectiles just poof); shisha = ↓→SP1 CLOUD NINE (one lingering cloud, grows to ~215px, 330 f); vape = ↓←SP1 VAPOR DASH (back by default, forward with →, invuln startup, trail, L/M/H = Vapor Kick; if the foe stands in smoke it becomes SMOKE STEP behind them); bong = SP2 HEAVY HIT (28f startup, big knockback, 18f inside the Hotbox). ↓→SP2 HOTBOX = box zone (360 f): foe slowed + blinded, Haze walks x1.3 and is concealed; pressing it again = CLEAR THE ROOM (walls collapse, 78 dmg, launch); cooldown 540 f starts when the box ends. Counterplay: guarding foes never cough (idle/walking foes in smoke build cough → short stun, then 180 f immune); smoke is capped in size, Haze's eyes/ember always show when concealed. ULT ZERO VISIBILITY: deep drag + face zoom, arena fog, glowing eyes, 8 strikes from all sides with silhouettes, final exhale blast (~240 dmg), "Anyway...". Config in HZ_CFG / HZ_ULT. Generic hook added: `ch.cpuBlind(F, O)` adds CPU reaction frames (07c_cpu seen()). tagClearMarks clears hzCough/hzCoughCd/hzBlindT. Also fixed: Jackpot synth sounds were never found by Sound.play (copied from table L into S). BALANCE haze dmg 1.25 hp 1050 (~48% bot). Tests: tests/mech_haze.js, haze_look.js, haze_battle.js.
+
+## 7u. Teke Teke — The Crawling Horror (`04_zzzz9i_teke.js`, `04_zzzz9j_teke_cine.js`, 2026-11-27)
+Urban-legend ghost schoolgirl with no legs (stylized, no gore: torn hem + red ghost mist at the waist). Own rig: `tkDraw` = drawFigure without legs, arms solved by 2-bone IK so planted hands stay on the floor (pose keys tpf/tpb = hand planted, tfx/tbx = hand x, tw = sickle angle). She never walks: walk/dash/backdash are a procedural crawl (`tkCrawlPose`, faster and lower per momentum stage), hand plants make dust + "teke teke" slaps. Low profile (hurtbox 60 high) during Underground and the crawl dash.
+Kit: SP1 TEKE TEKE RUSH (arm sprint, L/M/H = RUSH SLASH, at max momentum SP1 again = NO ESCAPE), ↓→SP1 SEVERING ARC (long sickle arc, more range at HUNTING+), ↓←SP1 UNDERGROUND (sink into the floor, low profile, resurface; L/M/H = AMBUSH, PERFECT within 9 f = +30%), SP2 HALF AND HALF (slow horizontal finisher, +12% dmg at max), ↓→SP2 RAILWAY NIGHTMARE (tracks + crossing lights under the foe, ghost train after ~1 s, shorter warning with momentum, blockable / escapable), ↓↓SP2 ENDLESS CRAWL (multi-hit crawl, 4-5 hits faster with momentum). ULT THE LAST TRAIN (needs no momentum): darkness, crossing bell, head turn, face zoom, "Teke… teke…", chase through an abandoned station, headlights, one-arm grab, raised sickle, train passes, horizontal cut, she crawls off, looks at camera, cut to black (timeline TK_ULT).
+MOMENTUM passive (TK_CFG.mom, HUD panel with pulsing meter): stages CRAWLING 0 / ACCELERATING 25 / HUNTING 50 / UNSTOPPABLE 80. Gains: moving forward, dashes, chasing, hits, chaining movement moves within 110 f. Losses: standing still (after 24 f grace), getting hit, blocking heavy hits, whiffing commitment moves; knockdown keeps only 15%. Effects per stage: crawl speed x1.12/1.24/1.34, dash, attack haste, damage x1.02/1.04/1.07, sickle range x1.15/1.25, knockback on Arc/Half/Pounce. UNSTOPPABLE cue = screech + red ring; aura, eye trails, dust veil. H does NOT get extra knockback (keeps H → SP2 combo at every stage). SP1+SP2 after Rush Slash at max always gives the ult, not No Escape.
+Integration: FIGHTER_CLASS rushdown, COMBO_BOOK (+ MOMENTUM section), trials regenerated, story rival Tetsumichi (conductor), 4 mastery colours, arcade skin LAST STATION (station master cap + crimson scarf), intros TEKE TEKE / LAST STOP, wins MY LEGS... / LAST TRAIN, title THE LAST TRAIN, throw RAILWAY DRAG, Boss Rush pool. New sounds in 01_audio.js: teke, tekeFast, tekeMax, crossing, trainHorn, trainPass, railClack, sickle, ghostBreath; ULT_FLAVOR rail. BALANCE teke dmg 0.84 hp 900 (51% bot, 2 reps). Tests: tests/mech_teke.js (47 checks), teke_look.js, teke_battle.js.
 
 ## 8. History of requests (in order)
 

@@ -204,6 +204,16 @@ const Sound = (() => {
     cough() { for (let i = 0; i < 2; i++) { noise(0.12, 0.3, 'bandpass', 700, 380, 1.4, i * 0.2); osc('sawtooth', 160, 110, 0.1, 0.04, i * 0.2); } },
     fogRoll() { noise(2.2, 0.16, 'lowpass', 300, 900, 0.8, 0, 0.8); osc('sine', 48, 40, 2.0, 0.22, 0, 0.7); },
     fear() { osc('sine', 55, 40, 1.2, 0.35, 0, 0.6); osc('sawtooth', 220, 210, 1.0, 0.03, 0.1, 0.8); osc('sawtooth', 233, 222, 1.0, 0.03, 0.1, 0.8); noise(1.0, 0.1, 'highpass', 6000, 3000, 1, 0, 0.8); },
+    // TEKE TEKE (crawling horror): hand slaps "teke teke", fast slaps, max-momentum screech, crossing bell, distant horn, train pass, sickle
+    teke(v = 1, p = 1) { for (let i = 0; i < 2; i++) { noise(0.045, 0.32 * v, 'bandpass', 1500 * p, 900 * p, 2.2, i * 0.11); osc('triangle', 520 * p, 300 * p, 0.04, 0.05 * v, i * 0.11); } },
+    tekeFast(v = 1) { for (let i = 0; i < 4; i++) noise(0.035, 0.26 * v, 'bandpass', 1700, 1000, 2.4, i * 0.06); },
+    tekeMax() { osc('sawtooth', 1400, 2300, 0.32, 0.04, 0, 0.6); osc('sawtooth', 1470, 2380, 0.32, 0.03, 0.02, 0.6); noise(0.3, 0.1, 'highpass', 5000, 8000, 1, 0, 0.5); for (let i = 0; i < 6; i++) noise(0.03, 0.28, 'bandpass', 1800, 1100, 2.4, 0.08 + i * 0.045); },
+    crossing(v = 1) { for (let i = 0; i < 4; i++) { const f = i % 2 ? 1180 : 1320; osc('triangle', f, f, 0.2, 0.09 * v, i * 0.32, 0.5); osc('sine', f * 2.01, f * 2.01, 0.14, 0.03 * v, i * 0.32, 0.5); } },
+    trainHorn(v = 1) { osc('sawtooth', 233, 228, 1.3, 0.05 * v, 0, 0.9); osc('sawtooth', 277, 270, 1.3, 0.045 * v, 0, 0.9); noise(1.2, 0.04 * v, 'bandpass', 400, 300, 2, 0, 0.9); },
+    trainPass(v = 1) { noise(1.1, 0.6 * v, 'lowpass', 220, 900, 0.9, 0, 0.5); osc('sine', 70, 40, 1.0, 0.5 * v, 0, 0.4); for (let i = 0; i < 8; i++) noise(0.06, 0.32 * v, 'bandpass', 1100, 700, 2, 0.05 + i * 0.1); noise(0.7, 0.3 * v, 'bandpass', 3000, 600, 1, 0.1, 0.6); },
+    railClack() { noise(0.05, 0.4, 'bandpass', 900, 600, 3); osc('square', 330, 300, 0.03, 0.05); noise(0.05, 0.3, 'bandpass', 900, 600, 3, 0.09); },
+    sickle(v = 1) { noise(0.14, 0.4 * v, 'bandpass', 5200, 1600, 1.1); osc('triangle', 2400, 900, 0.12, 0.08 * v); osc('sine', 4200, 4100, 0.2, 0.02 * v, 0.05); },
+    ghostBreath() { noise(0.9, 0.06, 'bandpass', 500, 300, 1.6, 0, 0.7); osc('sine', 110, 92, 0.9, 0.04, 0, 0.8); },
   };
   // extra synth layers that can sit under a sample (AUDIO_FILES.sfx[name].syn)
   const L = {
@@ -225,7 +235,7 @@ const Sound = (() => {
   };
   // ultimate start: one shared riser + an element "colour" per fighter
   const ULT_FLAVOR = { kazuma: 'fire', saint: 'holy', sera: 'storm', goro: 'earth', yoru: 'void', frogs: 'water', conductor: 'steel', cardmaster: 'rune', nue: 'beast',
-    borgar: 'earth', buzzu: 'steel', reika: 'blood', yamika: 'void', lunaria: 'holy', honored: 'void', hollow: 'blood', remnant: 'blood', fragment: 'void', kanae: 'steel', tokine: 'time', aimi: 'love', hachi: 'po', kuchi: 'cut', jackpot: 'gold', haze: 'smoke' };
+    borgar: 'earth', buzzu: 'steel', reika: 'blood', yamika: 'void', lunaria: 'holy', honored: 'void', hollow: 'blood', remnant: 'blood', fragment: 'void', kanae: 'steel', tokine: 'time', aimi: 'love', hachi: 'po', kuchi: 'cut', jackpot: 'gold', haze: 'smoke', teke: 'rail' };
   S.ultStart = (id) => {
     riser(0.85, 90, 520, 0.12);
     osc('sine', 45, 90, 0.9, 0.35, 0, 0.3);
@@ -246,6 +256,7 @@ const Sound = (() => {
     else if (fl === 'po') { noise(1.6, 0.14, 'bandpass', 380, 900, 0.8, 0.1, 0.8); S.po(2, 0.8); }
     else if (fl === 'cut') { for (let i = 0; i < 3; i++) { osc('square', 3400, 2700, 0.018, 0.08, 0.5 + i * 0.12); noise(0.04, 0.3, 'highpass', 5200, 8000, 2, 0.5 + i * 0.12); } osc('sine', 62, 38, 0.18, 0.5, 0.2); }
     else if (fl === 'smoke') { S.inhale(); S.exhale(1.2); osc('sine', 52, 40, 1.4, 0.3, 0.5, 0.8); }
+    else if (fl === 'rail') { S.crossing(0.8); S.teke(0.8, 0.8); osc('sine', 48, 36, 1.4, 0.3, 0.4, 0.8); }
     else if (fl === 'gold') { S.coin(1.2); [523, 784, 1047, 1568].forEach((f, i) => osc('square', f, f, 0.14, 0.05, 0.5 + i * 0.08)); }
     else if (fl === 'time') { for (let i = 0; i < 6; i++) osc('square', 2100 - i * 120, 1900 - i * 120, 0.02, 0.1, i * 0.12, 0.6); osc('sine', 196, 194, 1.4, 0.18, 0.7, 0.9); }
   };

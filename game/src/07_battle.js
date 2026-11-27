@@ -335,7 +335,7 @@ class Battle {
       // a grounded fighter's pushbox stops at the shoulders against a jumper (the big chibi head can be jumped over),
       // so a jump from the corner carries over the opponent instead of shoving them along the floor
       const air = !a.onGround !== !b.onGround;
-      const ha = (a.state === 'crouch' ? 110 : air && a.onGround ? 118 : 165) * a.s, hb = (b.state === 'crouch' ? 110 : air && b.onGround ? 118 : 165) * b.s;
+      const ha = (a.state === 'crouch' ? 110 : air && a.onGround ? 118 * (a.ch.lowPush || 1) : 165) * a.s, hb = (b.state === 'crouch' ? 110 : air && b.onGround ? 118 * (b.ch.lowPush || 1) : 165) * b.s;   // lowPush: crawling fighters (Teke Teke) are easier to jump over
       const vOver = a.y > b.y - hb && b.y > a.y - ha;
       const dx = b.x - a.x, ov = (wa + wb) / 2 - Math.abs(dx);
       if (vOver && ov > 0) {

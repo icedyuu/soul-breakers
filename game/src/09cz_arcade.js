@@ -368,6 +368,20 @@ const ARC = {
     },
     front(g, sk, p, c, R) { cosDrape(g, sk, c, R, c.kl, c.kt, c.kt); },
   },
+  // Teke Teke: the last train's ghost conductor. Black winter uniform, crimson scarf, a station master's cap
+  teke: { n: 'LAST STATION', jp: '終着駅', pal: { top: '#1a1a24', uarm: '#1a1a24', collar: '#7a0c1c', cuff: '#7a0c1c', stripe: '#d8b45a', ribbon: '#d8b45a',
+    kc: '#7a0c1c', kl: '#ff2a3a', kt: '#d8b45a', kh: '#14141c' },
+    head(g, r, c, R) {   // a station master's cap with a gold band and a red badge
+      g.save(); g.translate(0.08 * r, -0.66 * r); g.rotate(-0.12);
+      g.beginPath(); g.ellipse(0.62 * r, 0.06 * r, 0.62 * r, 0.16 * r, 0.08, 0, TAU); if (!R.mono) { g.strokeStyle = OUTLINE; g.lineWidth = R.ol * 2; g.stroke(); } g.fillStyle = R.mono || '#0a0a10'; g.fill(); g.restore();
+      polyR(g, r, [[-0.92, -0.62], [-0.98, -1.18], [-0.5, -1.46], [0.5, -1.48], [1.02, -1.2], [0.96, -0.66]], c.kh, R);
+      if (R.mono) return;
+      g.fillStyle = c.kt; g.beginPath(); g.moveTo(-0.94 * r, -0.84 * r); g.quadraticCurveTo(0, -0.74 * r, 0.98 * r, -0.86 * r); g.lineTo(0.97 * r, -0.72 * r); g.quadraticCurveTo(0, -0.6 * r, -0.93 * r, -0.7 * r); g.closePath(); g.fill();
+      g.fillStyle = c.kl; g.beginPath(); g.arc(0.42 * r, -1.04 * r, 0.16 * r, 0, TAU); g.fill();
+      g.fillStyle = c.kt; g.beginPath(); g.arc(0.42 * r, -1.04 * r, 0.07 * r, 0, TAU); g.fill();
+    },
+    front(g, sk, p, c, R) { cosDrape(g, sk, c, R, c.kc, c.kl, c.kt); },
+  },
 };
 
 // ---------------- registration: slot 5 for every fighter ----------------
