@@ -15,7 +15,7 @@ Handoff notes for continuing development of Beni's browser anime fighting game. 
 
 - Local fighting game on one keyboard: 1P vs CPU or 2 players (plus Training mode with a dummy).
 - Modes: 1P VS CPU (Single Match / Arcade, Easy/Normal/Hard), Versus, Training (frame data, hitbox view, combo trials, move list), How to Play (7 pages), Settings.
-- 6 stages: NEON DISTRICT (neon), CRIMSON VOLCANO (volcano), MOONLIT BAMBOO (bamboo), MIDNIGHT ACADEMY (school), CLOCKWORK SPIRE (clock), RUNE FORGE (forge).
+- 8 stages: NEON DISTRICT (neon), CRIMSON VOLCANO (volcano), MOONLIT BAMBOO (bamboo), MIDNIGHT ACADEMY (school), CLOCKWORK SPIRE (clock), RUNE FORGE (forge), DUSK SHRINE (shrine), THRONE OF SOULS (throne, story boss arena).
 - Round flow: VS screen → rounds with timer → KO → results. Burst, meter ("魂 SOUL"), ultimates with cinematics, counters, juggles with a juggle limit, combo scaling.
 
 ### Default controls
@@ -64,6 +64,7 @@ cd game && python3 build.py   # → dist/index.html
 | `06b_statepose.js` | optional `ch.statePose(F)` hook: per-fighter poses for non-attack states (Aimi's defeat/victory) |
 | `04_zzzz7_hollow.js` | The Hollow / The Psychic Sealer (+ the Remnant figure and shadow fragments used by his moves) |
 | `05_stages.js` | Stage definitions (vector) |
+| `05c_stages3.js` | Stages 7–8 (shrine, throne), `BOSS_STAGE` index; `07bc_pixstages3.js` = their `STAGE_PX` entries |
 | `05b_stages2.js` | Stages 4–6 (school, clock, forge), pushed onto `STAGES`; helper `layerPt` (layer coords → screen/art px), optional `bgAnim` hook (vector, after the far layer) |
 | `06_fighter.js` | `Fighter` class: states, movement, attacks, cancels, follow-ups, projectiles (`Proj`, `EXTRA_PROJ` registry) |
 | `07_battle.js` | `Battle`: rounds, hit resolution (`resolveHit`, `applyDamage`), cinematics (`startCine`, `scriptHit`, `release`), camera, training mode |
@@ -505,6 +506,12 @@ The test scripts are in `tests/` inside the source zip. Run each with node and P
 - CLOCKWORK SPIRE (時計塔): inside a clock tower, giant backlit clock face (mirrored numerals), gears, chains, lanterns; pixel: moving hands, meshing gears, light shafts, dust. Music: neon track.
 - RUNE FORGE (霊峰鍛冶場): forge hall carved into a snowy mountain, glowing gate, rune monoliths, cyan rune braziers, rune circle on the floor; pixel: aurora, pulsing runes, snow, sparks. Music: volcano track.
 - Stage select is a 3×2 grid (↑/↓ switches rows). All stage animation is visual only (netplay hashes identical on all new stages). Test: `tests/stages.js` (every stage vector+pixel, draw cost, select nav; shots to `../shots_stages/`).
+
+### Dusk Shrine + Throne of Souls (2026-11-27)
+- DUSK SHRINE (黄昏の社): rural shrine at sunset for Hachishakusama / Kuchisake-onna: setting sun over hills, steel pylons + wooden utility poles with crows on the wires, flooded rice paddies, farmhouse, tall hedge, big vermilion torii with shimenawa + shide, stone lanterns, jizō in red bibs, street lamp, red spider lilies, stone path with maple leaves, falling leaves + low mist. Pixel: drifting dusk clouds, crow flock, paddy glints, lantern flicker, street lamp that cuts out, swaying shide, and every ~25 s a very tall woman in a white hat peers over the hedge. Music: bamboo track (procedural fallback `shrine`).
+- THRONE OF SOULS (魂の玉座): story boss arena: red void with a black eclipse, floating ruins, ruined colonnade, two hooded colossi with swords, a throne under a cracked soul crystal chained to the colossi, torn banners, magenta braziers, seal circle on an obsidian floor. Pixel: red lightning, eclipse corona, pulsing crystal with orbiting shards, glowing seal, rising soul motes. Music: volcano track (fallback `boss`). Stage has `boss: true`.
+- ARCADE: the final (rival) fight always takes place in THRONE OF SOULS; the other fights rotate through the other stages (`arcadeVS` in 09h_story.js). Also selectable in Versus/1P; online random stage can pick both.
+- Stage select is now a 4×2 grid when there are more than 6 stages (smaller cards). Tests: `tests/stages.js` (all 8), `tests/story.js`.
 
 ### Hollow ultimate freeze fix (2026-11-26)
 - Bug: during THE LAST REMNANT the rift ellipse's width was `46*k + sin(T)*3`; while the rift opened/closed (small k) it could go negative depending on the frame timer, so `ctx.ellipse` threw mid-draw. The main loop caught it, but the draw's open `ctx.save()`s piled up every frame → lag that looked like a crash ("sometimes", because it depended on timing).
