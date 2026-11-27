@@ -93,8 +93,26 @@ let fails = 0; const ok = (c, m) => { if (!c) fails++; console.log(c ? 'ok  ' : 
   ok(await until(Bp, () => scene instanceof NetSelectScene, 15000) && await until(A, () => scene instanceof NetSelectScene, 15000), 'JOIN connects both into the online select');
   await sleep(300); await A.screenshot({ path: OUT + '/connected.png' });
   ok(await until(A, () => Friends.status() === 'match'), 'status in match');
+  // SPECTATE: Cara (friend of Alice) sees WATCH on Alice's row and joins the room as a spectator
+  const C = await mk('C');
+  await C.evaluate(() => Cloud.register('Cara', 'secret1')); await C.evaluate(() => Friends.call('sb_friend_add', { p_name: 'Alice' }));
+  await A.evaluate(() => Friends.call('sb_friend_add', { p_name: 'Cara' }));
+  const code = await A.evaluate(() => Net.code);
+  ok(await until(A, c => Friends.pubRoom === c, 8000, code), 'Alice publishes her room code');
+  const dbRoom = await srv.sql("select room from sb_users where lname = 'alice'"); ok(dbRoom[0].room === code, 'room stored on the server');
+  const strangers = await A.evaluate(t => Cloud.rpc('sb_friend_rooms', { p_token: t }), await A.evaluate(() => Cloud.tok));
+  ok(Array.isArray(strangers) && !strangers.some(x => x.name === 'Cara'), 'rooms only of friends in a fight');
+  await C.evaluate(() => go(new FriendsScene()));
+  ok(await until(C, () => scene.rows().some(r => r.name === 'Alice' && r.acts[0][0] === 'watch'), 15000), 'Cara sees WATCH next to Alice');
+  await sleep(300); await C.screenshot({ path: OUT + '/watch_row.png' });
+  await C.evaluate(() => { const rs = scene.rows(); scene.sel = rs.findIndex(r => r.name === 'Alice'); scene.act = 0; }); await C.keyboard.press('Enter');
+  ok(await until(C, () => scene instanceof SpectateScene && scene.state === 'waiting', 15000), 'WATCH connects Cara as a spectator');
+  ok(await A.evaluate(() => SpecHost.conns.length === 1), 'host has one spectator');
+  await sleep(300); await C.screenshot({ path: OUT + '/spectate_wait.png' });
   const left = await srv.sql('select count(*)::int n from sb_invites where ans is null'); ok(left[0].n === 0, 'no open invites left');
   await A.evaluate(() => { Net.close(); go(new TitleScene()); }); await Bp.evaluate(() => { Net.close(); go(new TitleScene()); });
+  ok(await until(C, () => scene instanceof SpectateScene && scene.state === 'done', 10000), 'spectator told when the room closes');
+  ok(await until(A, () => Friends.pubRoom === '', 8000), 'room code cleared after leaving');
 
   // remove needs two presses
   await A.evaluate(() => go(new FriendsScene())); await until(A, () => Friends.list);

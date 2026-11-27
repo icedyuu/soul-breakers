@@ -71,6 +71,7 @@ const Net = {
     p.on('open', () => { if (this.peer === p && this.status === 'opening') this.status = 'waiting'; });
     p.on('connection', c => {
       if (this.peer !== p) return;
+      if (c.metadata && c.metadata.spec) { if (typeof SpecHost !== 'undefined') SpecHost.accept(c); else c.close(); return; }   // spectator (09i_replay.js)
       if (this.conn) { c.on('open', () => { try { c.send({ t: 'full' }); } catch (e) { } setTimeout(() => c.close(), 400); }); return; }
       this.bind(c);
     });
@@ -164,13 +165,15 @@ class NetLobbyScene {
   constructor(o = {}) {
     this.t = 0; this.mode = o.join != null ? 'join' : 'menu'; this.code = o.join || ''; this.error = o.error || '';
     Music.play('menu');
-    this.menu = new MenuList([{ id: 'host', label: 'CREATE ROOM', jp: '部屋を作る' }, { id: 'join', label: 'JOIN ROOM', jp: '参加' }, { id: 'back', label: 'BACK', jp: '戻る' }], W / 2, 330, { w: 420, h: 54 });
+    this.menu = new MenuList([{ id: 'host', label: 'CREATE ROOM', jp: '部屋を作る' }, { id: 'join', label: 'JOIN ROOM', jp: '参加' }, { id: 'watch', label: 'WATCH A MATCH', jp: '観戦' }, { id: 'back', label: 'BACK', jp: '戻る' }], W / 2, 310, { w: 420, h: 54 });
     if (o.join && o.join.length === 6) this.doJoin();
   }
   keyRect(i) { const c = i % 3, r = Math.floor(i / 3); return { x: W / 2 - 180 + c * 124, y: 300 + r * 88, w: 112, h: 76 }; }
   backRect() { return { x: 30, y: H - 90, w: 180, h: 50 }; }
   shareRect() { return { x: W / 2 - 160, y: 470, w: 320, h: 52 }; }
-  doJoin() { this.error = ''; Net.join(this.code); this.mode = 'connecting'; Sound.play('menuOk'); }
+  doJoin() {
+    if (this.watch && typeof SpectateScene !== 'undefined') { Sound.play('menuOk'); go(new SpectateScene({ code: this.code, back: () => new NetLobbyScene() })); return; }
+    this.error = ''; Net.join(this.code); this.mode = 'connecting'; Sound.play('menuOk'); }
   leave() { Net.close(); Sound.play('menuBack'); this.mode = 'menu'; this.error = ''; }
   update() {
     this.t++; Net.tick();
@@ -183,7 +186,7 @@ class NetLobbyScene {
       if (it.id === 'back') { Net.close(); Sound.play('menuBack'); go(new TitleScene()); return; }
       Sound.play('menuOk'); this.error = '';
       if (it.id === 'host') { Net.host(); this.mode = 'hosting'; }
-      if (it.id === 'join') { this.mode = 'join'; this.code = ''; }
+      if (it.id === 'join' || it.id === 'watch') { this.mode = 'join'; this.code = ''; this.watch = it.id === 'watch'; }
       return;
     }
     if (backHit || Keys.pressed.has('Escape')) { this.leave(); return; }
@@ -229,7 +232,7 @@ class NetLobbyScene {
         g.fillText('Waiting for your opponent' + '.'.repeat(1 + (t >> 4) % 3), W / 2, 570);
       } else g.fillText('Creating room' + '.'.repeat(1 + (t >> 4) % 3), W / 2, 330);
     } else if (this.mode === 'join') {
-      g.fillText('Enter the room code:', W / 2, 212);
+      g.fillText(this.watch ? 'WATCH: enter the room code of a running online match:' : 'Enter the room code:', W / 2, 212);
       this.drawCode(g, this.code, 236, false);
       NET_KEYS.forEach((k, i) => drawButton(g, this.keyRect(i), k, null, inRect(this.keyRect(i)), t));
     } else if (this.mode === 'connecting') {

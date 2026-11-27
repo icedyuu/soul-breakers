@@ -76,6 +76,10 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   const seenV = await Bp.evaluate(() => scene.vs.slice());
   await Bp.keyboard.press('KeyF');
   const results = [];
+  // a third page SPECTATES (joins with the room code mid-match 1) and plays the live stream
+  const S = await mk('spec');
+  await S.evaluate(() => { window.SLOG = {}; const st = ReplayBattle.prototype.step; ReplayBattle.prototype.step = function () { st.call(this); SLOG[this.R.m] = { bad: this.bad, k: this.k, wins: this.wins.join('-'), ended: this.ended, live: !!this.o.live }; }; });
+  let specJoined = false, specShot = false; fs.mkdirSync(path.resolve(__dirname, '../shots_replay'), { recursive: true });
   for (let m = 1; m <= MATCHES; m++) {
     for (let i = 0; i < 100; i++) { await sleep(200); if (await A.evaluate(() => scene instanceof NetBattle) && await Bp.evaluate(() => scene instanceof NetBattle)) break; }
     if (!await Bp.evaluate(() => scene instanceof NetBattle)) throw new Error('match did not start: ' + await A.evaluate(() => scene.constructor.name) + ' / ' + await Bp.evaluate(() => scene.constructor.name));
@@ -87,6 +91,8 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
     const t0 = Date.now();
     for (;;) {
       await sleep(1000);
+      if (!specJoined && Date.now() - t0 > 6000) { specJoined = true; await S.evaluate(c => go(new SpectateScene({ code: c, name: 'Tester' })), code); }
+      if (specJoined && !specShot && Date.now() - t0 > 16000 && await S.evaluate(() => scene instanceof ReplayBattle)) { specShot = true; await S.evaluate(() => { scene.uiT = 0; }); await S.screenshot({ path: path.resolve(__dirname, '../shots_replay/spectate_live.png') }); }
       const a = await A.evaluate(() => scene.constructor.name), b = await Bp.evaluate(() => scene.constructor.name);
       if (a === 'NetResultsScene' && b === 'NetResultsScene') break;
       if (Date.now() - t0 > 240000) throw new Error('match timeout ' + a + ' ' + b);
@@ -108,14 +114,29 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
       console.log(`  ranked: host ${ka.s} ${ka.delta} → ${ka.rating} · guest ${kb.s} ${kb.delta} → ${kb.rating}`, rated ? 'OK' : 'FAIL');
       if (m === 1) await A.screenshot({ path: path.resolve(__dirname, '../shots_account/ranked_results.png') });
     }
-    results.push({ ok: rated && diff < 0 && rA.won !== rB.won && cmp > 600 && String(rA.wins) === String(rB.wins) });
+    // spectator: same result, no hash mismatches (it may lag a bit behind: wait for it)
+    let sp = null;
+    for (let i = 0; i < 80; i++) { sp = await S.evaluate(m => SLOG[m] || null, m); if (sp && sp.ended) break; await sleep(500); }
+    const specOk = !!sp && sp.ended && sp.bad === 0 && sp.wins === String(rA.wins).replace(',', '-');
+    console.log(`  spectator: ${JSON.stringify(sp)} ${specOk ? 'OK' : 'FAIL'}`);
+    // both players stored the match as a replay; it must play back without hash mismatches
+    const rp = async P => P.evaluate(() => { const R = Replay.load()[0]; if (!R || R.kind !== 'net') return 'no replay'; const rb = new ReplayBattle(R); const sc = scene; let g = 0; while (!rb.ended && rb.k < rb.total && g < 40000) { rb.step(); g++; } scene = sc; BT = sc.bt || BT; return rb.bad + ' bad, ' + rb.wins.join('-'); });
+    const rpA = await rp(A), rpB = await rp(Bp);
+    const rpOk = rpA === '0 bad, ' + String(rA.wins).replace(',', '-') && rpB === rpA;
+    console.log(`  stored replays: host ${rpA} · guest ${rpB} ${rpOk ? 'OK' : 'FAIL'}`);
+    results.push({ ok: specOk && rpOk && rated && diff < 0 && rA.won !== rB.won && cmp > 600 && String(rA.wins) === String(rB.wins) });
     if (m < MATCHES) { await A.evaluate(() => { scene.t = 99; Mouse.x = scene.menu.rect(0).x + 10; Mouse.y = scene.menu.rect(0).y + 10; Mouse.clicked = true; }); await Bp.keyboard.press('Enter'); }
   }
+  // host leaves → the spectator gets told
   // disconnect: guest closes its page → host should land in the lobby with a message
   await Bp.close();
   let lostMsg = null;
   for (let i = 0; i < 60 && !lostMsg; i++) { await sleep(250); lostMsg = await A.evaluate(() => scene instanceof NetLobbyScene ? scene.error : null); }
   console.log('host after guest left:', lostMsg);
+  let specMsg = null;
+  for (let i = 0; i < 60 && !specMsg; i++) { await sleep(250); specMsg = await S.evaluate(() => scene instanceof SpectateScene && (scene.state === 'done' || scene.state === 'error') ? scene.msg : null); }
+  console.log('spectator after the room closed:', specMsg);
+  if (!specMsg) results.push({ ok: false });
   console.log(errs.length ? 'ERRORS:\n' + errs.slice(0, 10).join('\n') : 'no errors');
   const pass = results.every(r => r.ok) && lostMsg && !errs.length;
   console.log(pass ? 'NETPLAY PASS' : 'NETPLAY FAIL');
