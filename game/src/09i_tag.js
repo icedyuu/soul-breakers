@@ -18,7 +18,7 @@ function tagReady(bt, i) {
 // marks / debuffs a fighter put on the opponent; cleared when that fighter leaves the field
 function tagClearMarks(O) {
   if (!O) return;
-  const zero = ['bleedN', 'bleedT', 'markT', 'cmdT', 'graspT', 'chainT', 'infFreezeT', 'hlwMarkT', 'sealT', 'kanPactT', 'kanPactN', 'tokStopT', 'tokSlowT', 'hachiMarkT', 'kuFearT', 'slowT'];
+  const zero = ['bleedN', 'bleedT', 'markT', 'cmdT', 'graspT', 'chainT', 'infFreezeT', 'hlwMarkT', 'sealT', 'kanPactT', 'kanPactN', 'tokStopT', 'tokSlowT', 'hachiMarkT', 'kuFearT', 'slowT', 'hzCough', 'hzCoughCd', 'hzBlindT'];
   for (const k of zero) if (O[k]) O[k] = 0;
   for (const k of ['bleedBy', 'markBy', 'hlwMarkBy', 'sealBy', 'kanPactBy', 'hachiBy', 'sealK', 'sealK2', 'chainPull']) if (O[k]) O[k] = null;
   if (O.hachiHid) { O.hachiHid = false; O.hidden = false; }

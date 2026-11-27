@@ -193,6 +193,16 @@ const Sound = (() => {
     breath() { noise(0.7, 0.07, 'bandpass', 900, 600, 1.4, 0, 0.4); noise(0.6, 0.05, 'bandpass', 700, 1000, 1.4, 0.8, 0.4); },
     maskOff() { noise(0.28, 0.22, 'bandpass', 2400, 1200, 0.9); osc('sine', 300, 120, 0.4, 0.05, 0.2, 0.6); },
     kuchiVanish() { osc('sine', 700, 70, 0.26, 0.1, 0, 0.6); noise(0.22, 0.24, 'bandpass', 3000, 600, 1, 0, 0.5); },
+    // HAZE (smoke dealer): inhale, exhale, bong bubbles, vape hiss, smoke poof, smoke boom, lighter flick, cough, fog roll
+    inhale() { noise(0.55, 0.09, 'bandpass', 700, 1500, 1.2, 0, 0.3); noise(0.4, 0.04, 'highpass', 3000, 5000, 1, 0.1); },
+    exhale(v = 1) { noise(0.8, 0.12 * v, 'bandpass', 1400, 400, 0.9, 0, 0.4); noise(0.7, 0.05 * v, 'lowpass', 900, 200, 0.7, 0.05, 0.5); },
+    bubble() { for (let i = 0; i < 3; i++) osc('sine', 180 + i * 70, 420 + i * 90, 0.06, 0.08, i * 0.05); },
+    vapeHiss() { noise(0.35, 0.18, 'highpass', 5200, 2600, 0.8); osc('sine', 1200, 600, 0.12, 0.03); },
+    poof(v = 1) { noise(0.25, 0.3 * v, 'lowpass', 1800, 200, 0.8); osc('sine', 160, 60, 0.18, 0.12 * v); },
+    smokeBoom(v = 1) { osc('sine', 90, 28, 0.7, 0.6 * v); noise(0.7, 0.45 * v, 'lowpass', 1400, 80, 0.7, 0, 0.6); noise(0.5, 0.15 * v, 'bandpass', 600, 2200, 1.5, 0.05, 0.6); },
+    flick() { osc('square', 2600, 2200, 0.015, 0.1); noise(0.03, 0.3, 'highpass', 4000, 6000, 2); noise(0.25, 0.08, 'bandpass', 900, 1800, 1, 0.06); },
+    cough() { for (let i = 0; i < 2; i++) { noise(0.12, 0.3, 'bandpass', 700, 380, 1.4, i * 0.2); osc('sawtooth', 160, 110, 0.1, 0.04, i * 0.2); } },
+    fogRoll() { noise(2.2, 0.16, 'lowpass', 300, 900, 0.8, 0, 0.8); osc('sine', 48, 40, 2.0, 0.22, 0, 0.7); },
     fear() { osc('sine', 55, 40, 1.2, 0.35, 0, 0.6); osc('sawtooth', 220, 210, 1.0, 0.03, 0.1, 0.8); osc('sawtooth', 233, 222, 1.0, 0.03, 0.1, 0.8); noise(1.0, 0.1, 'highpass', 6000, 3000, 1, 0, 0.8); },
   };
   // extra synth layers that can sit under a sample (AUDIO_FILES.sfx[name].syn)
@@ -215,7 +225,7 @@ const Sound = (() => {
   };
   // ultimate start: one shared riser + an element "colour" per fighter
   const ULT_FLAVOR = { kazuma: 'fire', saint: 'holy', sera: 'storm', goro: 'earth', yoru: 'void', frogs: 'water', conductor: 'steel', cardmaster: 'rune', nue: 'beast',
-    borgar: 'earth', buzzu: 'steel', reika: 'blood', yamika: 'void', lunaria: 'holy', honored: 'void', hollow: 'blood', remnant: 'blood', fragment: 'void', kanae: 'steel', tokine: 'time', aimi: 'love', hachi: 'po', kuchi: 'cut', jackpot: 'gold' };
+    borgar: 'earth', buzzu: 'steel', reika: 'blood', yamika: 'void', lunaria: 'holy', honored: 'void', hollow: 'blood', remnant: 'blood', fragment: 'void', kanae: 'steel', tokine: 'time', aimi: 'love', hachi: 'po', kuchi: 'cut', jackpot: 'gold', haze: 'smoke' };
   S.ultStart = (id) => {
     riser(0.85, 90, 520, 0.12);
     osc('sine', 45, 90, 0.9, 0.35, 0, 0.3);
@@ -235,9 +245,11 @@ const Sound = (() => {
     else if (fl === 'love') { osc('sine', 62, 38, 0.18, 0.6, 0.2); osc('sine', 58, 34, 0.2, 0.5, 0.45); osc('sine', 1760, 440, 1.0, 0.06, 0.5, 0.9); noise(0.7, 0.2, 'bandpass', 500, 3000, 3, 0.6, 0.7); }
     else if (fl === 'po') { noise(1.6, 0.14, 'bandpass', 380, 900, 0.8, 0.1, 0.8); S.po(2, 0.8); }
     else if (fl === 'cut') { for (let i = 0; i < 3; i++) { osc('square', 3400, 2700, 0.018, 0.08, 0.5 + i * 0.12); noise(0.04, 0.3, 'highpass', 5200, 8000, 2, 0.5 + i * 0.12); } osc('sine', 62, 38, 0.18, 0.5, 0.2); }
+    else if (fl === 'smoke') { S.inhale(); S.exhale(1.2); osc('sine', 52, 40, 1.4, 0.3, 0.5, 0.8); }
     else if (fl === 'gold') { S.coin(1.2); [523, 784, 1047, 1568].forEach((f, i) => osc('square', f, f, 0.14, 0.05, 0.5 + i * 0.08)); }
     else if (fl === 'time') { for (let i = 0; i < 6; i++) osc('square', 2100 - i * 120, 1900 - i * 120, 0.02, 0.1, i * 0.12, 0.6); osc('sine', 196, 194, 1.4, 0.18, 0.7, 0.9); }
   };
+  for (const k of ['coin', 'chips', 'dice', 'cardFlick', 'rTick', 'click', 'snap', 'slot', 'jackpot', 'badLuck']) if (!S[k]) S[k] = L[k];   // Jackpot's sounds live in L; make them playable
   function play(name, ...a) {
     if (!ac || Settings.muted) return;
     try {

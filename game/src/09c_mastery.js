@@ -230,6 +230,12 @@ const VARIANTS = {
     { n: 'ROYAL FLUSH', rules: [{ grey: 'only', l: [0.03, 0.26], hue: 270, ss: 0.4, lm: 1.7 }, { h: [340, 15], l: [0.25, 1], hue: 45, s: 1.1, la: 0.08 }] },
     { n: 'GOLDEN JACKPOT', glow: '#ffd34a', rules: [{ grey: 'only', l: [0.03, 0.26], hue: 40, ss: 0.55, lm: 2.6 }, { h: [340, 15], l: [0.25, 1], hue: 40, s: 1.2, la: 0.1 }] },
   ],
+  haze: [
+    { n: 'MENTHOL', rules: [{ h: [245, 295], hue: 168, s: 1.05 }] },
+    { n: 'CHERRY EMBER', rules: [{ h: [245, 295], hue: 352, s: 1.25 }, { h: [160, 190], hue: 24, s: 1.1 }, { h: [125, 155], hue: 8, s: 1.1 }] },
+    { n: 'WHITE SMOKE', rules: [{ grey: 'only', l: [0.03, 0.3], inv: 1, lm: 0.92 }] },
+    { n: 'GHOST HAZE', glow: '#7dfcff', rules: [{ grey: 'only', l: [0.03, 0.3], hue: 200, ss: 0.35, lm: 1.45 }, { h: [245, 295], hue: 186, s: 1.2, la: 0.08 }] },
+  ],
   hollow: [
     { n: 'CRIMSON SEAL', rules: [{ h: [240, 300], hue: 355 }] },
     { n: 'MIDNIGHT BLUE', rules: [{ h: [240, 300], hue: 195 }, { grey: 'also', l: [0.12, 0.45], hue: 225, ss: 0.35 }] },

@@ -356,6 +356,18 @@ const ARC = {
     },
     front(g, sk, p, c, R) { cosDrape(g, sk, c, R, c.kc, c.kt, '#ffcf3a'); },
   },
+  haze: { n: 'AFTER HOURS', jp: 'アフターアワーズ', pal: { top: '#1a1820', uarm: '#1a1820', farm: '#1a1820', hood: '#121018', collar: '#121018', pocket: '#121018', leg: '#141318', warm: '#141318', print: '#4ff0e0', cuff: '#4ff0e0',
+    kc: '#121018', kl: '#8a5cc8', kt: '#4ff0e0', kh: '#16141c' },
+    back(g, sk, p, c, R, o) { cosCape(g, sk, c, R, o, { len: 0.92, flare: 14, col: c.kc, lin: c.kl, trim: c.kt, tatter: 5 }); },
+    head(g, r, c, R) {   // a black bucket hat with a neon band
+      g.save(); g.translate(0.04 * r, -0.62 * r); g.rotate(-0.08);
+      g.beginPath(); g.ellipse(0.06 * r, 0.04 * r, 1.36 * r, 0.3 * r, 0, 0, TAU); if (!R.mono) { g.strokeStyle = OUTLINE; g.lineWidth = R.ol * 2; g.stroke(); } g.fillStyle = R.mono || c.kh; g.fill(); g.restore();
+      polyR(g, r, [[-0.9, -0.66], [-0.78, -1.3], [-0.3, -1.5], [0.4, -1.5], [0.86, -1.24], [0.98, -0.68]], c.kh, R);
+      if (R.mono) return;
+      g.fillStyle = c.kt; g.beginPath(); g.moveTo(-0.9 * r, -0.86 * r); g.quadraticCurveTo(0, -0.78 * r, 0.96 * r, -0.88 * r); g.lineTo(0.97 * r, -0.74 * r); g.quadraticCurveTo(0, -0.64 * r, -0.9 * r, -0.72 * r); g.closePath(); g.fill();
+    },
+    front(g, sk, p, c, R) { cosDrape(g, sk, c, R, c.kl, c.kt, c.kt); },
+  },
 };
 
 // ---------------- registration: slot 5 for every fighter ----------------
