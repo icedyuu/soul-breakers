@@ -256,7 +256,7 @@ const FX = {
       const x = left ? lerp(-420, 40, slide) : lerp(W + 420, W - 40, slide);
       g.save(); g.globalAlpha = k > 0.8 ? (1 - k) / 0.2 : 1;
       g.textAlign = left ? 'left' : 'right'; g.textBaseline = 'alphabetic';
-      g.translate(x, 150); if (!px) g.transform(1, 0, -0.18, 1, 0, 0);
+      g.translate(x, 150 + (this.calloutDy || 0)); if (!px) g.transform(1, 0, -0.18, 1, 0, 0);
       const grd = g.createLinearGradient(0, -40, 0, 4); grd.addColorStop(0, '#ffffff'); grd.addColorStop(1, c.color);
       g.font = `italic 900 40px ${FONT_T}`;
       g.shadowColor = c.color; g.shadowBlur = px ? 0 : 18;

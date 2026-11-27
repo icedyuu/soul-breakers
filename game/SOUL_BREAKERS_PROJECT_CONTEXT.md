@@ -557,3 +557,14 @@ The test scripts are in `tests/` inside the source zip. Run each with node and P
 - SKIP pill (click/tap) and pause menu SKIP LESSON / EXIT TUTORIAL. End screen: PRACTICE / 1P VS CPU / TUTORIAL AGAIN / MAIN MENU. Practice panel hidden while `bt.tutorial`.
 - Title: TUTORIAL item (NEW / ✔) and a one-time "NEW HERE?" offer on a fresh save (no mastery data, not logged in, no invite link; skipped under `navigator.webdriver` unless `window.SB_TUT_OFFER`). Saved flags `Settings.tutSeen`, `Settings.tutDone`.
 - Test: `tests/tutorial.js` (plays all lessons with keyboard, offer, skip, pause, controller + touch prompts; shots to `../shots_tut/`).
+## 2v2 TAG mode (`src/09i_tag.js`, 2026-11-27)
+
+- Entry: title **FIGHT 1P VS 2P** has a choice ◀ 1 VS 1 / 2 VS 2 TAG ▶ (←/→ or click the right side of the button); **1P VS CPU → 2 VS 2 TAG MATCH** (single match, not Arcade). Not online.
+- Select: each side confirms two fighters (first = POINT, second = PARTNER; same fighter twice is refused; back removes the first pick). Team strip under RANDOM. `go()` is wrapped so CHARACTER SELECT stays in tag mode when coming from a tag battle / results / stage select.
+- Cfg: `cfg.tag = { t: [[p1a, p1b], [p2a, p2b]], v: [[v, v], [v, v]] }`; `newRound` sets `cfg.p1/p2/v1/v2` to the point fighters and builds `bt.team[i] = { ids, vs, cur, cd, pending, s: [{ hp, rec, dead, burst }, …] }` (round = both teams back to full).
+- TAG button: P1 **E**, P2 **U** (new `tag` action in `ACTIONS`/binds, rebindable), controller **stick clicks** (padMap 10/11), touch **TAG** button (only in tag battles). Allowed when actionable, 3 s cooldown (`TAG.CD`). The partner jumps in behind the leaver and does an air heavy (tag-in attack). Meter is shared (carried over), burst is per fighter.
+- Every tag-in creates a **fresh `Fighter`** (hp/burst restored from the slot), so forms, buffs, summons and cooldowns of the leaver are gone. `tagSwap` also kills the leaver's projectiles and clears their marks on the opponent (`tagClearMarks`: bleed, marks, seal, slow, pact, time stop, Hachi hide, fear …) — add new debuff fields there.
+- Bench: recovers up to 50 % of the missing HP at 0.07 % max HP per frame (blue part of the partner bar).
+- KO: a KO'd point fighter falls, then the partner drops in (`kind 'ko'`, invuln). Round ends only when both are down; TIME OVER compares team HP totals.
+- CPU tags out a hurt fighter sometimes. HUD partner panel at y 118 under each health bar; move-name callouts shift down 40 px in tag battles (`FX.calloutDy`).
+- Test: `tests/tag.js [frames]` (mechanics checks, CPU tag match to results, random-input tag fuzz with every fighter on both sides).
