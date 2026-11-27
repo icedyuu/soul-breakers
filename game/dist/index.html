@@ -14410,7 +14410,7 @@ HAZE.moves.sp2.__ai = { reach: 175, kind: 'melee', anti: false, st: 28, low: fal
 HAZE.moves.sp2f.__ai = { reach: 320, kind: 'buff', anti: false, st: 16, low: false, over: false };
 HAZE.moves.sp1f.cpuOk = F => !hzZones(F, 'cloud').some(z => !z.dying);
 HAZE.moves.sp2f.cpuOk = F => { const z = hzZones(F, 'hotbox').find(q => !q.dying); return z ? !!hzZoneAt(F, F.opp, 'hotbox') : true; };
-HAZE.moves.counter.cpuOk = F => !!hzZoneAt(F, F.opp) || Math.abs(F.opp.x - F.x) < 150;
+HAZE.moves.counter.cpuOk = F => !!hzZoneAt(F, F.opp);   // the bot only uses it as Smoke Step
 HAZE.combos = [
   { name: 'Nicotine Rush', notation: 'L → M → SP1 (Nicotine Rush)', seq: ['L', 'M', 'sp1'] },
   { name: 'Heavy Hit', notation: 'L → M → H → SP2 (Heavy Hit)', seq: ['L', 'M', 'H', 'sp2'] },
@@ -14727,7 +14727,7 @@ const BALANCE = {
   hachi:   { dmg: 1.2, hp: 1050 },
   kuchi:   { dmg: 1.0 },
   jackpot: { dmg: 1.08, hp: 1020 },
-  haze:    { dmg: 1.0 },
+  haze:    { dmg: 1.25, hp: 1050 },
   yoru:    { dmg: 1.08 },
   yamika:  { dmg: 1.12 },
   kanae:   { dmg: 1.12 },
@@ -22437,6 +22437,7 @@ const COMBO_BOOK = {"kazuma":[["",[["EASY","L → M → H → SP1 (Blazing Knuck
 "aimi":[["",[["EASY","L → M → H → SP1 → SP1",27,0,"any range"],["MEDIUM","L → L → M → H → SP1 → SP1",27,0,""],["HARD","L → M → L+H → hold ↑ → L → M → H (air)",25,0,"not vs Borgar / Buzzu"],["SOUL","L → L → M → H → ↓←SP1 → SP1+SP2",50,0,""]]]],
 "hachi":[["",[["EASY","L → M → H → SP2",28,0,"any range"],["MEDIUM","L → L → L → M → H → SP2",29,0,"any range"],["HARD","M → L+H → hold ↑ → M → H (air)",26,0,"hits everyone"],["SOUL","L → L → L → M → H → SP2 → SP1+SP2",35,0,""]]]],
 "jackpot":[["",[["EASY","L → M → H → SP1 (Loaded Dice)",19,4,"the die decides the damage"],["MEDIUM","L → L → M → H → ↓→SP1 (Royal Flush)",25,10,"more with a Royal Flush"],["HARD","L → M → L+H → hold ↑ → L → M → H (air)",24,6,"not vs Borgar / Buzzu"],["SOUL","L → L → L → M → H → SP1+SP2 (The Final Bet)",29,14,"MAX at 100 LUCK"]]],["LUCK",[["70+","L → M → H → ↓↓SP2 (All In — High Roller)",28,5,"spends all LUCK"],["100","L → M → H → ↓↓SP2 (All In — JACKPOT)",36,8,"cinematic · spends all LUCK"]]]],
+"haze":[["",[["EASY","L → M → H → SP1 (Nicotine Rush)",18,4,"any range"],["MEDIUM","L → L → M → H → SP2 (Heavy Hit)",24,5,"huge knockback · wall splat"],["HARD","M → L+H → hold ↑ → M → H (air)",20,4,"hits everyone"],["SOUL","L → L → L → M → H → SP1+SP2 (Zero Visibility)",41,15,""]]],["SMOKE",[["HOTBOX","in his Hotbox: L → M → H → SP2 (Heavy Hit, fast pull)",24,4,"they are slowed inside"],["COUGH","foe coughs in his smoke → L → M → H → SP2",24,4,"stand still unguarded = cough"],["STEP","foe in smoke: ↓←SP1 (Smoke Step) → L (Vapor Kick)",5,1,"he steps out behind them"]]]],
 "kuchi":[["",[["EASY","L → M → H → SP1",20,0,""],["MEDIUM","L → L → L → M → H → ↓→SP1",21,0,""],["HARD","L → M → L+H → hold ↑ → L → M → H (air)",23,0,"not vs Borgar / Buzzu"],["SOUL","L → L → L → M → H → ↓→SP1 → SP1+SP2",34,0,""]]]]};
 
 // ---------------------------------- Buzzu hurtbox fix ----------------------------------

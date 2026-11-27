@@ -634,7 +634,7 @@ HAZE.moves.sp2.__ai = { reach: 175, kind: 'melee', anti: false, st: 28, low: fal
 HAZE.moves.sp2f.__ai = { reach: 320, kind: 'buff', anti: false, st: 16, low: false, over: false };
 HAZE.moves.sp1f.cpuOk = F => !hzZones(F, 'cloud').some(z => !z.dying);
 HAZE.moves.sp2f.cpuOk = F => { const z = hzZones(F, 'hotbox').find(q => !q.dying); return z ? !!hzZoneAt(F, F.opp, 'hotbox') : true; };
-HAZE.moves.counter.cpuOk = F => !!hzZoneAt(F, F.opp) || Math.abs(F.opp.x - F.x) < 150;
+HAZE.moves.counter.cpuOk = F => !!hzZoneAt(F, F.opp);   // the bot only uses it as Smoke Step
 HAZE.combos = [
   { name: 'Nicotine Rush', notation: 'L → M → SP1 (Nicotine Rush)', seq: ['L', 'M', 'sp1'] },
   { name: 'Heavy Hit', notation: 'L → M → H → SP2 (Heavy Hit)', seq: ['L', 'M', 'H', 'sp2'] },

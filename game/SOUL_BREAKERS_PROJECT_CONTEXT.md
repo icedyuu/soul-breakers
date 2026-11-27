@@ -137,6 +137,7 @@ Combo trials: `{ name, notation, seq:[moveKeys], pre?:[...] }` — checked by th
 | 20 | HACHISHAKUSAMA 八尺様 | The Eight-Foot Tall Woman 八尺の女 | Zoner / Space Control | 1050 | **chibi** (tall) |
 | 21 | KUCHISAKE-ONNA 口裂け女 | The Slit-Mouth Woman 口裂けの女 | Rushdown / Mix-up | 1000 | **chibi** |
 | 22 | JACKPOT ジャックポット | The Gambler 賭博師 | Technical / Trickster | 960 | **chibi** |
+| 23 | HAZE ヘイズ | The Smoke Dealer 煙の売人 | Trickster / Area Control | 980 | **chibi** |
 
 ### Signature specials & ultimates
 - **Kazuma:** Blazing Knuckle → Second Blaze, Burst Shot, Iron Wall (counter), Rising Flame, Flame Cyclone (↓→SP2), Earth Breaker, Burning Hammer · Ult **Hundred Inferno Fists**.
@@ -156,6 +157,7 @@ Combo trials: `{ name, notation, seq:[moveKeys], pre?:[...] }` — checked by th
 - **Aimi:** see §7n.
 - **Hachishakusama / Kuchisake-onna:** see §7q.
 - **Jackpot:** see §7s.
+- **Haze:** see §7t.
 
 All characters have 3–7 combo trials (74 total).
 
@@ -462,6 +464,9 @@ Original fighter #22 (Beni's spec): arrogant supernatural casino gambler. Chibi,
 - Skins: WHITE TUXEDO, EMERALD TABLE, ROYAL FLUSH, GOLDEN JACKPOT (LV10 glow), arcade **HIGH ROLLER** (white suit, top hat instead of the fedora, black mantle). Cosmetics: intros HIGH STAKES / SHUFFLE UP, wins HOUSE WINS / LUCKY SEVEN, LV10 title THE HOUSE ALWAYS WINS. Story rival: Fudagami. Locked for new players like every non-original.
 - Tests: `mech_jackpot.js` (luck, odds, every tier of every gamble, max-LUCK jackpot, DoN, roulette interrupt/crouch/click, house dodge, All In tiers, both ult endings, skins, seeded determinism), `jackpot_look.js`, `jackpot_battle.js` (screenshots).
 - Known: Hachishakusama's ult script runs to f452 but the old 400-frame cap ends it early (pre-existing; can now be fixed with `c.maxF`).
+
+## 7t. Haze — The Smoke Dealer (`04_zzzz9g_haze.js`, `04_zzzz9h_haze_cine.js`, 2026-11-27)
+Relaxed, bored trickster in an oversized hoodie (round purple shades, neon cyan accents). Each device has one job: cigarette = fast interrupt (SP1 NICOTINE RUSH stream) and counter (↓↓SP2 SECONDHAND: vanish, reappear behind the attacker, 2 hits + launch; whiff = long open recovery, throws beat it, far projectiles just poof); shisha = ↓→SP1 CLOUD NINE (one lingering cloud, grows to ~215px, 330 f); vape = ↓←SP1 VAPOR DASH (back by default, forward with →, invuln startup, trail, L/M/H = Vapor Kick; if the foe stands in smoke it becomes SMOKE STEP behind them); bong = SP2 HEAVY HIT (28f startup, big knockback, 18f inside the Hotbox). ↓→SP2 HOTBOX = box zone (360 f): foe slowed + blinded, Haze walks x1.3 and is concealed; pressing it again = CLEAR THE ROOM (walls collapse, 78 dmg, launch); cooldown 540 f starts when the box ends. Counterplay: guarding foes never cough (idle/walking foes in smoke build cough → short stun, then 180 f immune); smoke is capped in size, Haze's eyes/ember always show when concealed. ULT ZERO VISIBILITY: deep drag + face zoom, arena fog, glowing eyes, 8 strikes from all sides with silhouettes, final exhale blast (~240 dmg), "Anyway...". Config in HZ_CFG / HZ_ULT. Generic hook added: `ch.cpuBlind(F, O)` adds CPU reaction frames (07c_cpu seen()). tagClearMarks clears hzCough/hzCoughCd/hzBlindT. Also fixed: Jackpot synth sounds were never found by Sound.play (copied from table L into S). BALANCE haze dmg 1.25 hp 1050 (~48% bot). Tests: tests/mech_haze.js, haze_look.js, haze_battle.js.
 
 ## 8. History of requests (in order)
 
