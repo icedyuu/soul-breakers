@@ -17020,6 +17020,8 @@ try {
 // Two devices (phones, tablets, PCs) play a Versus match over the internet.
 //  · Signaling: free PeerJS cloud server (0.peerjs.com, no accounts). The data itself
 //    flows peer-to-peer over a WebRTC data channel (PeerJS' free TURN relay as fallback).
+//    If no direct link opens within a few seconds (school / work WiFi blocks WebRTC), the guest
+//    also tries the WebSocket relay below (Supabase Realtime broadcast); the host listens on both.
 //  · Netcode: delay-based lockstep. Both peers run the same deterministic simulation;
 //    only inputs (one small int per frame) are exchanged, applied `delay` frames later.
 //    Math.random is a shared seeded PRNG inside the sim, sim-relevant Settings are fixed.
@@ -17032,6 +17034,8 @@ const NET_PROTO = 1;
 const NET_PREFIX = 'soulbrk-v1-';
 const NET_HASH_EVERY = 60;
 const NET_TIMEOUT = 7000;
+const NET_DIRECT_WAIT = 6000;   // ms the guest waits for a direct WebRTC link before also trying the relay
+const NET_BLOCKED = 'Could not connect. This network may block online play (school / work WiFi). Try a phone hotspot.';
 
 // ---------------- deterministic RNG for the simulation ----------------
 const NetRng = {
@@ -17072,6 +17076,75 @@ function netEncode(l, r, u, d, held, press, ok) {
   return ok ? v | NET_OK : v;
 }
 
+// ---------------- relay fallback (WebSocket) ----------------
+// When WebRTC can't get through (school / work WiFi, strict firewalls), both players talk through
+// Supabase Realtime "broadcast" (the free project the accounts already use) over a normal wss://
+// connection on port 443. Same message objects as the direct link, so lockstep is unchanged; only
+// the latency is a bit higher (the input delay adapts to the measured ping). Messages are batched
+// (one WebSocket frame every NET_RELAY_BATCH ms) to stay far below the free tier's rate limits.
+// The object mimics a PeerJS DataConnection: open, send(), close(), on('open'|'data'|'close'|'error').
+const NET_RELAY_BATCH = 34;   // ~2 frames: about 30 WebSocket messages per second per player
+const NetRelay = {
+  url() {
+    if (window.SB_RELAY_URL) return window.SB_RELAY_URL;
+    const c = typeof Cloud !== 'undefined' ? Cloud.cfg() : CLOUD_CFG;
+    return c.url.replace(/^http/, 'ws') + '/realtime/v1/websocket?apikey=' + encodeURIComponent(c.key) + '&vsn=1.0.0';
+  },
+  available() { return typeof WebSocket === 'function' && (!!window.SB_RELAY_URL || typeof CLOUD_CFG !== 'undefined'); },
+};
+class RelayConn {
+  constructor(code, role) {
+    this.code = code; this.role = role; this.open = false; this.closed = false; this.h = {}; this.q = []; this.ref = 1;
+    this.topic = 'realtime:sbnet-' + NET_PROTO + '-' + code; this.sid = Math.random().toString(36).slice(2, 10); this.peerSid = null;
+    try { this.ws = new WebSocket(NetRelay.url()); } catch (e) { setTimeout(() => this.emit('fail'), 0); return; }
+    this.ws.onopen = () => this.raw(this.topic, 'phx_join', { config: { broadcast: { self: false, ack: false }, presence: { key: '' }, private: false } }, '1');
+    this.ws.onmessage = m => { let d; try { d = JSON.parse(m.data); } catch (e) { return; } this.onMsg(d); };
+    this.ws.onerror = () => { };
+    this.ws.onclose = () => { const was = this.open, j = this.joined; this.open = false; clearInterval(this.hb); clearInterval(this.knockT); if (this.closed) return; this.closed = true; if (was) this.emit('close'); else if (!j || this.role === 'guest') this.emit('fail'); };
+    this.joinTO = setTimeout(() => { if (!this.joined) this.close(true); }, 8000);
+  }
+  on(ev, fn) { (this.h[ev] || (this.h[ev] = [])).push(fn); return this; }
+  emit(ev, a) { for (const fn of this.h[ev] || []) try { fn(a); } catch (e) { console.error(e); } }
+  raw(topic, event, payload, ref) { try { if (this.ws.readyState === 1) this.ws.send(JSON.stringify({ topic, event, payload, ref: ref || String(++this.ref), join_ref: '1' })); } catch (e) { } }
+  post(body) { this.raw(this.topic, 'broadcast', { type: 'broadcast', event: 'm', payload: Object.assign({ r: this.role, s: this.sid }, body) }); }
+  ctl(c) { this.post({ c, to: this.peerSid }); }
+  onMsg(d) {
+    if (d.event === 'phx_reply' && d.ref === '1') {
+      clearTimeout(this.joinTO);
+      if (!d.payload || d.payload.status !== 'ok') return this.close(true);
+      this.joined = true; this.emit('joined');
+      this.hb = setInterval(() => this.raw('phoenix', 'heartbeat', {}), 25000);
+      if (this.role === 'guest') { const k = () => this.post({ c: 'knock' }); k(); this.knockT = setInterval(() => { if (!this.open) k(); }, 1000); }
+      return;
+    }
+    if (d.event === 'phx_error' || d.event === 'phx_close') return this.close(true);
+    if (d.event !== 'broadcast' || !d.payload || !d.payload.payload) return;
+    const b = d.payload.payload;
+    if (b.r === this.role || (b.to && b.to !== this.sid)) return;
+    if (this.peerSid && b.s !== this.peerSid) { if (b.c === 'knock' && this.role === 'host') this.post({ c: 'full', to: b.s }); return; }   // a third device
+    if (b.c === 'knock' && this.role === 'host') { if (!this.peerSid) { this.peerSid = b.s; this.emit('knock'); } else this.ctl('ok'); return; }
+    if (b.c === 'ok' && this.role === 'guest' && !this.peerSid) { this.peerSid = b.s; clearInterval(this.knockT); this.emit('accepted'); return; }
+    if (b.c === 'full' && this.role === 'guest' && !this.open) { clearInterval(this.knockT); this.emit('full'); return; }
+    if (b.c === 'bye') { if (this.open) { this.open = false; this.emit('close'); } return this.close(); }
+    if (b.q && this.open) for (const o of b.q) this.emit('data', o);
+  }
+  accept() { this.ctl('ok'); this.markOpen(); }   // host: take this guest
+  markOpen() { this.open = true; setTimeout(() => { if (this.open) this.emit('open'); }, 0); }
+  send(o) {
+    if (!this.open) return;
+    this.q.push(o);
+    if (!this.ft) this.ft = setTimeout(() => this.flush(), NET_RELAY_BATCH);
+  }
+  flush() { clearTimeout(this.ft); this.ft = 0; if (this.q.length) { const q = this.q; this.q = []; this.post({ q, to: this.peerSid }); } }
+  close(failed) {
+    if (this.closed) return;
+    this.flush(); if (this.peerSid && !failed) this.ctl('bye');
+    const was = this.open; this.open = false; this.closed = true; clearInterval(this.hb); clearInterval(this.knockT); clearTimeout(this.joinTO);
+    const ws = this.ws; setTimeout(() => { try { ws && ws.close(); } catch (e) { } }, 150);
+    if (failed) this.emit(was ? 'close' : 'fail');
+  }
+}
+
 // ---------------- connection ----------------
 const Net = {
   peer: null, conn: null, role: null, code: '', status: 'idle', err: '', rtt: 0, lastRx: 0, lastPing: 0,
@@ -17079,37 +17152,85 @@ const Net = {
   available() { return typeof window.Peer === 'function'; },
   opts() {
     const q = new URLSearchParams(location.search), o = { debug: 0 };
+    // PeerJS' defaults plus TCP variants of its free TURN relay (some networks only let TCP through)
+    o.config = { iceServers: [{ urls: ['stun:stun.l.google.com:19302', 'stun:stun.cloudflare.com:3478'] },
+      { urls: ['turn:eu-0.turn.peerjs.com:3478', 'turn:us-0.turn.peerjs.com:3478', 'turn:eu-0.turn.peerjs.com:3478?transport=tcp', 'turn:us-0.turn.peerjs.com:3478?transport=tcp'], username: 'peerjs', credential: 'peerjsp' }], sdpSemantics: 'unified-plan' };
     if (q.get('peerhost')) { o.host = q.get('peerhost'); o.port = +q.get('peerport') || 9000; o.secure = q.get('peersecure') === '1'; o.path = q.get('peerpath') || '/'; }
     return o;
   },
   reset() { this.match = 0; this.rin = new Map(); this.rinMax = -1; this.rhash = new Map(); this.remoteSel = null; this.rtt = 0; this.desyncs = 0; },
   host() {
-    this.close(); this.reset(); this.role = 'host'; this.status = 'opening'; this.err = '';
-    if (!this.available()) return this.fail('Online play is not available in this browser.');
-    this.code = String(100000 + Math.floor(Math.random() * 900000));
-    const p = this.peer = new Peer(NET_PREFIX + this.code, this.opts());
+    this.close(); this.reset(); this.role = 'host'; this.status = 'opening'; this.err = ''; this.p2pErr = null;
+    if (!this.available() && !NetRelay.available()) return this.fail('Online play is not available in this browser.');
+    const code = this.code = String(100000 + Math.floor(Math.random() * 900000));
+    // the room listens on BOTH ways in: direct WebRTC (PeerJS) and the WebSocket relay (school / work
+    // networks often block WebRTC; the relay goes over normal HTTPS like any website)
+    const relay = this.relayL = NetRelay.available() ? new RelayConn(code, 'host') : null;
+    if (relay) {
+      relay.on('joined', () => { if (this.relayL === relay && this.status === 'opening') this.status = 'waiting'; });
+      relay.on('knock', () => {
+        if (this.relayL !== relay) return;
+        if (this.conn && this.conn.open) return relay.ctl('full');
+        const old = this.conn; this.conn = null; try { if (old) old.close(); } catch (e) { }   // a direct link that never opened
+        this.bind(relay); relay.accept();
+      });
+      relay.on('fail', () => { if (this.relayL !== relay) return; this.relayL = null; if (!this.peer && !this.conn) this.fail(this.p2pErr ? netErrText(this.p2pErr) : NET_BLOCKED); });
+    }
+    if (!this.available() || window.SB_NET_NOP2P) return;
+    const p = this.peer = new Peer(NET_PREFIX + code, this.opts());
     p.on('open', () => { if (this.peer === p && this.status === 'opening') this.status = 'waiting'; });
     p.on('connection', c => {
       if (this.peer !== p) return;
       if (c.metadata && c.metadata.spec) { if (typeof SpecHost !== 'undefined') SpecHost.accept(c); else c.close(); return; }   // spectator (09i_replay.js)
       if (this.conn) { c.on('open', () => { try { c.send({ t: 'full' }); } catch (e) { } setTimeout(() => c.close(), 400); }); return; }
       this.bind(c);
+      c.on('open', () => { if (this.conn === c && this.relayL) { this.relayL.close(); this.relayL = null; } });   // direct link works: relay not needed
     });
     p.on('disconnected', () => { if (this.peer === p && !this.conn) try { p.reconnect(); } catch (e) { } });
     p.on('error', e => {
       if (this.peer !== p) return;
       if (e.type === 'unavailable-id') return this.host();
-      if (this.conn && this.conn.open) return;   // signaling hiccup after the P2P link is up: ignore
+      if (this.conn && this.conn.open) return;   // signaling hiccup after the link is up: ignore
+      this.p2pErr = e;
+      if (this.relayL) { this.peer = null; try { p.destroy(); } catch (x) { } return; }   // the relay keeps the room open
       this.fail(netErrText(e));
     });
   },
   join(code) {
-    this.close(); this.reset(); this.role = 'guest'; this.code = code; this.status = 'connecting'; this.err = '';
-    if (!this.available()) return this.fail('Online play is not available in this browser.');
-    const p = this.peer = new Peer(this.opts());
-    p.on('open', () => { if (this.peer === p) this.bind(p.connect(NET_PREFIX + code, { reliable: true, serialization: 'json' })); });
-    p.on('error', e => { if (this.peer !== p) return; if (this.conn && this.conn.open) return; this.fail(e.type === 'peer-unavailable' ? `Room ${code} not found. Check the code.` : netErrText(e)); });
-    this.joinT = setTimeout(() => { if (this.peer === p && this.status === 'connecting') this.fail('Could not connect. Check the code and your internet, then try again.'); }, 20000);
+    this.close(); this.reset(); this.role = 'guest'; this.code = code; this.status = 'connecting'; this.err = ''; this.p2pErr = null; this.relayState = '';
+    if (!this.available() && !NetRelay.available()) return this.fail('Online play is not available in this browser.');
+    if (this.available() && !window.SB_NET_NOP2P) {
+      const p = this.peer = new Peer(this.opts());
+      p.on('open', () => { if (this.peer === p && !this.relay) this.bind(p.connect(NET_PREFIX + code, { reliable: true, serialization: 'json' })); });
+      p.on('error', e => {
+        if (this.peer !== p) return; if (this.conn && this.conn.open) return;
+        this.p2pErr = e; this.peer = null; try { p.destroy(); } catch (x) { }
+        if (!this.startRelay()) this.fail(e.type === 'peer-unavailable' ? `Room ${code} not found. Check the code.` : netErrText(e));
+      });
+      // no direct link after a few seconds (blocked WebRTC, strict firewall): try the relay too
+      this.relayT = setTimeout(() => { if (this.status === 'connecting' && !(this.conn && this.conn.open)) this.startRelay(); }, NET_DIRECT_WAIT);
+    } else if (!this.startRelay()) return;
+    this.joinT = setTimeout(() => {
+      if (this.status !== 'connecting') return;
+      const nf = this.p2pErr && this.p2pErr.type === 'peer-unavailable';
+      this.fail(this.relayState === 'joined' ? (nf ? `Room ${code} not found. Check the code.` : `No answer from room ${code}. Check the code or make a new room.`) : NET_BLOCKED);
+    }, 20000);
+  },
+  // guest: second way in, over the WebSocket relay
+  startRelay() {
+    if (this.relay || this.role !== 'guest' || !NetRelay.available()) return !!this.relay;
+    const r = this.relay = new RelayConn(this.code, 'guest');
+    r.on('joined', () => { if (this.relay === r) this.relayState = 'joined'; });
+    r.on('fail', () => { if (this.relay !== r) return; this.relayState = 'failed'; if (!this.peer && this.status === 'connecting') this.fail(this.p2pErr && this.p2pErr.type === 'peer-unavailable' ? `Room ${this.code} not found. Check the code.` : NET_BLOCKED); });
+    r.on('full', () => { if (this.relay === r && this.status === 'connecting' && !(this.conn && this.conn.open)) this.fail('That room is already full.'); });
+    r.on('accepted', () => {
+      if (this.relay !== r || this.status !== 'connecting') return;
+      if (this.conn && this.conn.open) { r.close(); return; }
+      const old = this.conn, p = this.peer; this.conn = null; this.peer = null;
+      try { if (old) old.close(); } catch (e) { } try { if (p) p.destroy(); } catch (e) { }
+      this.bind(r); r.markOpen();
+    });
+    return true;
   },
   bind(c) {
     this.conn = c; this.lastRx = performance.now();
@@ -17156,13 +17277,15 @@ const Net = {
     if (!(scene instanceof NetLobbyScene)) go(new NetLobbyScene({ error: msg }));
   },
   teardown() {
-    const c = this.conn, p = this.peer; this.conn = null; this.peer = null; clearTimeout(this.joinT);
+    const c = this.conn, p = this.peer; this.conn = null; this.peer = null; clearTimeout(this.joinT); clearTimeout(this.relayT); this.dropRelays(c);
     try { if (c) c.close(); } catch (e) { }
     try { if (p) p.destroy(); } catch (e) { }
   },
+  dropRelays(keep) { for (const k of ['relay', 'relayL']) { const r = this[k]; this[k] = null; if (r && r !== keep) r.close(); } },
+  viaRelay() { return this.conn instanceof RelayConn; },
   close() {
     if (this.conn) this.send({ t: 'bye' });
-    const c = this.conn, p = this.peer; this.conn = null; this.peer = null; this.status = 'idle'; clearTimeout(this.joinT);
+    const c = this.conn, p = this.peer; this.conn = null; this.peer = null; this.status = 'idle'; clearTimeout(this.joinT); clearTimeout(this.relayT); this.dropRelays(c);
     setTimeout(() => { try { if (c) c.close(); } catch (e) { } try { if (p) p.destroy(); } catch (e) { } }, 300);
   },
 };
@@ -17175,7 +17298,7 @@ function netErrText(e) {
 function netStatusChip(g) {
   const ms = Math.round(Net.rtt);
   g.save(); g.font = `800 14px ${FONT_UI}`; g.textAlign = 'left'; g.textBaseline = 'middle';
-  const txt = `ONLINE · ROOM ${Net.code}${ms ? ' · ' + ms + ' ms' : ''}`, w = g.measureText(txt).width + 24;
+  const txt = `ONLINE · ROOM ${Net.code}${Net.viaRelay() ? ' · RELAY' : ''}${ms ? ' · ' + ms + ' ms' : ''}`, w = g.measureText(txt).width + 24;
   g.fillStyle = 'rgba(10,6,24,0.8)'; g.fillRect(12, 10, w, 26); g.strokeStyle = '#7affc0'; g.lineWidth = 1.5; g.strokeRect(12, 10, w, 26);
   g.fillStyle = '#7affc0'; g.fillText(txt, 24, 24); g.restore();
 }

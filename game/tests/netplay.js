@@ -4,6 +4,7 @@
 // identical state hashes on both sides every frame, no errors, results + rematch, disconnect.
 // Usage: node netplay.js [matches=2]    env: SB_PEER_MODULE=path/to/node_modules/peer, SB_DIST
 // SB_NET_TAG=1: the host switches the room to 2 VS 2 TAG, both pick two fighters, the bots press TAG now and then.
+// SB_NET_RELAY=1: the guest has no WebRTC (like a school WiFi), so it must connect over the WebSocket relay (local mock).
 // The guest page renders only every 3rd frame (other draw timing must not desync).
 const { chromium } = require('playwright');
 const http = require('http'), fs = require('fs'), path = require('path');
@@ -18,6 +19,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   const srv = http.createServer((q, r) => { const f = q.url.split('?')[0]; if (f === '/' || f === '/index.html') { r.setHeader('content-type', 'text/html'); r.end(fs.readFileSync(DIST)); } else { r.statusCode = 404; r.end(); } }).listen(9124);
   await sleep(500);
   // SB_CLOUD=1: both players log in to a local mock of the account server (tests/cloudmock.js) and every match must be rated
+  const RELAYS = require('./relaymock').start(9206), RELAY = process.env.SB_NET_RELAY ? RELAYS : null;   // the host always listens on the relay too
   const CLOUD = process.env.SB_CLOUD ? require('./cloudmock').start(9205) : null;
   if (CLOUD) await CLOUD.sql("delete from sb_matches; delete from sb_reports; delete from sb_sessions; delete from sb_users");
   const browser = await chromium.launch({ args: ['--autoplay-policy=no-user-gesture-required'] });
@@ -28,7 +30,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
     const p = await ctx.newPage();
     p.on('pageerror', e => errs.push(name + ': ' + (e.stack || e)));
     p.on('console', m => { if (m.type() === 'error' && !m.text().includes('Failed to load resource')) errs.push(name + ' console: ' + m.text()); });
-    await p.addInitScript(c => { localStorage.clear(); if (c) window.SB_CLOUD_OVERRIDE = { url: 'http://127.0.0.1:9205', key: 'test' }; }, !!CLOUD);
+    await p.addInitScript(([c, r, nm]) => { localStorage.clear(); if (c) window.SB_CLOUD_OVERRIDE = { url: 'http://127.0.0.1:9205', key: 'test' }; window.SB_RELAY_URL = 'ws://127.0.0.1:9206/realtime/v1/websocket?vsn=1.0.0'; if (r && nm === 'guest') window.SB_NET_NOP2P = 1; }, [!!CLOUD, !!RELAY, name]);
     await p.goto(url); await p.waitForTimeout(400);
     await p.evaluate(() => {
       Settings.voice = false; Settings.muted = true; Settings.mobile = false;
@@ -66,7 +68,8 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   for (const d of code) { await Bp.keyboard.press('Digit' + d); await sleep(60); }
   for (let i = 0; i < 50; i++) { await sleep(200); if (await A.evaluate(() => scene instanceof NetSelectScene) && await Bp.evaluate(() => scene instanceof NetSelectScene)) break; }
   if (!await Bp.evaluate(() => scene instanceof NetSelectScene)) throw new Error('not in select: ' + await Bp.evaluate(() => Net.status + ' ' + Net.err + ' ' + scene.constructor.name));
-  console.log('connected, rtt', await A.evaluate(() => Math.round(Net.rtt)));
+  console.log('connected, rtt', await A.evaluate(() => Math.round(Net.rtt)), 'relay host/guest', await A.evaluate(() => Net.viaRelay()), await Bp.evaluate(() => Net.viaRelay()));
+  if (!!RELAY !== (await A.evaluate(() => Net.viaRelay()) && await Bp.evaluate(() => Net.viaRelay()))) throw new Error(RELAY ? 'relay mode expected' : 'direct link expected');
   // pick fighters: host clicks a card, guest uses keyboard
   const ids = await A.evaluate(() => CHARS.map(c => c.id));
   // colour variants: host picks NUE colour 3 (LV 7 unlocked), guest cycles once with SP2 (T)
@@ -149,9 +152,10 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   for (let i = 0; i < 60 && !specMsg; i++) { await sleep(250); specMsg = await S.evaluate(() => scene instanceof SpectateScene && (scene.state === 'done' || scene.state === 'error') ? scene.msg : null); }
   console.log('spectator after the room closed:', specMsg);
   if (!specMsg) results.push({ ok: false });
+  if (RELAY) { console.log('relay msgs', RELAY.stats.msgs, 'max/s', RELAY.stats.maxPerSec); if (RELAY.stats.maxPerSec > 60) results.push({ ok: false }); }
   console.log(errs.length ? 'ERRORS:\n' + errs.slice(0, 10).join('\n') : 'no errors');
   const pass = results.every(r => r.ok) && lostMsg && !errs.length;
   console.log(pass ? 'NETPLAY PASS' : 'NETPLAY FAIL');
-  await browser.close(); srv.close(); if (CLOUD) await CLOUD.shut(); try { ps.close?.(); } catch (e) { }
+  await browser.close(); srv.close(); RELAYS.close(); if (CLOUD) await CLOUD.shut(); try { ps.close?.(); } catch (e) { }
   process.exit(pass ? 0 : 1);
 })().catch(e => { console.error(e); process.exit(1); });
