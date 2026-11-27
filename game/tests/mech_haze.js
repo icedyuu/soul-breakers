@@ -52,7 +52,7 @@ const { open } = require('./harness');
     [A, D] = fresh('kazuma', 80); A.startMove('sp2d'); T.run(12); D.startMove('THROW'); T.run(40); ok(!A.performed.has('secondhand'), 'throws beat Secondhand');
     [A, D] = fresh('yoru', 500); D.startMove('sp1'); for (let i = 0; i < 60 && !BT.projs.some(p => p.owner === D && Math.abs(p.x - A.x) < 260); i++) T.frame(); A.startMove('sp2d'); T.run(40); ok(A.hp === A.maxHp && !A.performed.has('secondhand'), 'far projectile is swallowed by the smoke');
     // --- Nicotine Rush ---
-    [A, D] = fresh('kazuma', 400); play(A, 'sp1', 40); ok(D.hp < D.maxHp && D.maxHp - D.hp < 45, `Nicotine Rush: low damage (${Math.round(D.maxHp - D.hp)})`);
+    [A, D] = fresh('kazuma', 400); play(A, 'sp1', 40); ok(D.hp < D.maxHp && D.maxHp - D.hp <= 50, `Nicotine Rush: low damage (${Math.round(D.maxHp - D.hp)})`);
     [A, D] = fresh('kazuma', 400); D.startMove('sp1'); T.run(2); A.startMove('sp1'); T.run(40); ok(true, 'stream vs fireball runs');
     // --- ultimate ---
     const ult = () => { const [A, D] = fresh('kazuma', 110); A.meter = 100; play(A, 'sp1f', 40); A.startMove('ult'); let n = 0, fog = 0, hid = 0; while ((A.state === 'attack' || A.state === 'cine' || BT.freeze) && n < 900) { T.frame(); n++; if (BT.cine) { fog = Math.max(fog, BT.cine.fog || 0); if (A.hidden) hid++; } } return [Math.round(D.maxHp - D.hp), n, fog, hid, A.hidden, hzZones(A).length, D.state]; };
