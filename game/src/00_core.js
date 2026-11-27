@@ -31,11 +31,11 @@ function overlap(a, b) { return a && b && a.x < b.x + b.w && a.x + a.w > b.x && 
 function mkCanvas(w, h, fn) { const c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d'); if (fn) fn(g, w, h); return c; }
 
 // ---------------- Settings (persisted in localStorage) ----------------
-const ACTIONS = ['left', 'right', 'up', 'down', 'light', 'medium', 'heavy', 'sp1', 'sp2', 'block'];
-const ACTION_LABELS = { left: 'Move Left', right: 'Move Right', up: 'Jump', down: 'Crouch', light: 'Light Attack', medium: 'Medium Attack', heavy: 'Heavy Attack', sp1: 'Special 1', sp2: 'Special 2', block: 'Block' };
+const ACTIONS = ['left', 'right', 'up', 'down', 'light', 'medium', 'heavy', 'sp1', 'sp2', 'block', 'tag'];
+const ACTION_LABELS = { left: 'Move Left', right: 'Move Right', up: 'Jump', down: 'Crouch', light: 'Light Attack', medium: 'Medium Attack', heavy: 'Heavy Attack', sp1: 'Special 1', sp2: 'Special 2', block: 'Block', tag: 'Tag Partner (2v2)' };
 const DEFAULT_BINDS = {
-  1: { left: 'KeyA', right: 'KeyD', up: 'KeyW', down: 'KeyS', light: 'KeyF', medium: 'KeyV', heavy: 'KeyG', sp1: 'KeyR', sp2: 'KeyT', block: 'KeyH' },
-  2: { left: 'ArrowLeft', right: 'ArrowRight', up: 'ArrowUp', down: 'ArrowDown', light: 'KeyK', medium: 'KeyJ', heavy: 'KeyL', sp1: 'KeyO', sp2: 'KeyP', block: 'KeyI' },
+  1: { left: 'KeyA', right: 'KeyD', up: 'KeyW', down: 'KeyS', light: 'KeyF', medium: 'KeyV', heavy: 'KeyG', sp1: 'KeyR', sp2: 'KeyT', block: 'KeyH', tag: 'KeyE' },
+  2: { left: 'ArrowLeft', right: 'ArrowRight', up: 'ArrowUp', down: 'ArrowDown', light: 'KeyK', medium: 'KeyJ', heavy: 'KeyL', sp1: 'KeyO', sp2: 'KeyP', block: 'KeyI', tag: 'KeyU' },
 };
 const Settings = {
   cpuLevel: 1, master: 0.8, music: 0.5, sfx: 0.85, muted: false, voice: true, shake: true, fx: 'HIGH', roundTime: 99, pixel: true, mobile: null, touchSize: 'M', touchAlpha: 'MID',
@@ -129,7 +129,7 @@ class PlayerInput {
     if (dir !== this.dir) { this.dir = dir; this.hist.push({ d: dir, f: this.f }); if (this.hist.length > 24) this.hist.shift(); }
     const now = [], vb = this.virtual && this.virtual.btn;   // vb: CPU-driven buttons ({ held:{}, press:Set }), same path as keys
     const bHeld = a => vb ? this.enabled && !!vb.held[a] : dn(b[a]), bPr = a => vb ? this.enabled && vb.press.has(a) : pr(b[a]);
-    for (const a of ['light', 'medium', 'heavy', 'sp1', 'sp2', 'block']) {
+    for (const a of ['light', 'medium', 'heavy', 'sp1', 'sp2', 'block', 'tag']) {   // tag: 2v2 TAG mode only (09i_tag.js)
       this.held[a] = bHeld(a);
       if (bPr(a)) { this.buf[a] = 10; this.pressF[a] = this.f; this.pdir[a] = { fwd: this.fwd, d }; now.push(a); } else if (this.buf[a] > 0) this.buf[a]--;
     }
