@@ -599,3 +599,9 @@ The test scripts are in `tests/` inside the source zip. Run each with node and P
 - KO: a KO'd point fighter falls, then the partner drops in (`kind 'ko'`, invuln). Round ends only when both are down; TIME OVER compares team HP totals.
 - CPU tags out a hurt fighter sometimes. HUD partner panel at y 118 under each health bar; move-name callouts shift down 40 px in tag battles (`FX.calloutDy`).
 - Test: `tests/tag.js [frames]` (mechanics checks, CPU tag match to results, random-input tag fuzz with every fighter on both sides).
+
+## Fighter classes on character select (`src/09j_classes.js`, 2026-11-27)
+- Six classes with a symbol: RUSHDOWN (bolt), ZONER (crosshair), GRAPPLER (crushing arrows), TRICKSTER (sparkle), CONTROL (hourglass), ALL-ROUNDER (shield). Round badge on the bottom edge of every select tile (dimmed when locked).
+- Legend: 3 + 3 entries beside the short last grid row; when the rows are full it falls back to two lines under RANDOM. The class of the hovered fighter(s) lights up.
+- Assignment table `FIGHTER_CLASS` (id → class); a new fighter adds its id there or sets `ch.fclass`. Unknown ids default to ALL-ROUNDER. `haze` is pre-mapped to trickster.
+- Current: All-Rounder Kazuma, Kuon · Rushdown Yoru, Buzzu, Vespera, Aimi, Kuchisake · Zoner Sera, Fudagami, Lunaria, Hachishakusama · Grappler Goro, Borgar · Trickster Frogs, Nue, Yamika, Kanae, Jackpot · Control Tetsumichi, Reika, Hollow, Tokine.
