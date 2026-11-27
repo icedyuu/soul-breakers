@@ -89,7 +89,7 @@ FROGS.moves.sp2f = {
 // ---------------------------------- TETSUMICHI: ↓→SP2 PANTOGRAPH SPARK ----------------------------------
 CONDUCTOR.moves.sp2f = {
   name: 'PANTOGRAPH SPARK', jp: '集電火花', desc: 'Raises the lance like a pantograph; an overhead line arcs with electricity. Invulnerable start, anti-air launcher.', special: 1, lvl: 4,
-  poses: ['point', 'signal'], st: 6, act: 10, rec: 22, dmg: 86, hs: 30, bs: 14, kb: 2, launch: -13, kd: 1, hb: { x: -30, y: -340, w: 170, h: 210 }, invuln: [0, 9], cd: 60, str: 3, sfx: 'thunder',
+  poses: ['point', 'signal'], st: 6, act: 10, rec: 22, dmg: 86, hs: 30, bs: 14, kb: 2, launch: -13, kd: 1, hb: { x: -30, y: -340, w: 170, h: 210 }, invuln: [0, 9], cd: 90, str: 3, sfx: 'thunder',
   tick(F, f) {
     if (f >= 6 && f < 16) {
       const tx = F.x + F.facing * 18, ty = F.y - 300 * F.s;

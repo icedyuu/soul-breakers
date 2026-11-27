@@ -625,7 +625,7 @@ const CONDUCTOR = {
   },
   moves: Object.assign(baseNormals({ dmg: 1.0, rng: 1.08 }), {
     sp1: {
-      name: 'ALL ABOARD!', jp: '発車', desc: 'Whistles up a spectral train that charges across the whole arena. Crushes projectiles — jump over it!', special: 1, lvl: 4, poses: ['whistle', 'whistle'], st: 20, act: 1, rec: 28, cd: 110, sfx: 'whistle',
+      name: 'ALL ABOARD!', jp: '発車', desc: 'Whistles up a spectral train that charges across the whole arena. Crushes projectiles — jump over it!', special: 1, lvl: 4, poses: ['whistle', 'whistle'], st: 20, act: 1, rec: 28, cd: 165, sfx: 'whistle',
       tick(F, f) { if (f === 4) { FX.wtext(F.x, F.y - 235 * F.s, 'ALL ABOARD!', { size: 34, color: '#ffffff', stroke: '#c8102e', life: 40 }); Sound.speak('All aboard!', 0.45, 1); } if (f % 3 === 0 && f < 20) FX.p({ type: 'smoke', x: F.x + F.facing * 10, y: F.y - 170 * F.s, vx: rand(-1, 1), vy: -2, life: 24, size: 8, color: 'rgba(255,255,255,0.5)', add: false, grow: 0.4 }); },
       spawn: { f: 20, fn(F) { BT.spawn({ owner: F, kind: 'train', persist: 1, x: F.x - F.facing * 260, y: GROUND - 78, vx: F.facing * 15, w: 250, h: 150, dmg: 88, hs: 26, bs: 16, kb: 12, kd: 1, life: 150, str: 3, clash: 0, crush: 1, color: '#ff2a3a' }); Sound.play('trainRumble'); Sound.play('horn'); } },
     },
@@ -641,7 +641,7 @@ const CONDUCTOR = {
       tick(F, f) { if (f === 4) Sound.play('clack'); } },
     sp2: {
       name: 'EXPRESS DELIVERY', jp: '特急便', desc: 'Vanishes, leaving a red-and-white afterimage, and reappears behind the opponent (hold ← to appear in front) with a baton strike.', special: 1, lvl: 4, poses: ['crouch', 'thrust'], st: 14, act: 4, rec: 16, dmg: 82, hs: 24, bs: 14, kb: 10,
-      hb: { x: 0, y: -178, w: 138, h: 62 }, cd: 85, str: 3, invuln: [3, 13], sfx: 'whistle',
+      hb: { x: 0, y: -178, w: 138, h: 62 }, cd: 130, str: 3, invuln: [3, 13], sfx: 'whistle',
       onStart(F) { F.expFront = [1, 4, 7].includes(F.input.dir); F.afterimage = 14; },
       tick(F, f, O) {
         if (f === 4) { F.hidden = true; FX.burst(F.x, F.y - 100, '#ff2a3a', 12, 6); FX.burst(F.x, F.y - 100, '#ffffff', 10, 6); Sound.play('teleport'); F.exp0 = F.x; }
