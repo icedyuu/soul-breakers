@@ -26,6 +26,7 @@ async function open(opts = {}) {
       draw() { ctx.setTransform(VIEW_K, 0, 0, VIEW_K, 0, 0); ctx.imageSmoothingEnabled = !Settings.pixel; ctx.save(); scene.draw(ctx); ctx.restore(); },
     };
   }, !!process.env.SB_MOBILE);
+  if (process.env.SB_HF) await page.evaluate(f => { HF_FORCE = f.includes(',') ? f.split(',') : f; }, process.env.SB_HF);   // force Haunted Four form(s)
   return { browser, page, errors };
 }
 module.exports = { open };

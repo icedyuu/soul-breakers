@@ -14,7 +14,7 @@ const TITLE_TOP = {
   yamika: ['DARK FLAME MASTER', '黒炎の支配者'], lunaria: ['ETERNAL NIGHT', '永遠の夜'], honored: ['THE STRONGEST', '最強'], hollow: ['THE LAST REMNANT', '最後の残滓'],
   kanae: ['THORN QUEEN', '棘の女王'], tokine: ['NIGHTMARE OF TIME', '時の悪夢'], aimi: ['FOREVER YOURS', '永遠にあなたのもの'],
   hachi: ['EIGHT FEET OF DREAD', '八尺の恐怖'], kuchi: ['AM I PRETTY?', '私、きれい？'], jackpot: ['THE HOUSE ALWAYS WINS', '胴元は必ず勝つ'],
-  haze: ['ZERO VISIBILITY', '視界ゼロ'], teke: ['THE LAST TRAIN', '最終電車'],
+  haze: ['ZERO VISIBILITY', '視界ゼロ'], teke: ['THE LAST TRAIN', '最終電車'], haunted: ['THEY ALWAYS COME BACK', '彼らは必ず戻る'],
 };
 function masteryTitle(ch, lv) { lv = clamp(lv | 0, 1, 10); return lv >= 10 ? (TITLE_TOP[ch.id] || ['SOUL BREAKER', '魂砕き']) : TITLE_GEN[lv - 1]; }
 
@@ -272,6 +272,12 @@ cosAdd('teke', { c: '#ff2a3a', c2: '#e4e2ea', pt: 'ember', snd: 'teke' }, P => (
     mk('LAST STOP', '終点', TPL.poses(P, ['still', ['look', F => CFX.snd('crossing')], ['turn', F => { CFX.snd('teke'); CFX.flash('#ff2a3a', 0.15); }], 'stance'], null, { step: 36 }), { line: 'Is this your stop...?' })],
   w: [mk('MY LEGS...', '私の脚…', TPL.poses(P, ['look', ['tilt', F => CFX.snd('teke')], 'tilt'], null, { step: 40 }), { line: 'Have you seen... my legs?' }),
     mk('LAST TRAIN', '最終電車', TPL.poses(P, ['reap_w', ['reap', F => { CFX.burst(F, P.c, 18, 10, 60); CFX.snd('sickle'); }], 'victory'], null, { step: 30 }), { loop: [ambient('ember', P.c, 14, 60, 220, 2)] })],
+}));
+cosAdd('haunted', { c: '#ffc24a', c2: '#ff3a3a', pt: 'spark', snd: 'servo' }, P => ({
+  i: [mk('AFTER HOURS', '閉店後', TPL.poses(P, ['slump', ['twitch', F => { CFX.snd('creak'); }], ['intro', F => CFX.snd('servo')], 'stance'], null, { step: 34 }), { line: '...the show starts at midnight.' }),
+    mk('ON STAGE', 'オンステージ', TPL.poses(P, ['bow', ['wave', F => { CFX.snd('musicBox'); CFX.burst(F, P.c, 14, 8, 160); }], 'stance'], null, { step: 36 }), { line: 'Welcome, welcome! Take a seat.' })],
+  w: [mk('ENCORE', 'アンコール', TPL.poses(P, ['bow', ['victory', F => CFX.snd('musicBox')], 'victory'], null, { step: 36 }), { line: 'Same time tomorrow night.' }),
+    mk('POWER OUTAGE', '停電', TPL.poses(P, ['twitch', ['slump', F => { CFX.flash('#000000', 0.5); CFX.snd('staticHum'); }], ['twitch', F => CFX.snd('springClick')], 'victory'], null, { step: 30 }), { loop: [ambient('spark', P.c, 14, 60, 220, 2)] })],
 }));
 cosAdd('kuchi', { c: '#e0203a', c2: '#ffb4c0', pt: 'spark', snd: 'snip' }, P => ({
   i: [mk('EXCUSE ME', 'すみません', TPL.walk(P, null, 'touch', {}), { line: 'Excuse me… may I ask you something?' }),

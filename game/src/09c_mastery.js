@@ -242,6 +242,12 @@ const VARIANTS = {
     { n: 'GREEN SIGNAL', rules: [{ h: [220, 245], hue: 158, s: 1.1, lm: 1.2 }, { h: [340, 15], hue: 130, s: 1.2 }] },
     { n: 'PHANTOM RAIL', glow: '#ff2a3a', rules: [{ grey: 'only', l: [0.03, 0.3], hue: 352, ss: 0.4, lm: 1.6 }, { h: [220, 245], hue: 0, s: 1.3, la: 0.05 }] },
   ],
+  haunted: [   // hue rules that work on all four forms (brown / purple / yellow / red fur)
+    { n: 'WITHERED', rules: [{ h: [0, 360], s: 0.55, lm: 0.82 }] },
+    { n: 'NIGHTMARE', rules: [{ grey: 'also', l: [0.03, 0.4], hue: 270, ss: 0.3, lm: 0.7 }, { h: [0, 360], s: 1.15, lm: 0.72 }] },
+    { n: 'PHANTOM', rules: [{ h: [0, 360], hue: 172, s: 0.7, lm: 1.15 }] },
+    { n: 'GOLDEN SHOW', glow: '#ffd860', rules: [{ h: [0, 360], hue: 44, s: 1.1, la: 0.06 }] },
+  ],
   hollow: [
     { n: 'CRIMSON SEAL', rules: [{ h: [240, 300], hue: 355 }] },
     { n: 'MIDNIGHT BLUE', rules: [{ h: [240, 300], hue: 195 }, { grey: 'also', l: [0.12, 0.45], hue: 225, ss: 0.35 }] },
