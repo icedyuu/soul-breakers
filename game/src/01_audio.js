@@ -213,6 +213,31 @@ const Sound = (() => {
     trainPass(v = 1) { noise(1.1, 0.6 * v, 'lowpass', 220, 900, 0.9, 0, 0.5); osc('sine', 70, 40, 1.0, 0.5 * v, 0, 0.4); for (let i = 0; i < 8; i++) noise(0.06, 0.32 * v, 'bandpass', 1100, 700, 2, 0.05 + i * 0.1); noise(0.7, 0.3 * v, 'bandpass', 3000, 600, 1, 0.1, 0.6); },
     railClack() { noise(0.05, 0.4, 'bandpass', 900, 600, 3); osc('square', 330, 300, 0.03, 0.05); noise(0.05, 0.3, 'bandpass', 900, 600, 3, 0.09); },
     sickle(v = 1) { noise(0.14, 0.4 * v, 'bandpass', 5200, 1600, 1.1); osc('triangle', 2400, 900, 0.12, 0.08 * v); osc('sine', 4200, 4100, 0.2, 0.02 * v, 0.05); },
+    // HAUNTED FOUR (animatronics): servos, creaks, mic, music box, guitar, clucks, kitchen, cupcakes, screech, springlocks, whispers
+    servo(v = 1) { osc('sawtooth', 180, 320, 0.18, 0.05 * v); osc('square', 90, 140, 0.16, 0.03 * v); noise(0.14, 0.08 * v, 'bandpass', 1200, 2400, 3); },
+    creak(v = 1) { osc('sawtooth', 140, 95, 0.5, 0.05 * v, 0, 0.6); osc('sawtooth', 147, 101, 0.5, 0.04 * v, 0.02, 0.6); noise(0.4, 0.05 * v, 'bandpass', 700, 500, 6, 0, 0.6); },
+    stepHeavy(v = 1) { osc('sine', 80, 40, 0.14, 0.3 * v); noise(0.06, 0.18 * v, 'lowpass', 600, 200, 1); osc('square', 1400, 1100, 0.02, 0.03 * v, 0.03); },
+    stepFast(v = 1) { noise(0.03, 0.2 * v, 'bandpass', 2200, 1600, 2); osc('square', 900, 700, 0.02, 0.03 * v); },
+    micThud(v = 1) { osc('sine', 110, 45, 0.18, 0.4 * v); noise(0.1, 0.3 * v, 'bandpass', 900, 300, 1.2); osc('sawtooth', 2200, 1900, 0.12, 0.025 * v, 0.02); },
+    musicBox(v = 1) { [784, 659, 523, 587, 494].forEach((f, i) => { osc('sine', f, f * 0.985, 0.32, 0.06 * v, i * 0.11, 0.6); osc('triangle', f * 2.01, f * 1.98, 0.2, 0.02 * v, i * 0.11, 0.6); }); },
+    songNote(v = 1) { [392, 466, 440].forEach((f, i) => { osc('sawtooth', f, f * 0.97, 0.22, 0.04 * v, i * 0.09, 0.6); osc('sine', f * 0.5, f * 0.49, 0.25, 0.05 * v, i * 0.09); }); noise(0.3, 0.03 * v, 'bandpass', 3000, 2000, 4, 0, 0.6); },
+    staticHum(v = 1) { noise(0.6, 0.06 * v, 'bandpass', 4000, 3000, 1, 0, 0.6); osc('sawtooth', 60, 60, 0.6, 0.05 * v, 0, 0.6); osc('sine', 120, 118, 0.6, 0.04 * v, 0, 0.6); },
+    pulse(v = 1) { osc('sine', 70, 30, 0.6, 0.45 * v, 0, 0.5); osc('sawtooth', 300, 80, 0.4, 0.06 * v); noise(0.5, 0.15 * v, 'lowpass', 1200, 100, 0.8, 0, 0.5); },
+    guitarRiff(v = 1) { [110, 110, 147, 131].forEach((f, i) => { osc('sawtooth', f, f, 0.16, 0.08 * v, i * 0.09, 0.5); osc('square', f * 2, f * 2, 0.14, 0.04 * v, i * 0.09, 0.5); }); noise(0.4, 0.06 * v, 'bandpass', 2500, 1500, 1, 0, 0.5); },
+    cluck(v = 1) { for (let i = 0; i < 2; i++) { osc('square', 700, 420, 0.05, 0.05 * v, i * 0.09); noise(0.04, 0.12 * v, 'bandpass', 1800, 1200, 3, i * 0.09); } osc('sawtooth', 300, 260, 0.06, 0.02 * v, 0.2); },
+    panClang(v = 1) { osc('triangle', 1250, 1210, 0.5, 0.09 * v, 0, 0.7); osc('sine', 1870, 1850, 0.4, 0.05 * v, 0, 0.7); noise(0.08, 0.3 * v, 'highpass', 3000, 5000, 1); },
+    cupPop(v = 1) { osc('sine', 500, 1300, 0.07, 0.12 * v); noise(0.04, 0.12 * v, 'bandpass', 2400, 1800, 2); },
+    cupBoom(v = 1) { osc('sine', 120, 35, 0.45, 0.5 * v); noise(0.35, 0.35 * v, 'lowpass', 2200, 200, 0.8); [1047, 1319, 1568].forEach((f, i) => osc('sine', f, f, 0.18, 0.03 * v, 0.05 + i * 0.04)); },
+    cupBite(v = 1) { osc('square', 900, 300, 0.06, 0.06 * v); noise(0.05, 0.25 * v, 'bandpass', 2000, 900, 2); },
+    candleFlame(v = 1) { noise(0.2, 0.15 * v, 'bandpass', 1600, 600, 1); osc('sine', 300, 500, 0.12, 0.03 * v); },
+    hookScrape(v = 1) { noise(0.16, 0.3 * v, 'bandpass', 4200, 2400, 4); osc('sawtooth', 2600, 1900, 0.12, 0.03 * v); },
+    glitch(v = 1) { for (let i = 0; i < 5; i++) osc('square', 200 + i * 340, 120 + i * 300, 0.04, 0.04 * v, i * 0.04); noise(0.25, 0.08 * v, 'highpass', 5000, 3000, 1); },
+    curtain(v = 1) { noise(0.35, 0.14 * v, 'bandpass', 900, 1500, 0.8); },
+    screech(v = 1) { osc('sawtooth', 900, 2400, 0.4, 0.05 * v, 0, 0.6); osc('sawtooth', 955, 2520, 0.4, 0.04 * v, 0.01, 0.6); osc('square', 140, 90, 0.4, 0.05 * v, 0, 0.6); noise(0.45, 0.2 * v, 'highpass', 3000, 6000, 1, 0, 0.6); },
+    screechShort(v = 1) { osc('sawtooth', 1100, 2000, 0.16, 0.04 * v); noise(0.14, 0.12 * v, 'highpass', 4000, 6000, 1); },
+    springClick(v = 1) { osc('square', 2200, 1700, 0.015, 0.14 * v); noise(0.025, 0.4 * v, 'bandpass', 3200, 2400, 4); osc('sine', 600, 500, 0.08, 0.05 * v, 0.01); },
+    springSnap(v = 1) { noise(0.06, 0.8 * v, 'bandpass', 2600, 1400, 2); osc('square', 1600, 200, 0.12, 0.12 * v); osc('sine', 90, 30, 0.6, 0.5 * v, 0.02, 0.5); },
+    whisper(v = 1) { noise(1.1, 0.07 * v, 'bandpass', 2400, 3400, 3, 0, 0.8); noise(0.9, 0.05 * v, 'bandpass', 1300, 900, 4, 0.2, 0.8); osc('sine', 660, 640, 1.0, 0.012 * v, 0.1, 0.8); },
     ghostBreath() { noise(0.9, 0.06, 'bandpass', 500, 300, 1.6, 0, 0.7); osc('sine', 110, 92, 0.9, 0.04, 0, 0.8); },
   };
   // extra synth layers that can sit under a sample (AUDIO_FILES.sfx[name].syn)
@@ -235,7 +260,7 @@ const Sound = (() => {
   };
   // ultimate start: one shared riser + an element "colour" per fighter
   const ULT_FLAVOR = { kazuma: 'fire', saint: 'holy', sera: 'storm', goro: 'earth', yoru: 'void', frogs: 'water', conductor: 'steel', cardmaster: 'rune', nue: 'beast',
-    borgar: 'earth', buzzu: 'steel', reika: 'blood', yamika: 'void', lunaria: 'holy', honored: 'void', hollow: 'blood', remnant: 'blood', fragment: 'void', kanae: 'steel', tokine: 'time', aimi: 'love', hachi: 'po', kuchi: 'cut', jackpot: 'gold', haze: 'smoke', teke: 'rail' };
+    borgar: 'earth', buzzu: 'steel', reika: 'blood', yamika: 'void', lunaria: 'holy', honored: 'void', hollow: 'blood', remnant: 'blood', fragment: 'void', kanae: 'steel', tokine: 'time', aimi: 'love', hachi: 'po', kuchi: 'cut', jackpot: 'gold', haze: 'smoke', teke: 'rail', haunted: 'spring' };
   S.ultStart = (id) => {
     riser(0.85, 90, 520, 0.12);
     osc('sine', 45, 90, 0.9, 0.35, 0, 0.3);
@@ -256,6 +281,7 @@ const Sound = (() => {
     else if (fl === 'po') { noise(1.6, 0.14, 'bandpass', 380, 900, 0.8, 0.1, 0.8); S.po(2, 0.8); }
     else if (fl === 'cut') { for (let i = 0; i < 3; i++) { osc('square', 3400, 2700, 0.018, 0.08, 0.5 + i * 0.12); noise(0.04, 0.3, 'highpass', 5200, 8000, 2, 0.5 + i * 0.12); } osc('sine', 62, 38, 0.18, 0.5, 0.2); }
     else if (fl === 'smoke') { S.inhale(); S.exhale(1.2); osc('sine', 52, 40, 1.4, 0.3, 0.5, 0.8); }
+    else if (fl === 'spring') { S.musicBox(0.8); S.springClick(0.9); S.staticHum(0.6); osc('sine', 52, 38, 1.4, 0.3, 0.3, 0.8); }
     else if (fl === 'rail') { S.crossing(0.8); S.teke(0.8, 0.8); osc('sine', 48, 36, 1.4, 0.3, 0.4, 0.8); }
     else if (fl === 'gold') { S.coin(1.2); [523, 784, 1047, 1568].forEach((f, i) => osc('square', f, f, 0.14, 0.05, 0.5 + i * 0.08)); }
     else if (fl === 'time') { for (let i = 0; i < 6; i++) osc('square', 2100 - i * 120, 1900 - i * 120, 0.02, 0.1, i * 0.12, 0.6); osc('sine', 196, 194, 1.4, 0.18, 0.7, 0.9); }

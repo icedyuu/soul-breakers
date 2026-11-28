@@ -10,7 +10,7 @@ const FCLASSES = {
 };
 const FCLASS_ORDER = ['rushdown', 'zoner', 'grappler', 'trickster', 'control', 'allround'];
 const FIGHTER_CLASS = {
-  kazuma: 'allround', honored: 'allround',
+  kazuma: 'allround', honored: 'allround', haunted: 'allround',
   yoru: 'rushdown', buzzu: 'rushdown', saint: 'rushdown', aimi: 'rushdown', kuchi: 'rushdown',
   sera: 'zoner', cardmaster: 'zoner', lunaria: 'zoner', hachi: 'zoner',
   goro: 'grappler', borgar: 'grappler',

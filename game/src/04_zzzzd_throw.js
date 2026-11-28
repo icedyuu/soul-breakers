@@ -13,7 +13,7 @@ const THROW_STYLE = {
   saint: ['spin', 'CRIMSON WALTZ'], borgar: ['slam', 'ANVIL DROP'], buzzu: ['knee', 'CHAIN RIP'], reika: ['knee', 'ICE KNEE'],
   yamika: ['blast', 'SEALED PALM'], lunaria: ['toss', 'MOON TOSS'], honored: ['blast', 'RED REPEL'], hollow: ['slam', 'HOLLOW CRUSH'],
   kanae: ['knee', 'UGLY KNEE'], tokine: ['spin', 'CLOCK HAND'], aimi: ['toss', 'LOVE TOSS'], hachi: ['slam', 'TALL SHADOW'],
-  kuchi: ['knee', 'SNIP & KICK'], jackpot: ['spin', 'HOUSE SPIN'], haze: ['blast', 'SMOKE RING'], teke: ['slam', 'RAILWAY DRAG'],
+  kuchi: ['knee', 'SNIP & KICK'], jackpot: ['spin', 'HOUSE SPIN'], haze: ['blast', 'SMOKE RING'], teke: ['slam', 'RAILWAY DRAG'], haunted: ['slam', 'SHOW\'S OVER'],
 };
 function throwMove() {
   return {
@@ -26,7 +26,7 @@ function throwMove() {
     },
   };
 }
-for (const ch of [...CHARS, ...Object.values(typeof BEAST_FORMS !== 'undefined' ? BEAST_FORMS : {})]) {
+for (const ch of [...CHARS, ...Object.values(typeof BEAST_FORMS !== 'undefined' ? BEAST_FORMS : {}), ...Object.values(typeof HF_FORMS !== 'undefined' ? HF_FORMS : {})]) {
   if (!ch.moves || ch.moves.THROW) continue;
   ch.moves.THROW = throwMove();
 }

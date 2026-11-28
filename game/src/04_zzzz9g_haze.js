@@ -40,6 +40,7 @@ function hzZoneAt(F, X, sub) {   // the zone of F's smoke that X stands in (feet
   return hit;
 }
 function hzMouth(F) {   // world position of his mouth
+  if (!F.sk) return [F.x + F.facing * 20 * F.s, F.y - 150 * F.s];   // not drawn yet (cosmetic intro on its first frame)
   const sk = F.sk, r = F.ch.dims.headR, hp = headPt(sk, 0.78 * r, 0.62 * r);
   return toWorld(F.x, F.y, F.facing, F.s, F.pose, sk, hp[0], hp[1]);
 }

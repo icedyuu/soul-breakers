@@ -101,6 +101,10 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
     const vA = await A.evaluate(() => [scene.p1.variant, scene.p2.variant]), vB = await Bp.evaluate(() => [scene.p1.variant, scene.p2.variant]);
     console.log('variants host', JSON.stringify(vA), 'guest', JSON.stringify(vB), 'guest select saw', JSON.stringify(seenV));
     if (JSON.stringify(vA) !== JSON.stringify(vB) || (!TAG && (vA[0] !== 5 || vA[1] !== 1 || seenV[1] !== 5))) throw new Error('colour variants not synced');
+    if (HOST === 'haunted') {   // the rolled Haunted Four form must match on both peers
+      await sleep(800); const fA = await A.evaluate(() => [scene.p1.ch.formId, scene.p2.ch.formId]), fB = await Bp.evaluate(() => [scene.p1.ch.formId, scene.p2.ch.formId]);
+      console.log('  haunted form host', JSON.stringify(fA), 'guest', JSON.stringify(fB)); if (JSON.stringify(fA) !== JSON.stringify(fB) || !fA[0]) throw new Error('haunted form not synced');
+    }
     if (TAG) { const tA = await A.evaluate(() => JSON.stringify(scene.cfg.tag)), tB = await Bp.evaluate(() => JSON.stringify(scene.cfg.tag)); console.log('  tag cfg host', tA, 'guest', tB); if (tA !== tB || tA === undefined) throw new Error('tag cfg not synced'); }
     const t0 = Date.now();
     for (;;) {

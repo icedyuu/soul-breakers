@@ -16,6 +16,11 @@ const BALANCE = {
   jackpot: { dmg: 1.08, hp: 1020 },
   haze:    { dmg: 1.25, hp: 1050 },
   teke:    { dmg: 0.84, hp: 900 },
+  // HAUNTED FOUR: one entry per rolled form (key haunted_<form>)
+  haunted_bear:    { dmg: 1.0, hp: 1000 },
+  haunted_rabbit:  { dmg: 0.94, hp: 1080 },
+  haunted_chicken: { dmg: 1.12, hp: 1040 },
+  haunted_fox:     { dmg: 1.0, hp: 900 },
   yoru:    { dmg: 1.08 },
   yamika:  { dmg: 1.12 },
   kanae:   { dmg: 1.12 },
@@ -26,8 +31,8 @@ const BALANCE = {
   hollow:  { dmg: 1.27, hp: 1010 },
   honored: { dmg: 1.32, hp: 1040 },
 };
-for (const ch of CHARS) {
-  const b = BALANCE[ch.id]; if (!b) continue;
+for (const ch of [...CHARS, ...Object.values(typeof HF_FORMS !== 'undefined' ? HF_FORMS : {})]) {
+  const b = BALANCE[ch.formId && ch.id === 'haunted' ? 'haunted_' + ch.formId : ch.id]; if (!b) continue;
   if (b.hp) ch.health = b.hp;
   if (b.dmg && b.dmg !== 1) { const base = ch.dmgBonus, m = b.dmg; ch.dmgBonus = base ? F => base(F) * m : () => m; }
 }
